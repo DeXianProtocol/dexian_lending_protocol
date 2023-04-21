@@ -311,6 +311,16 @@ mod dexian_lending {
             self.price_oracle.get_price_quote_in_xrd(asset_addr)
         }
 
+        pub fn get_current_index(&self, asset_addr: ResourceAddress) -> (Decimal, Decimal){
+            assert!(self.states.contains_key(&asset_addr), "unknown asset!");
+            self.states.get(&asset_addr).unwrap().get_current_index()
+        }
+
+        pub fn get_interest_rate(&self, asset_addr: ResourceAddress) -> (Decimal, Decimal){
+            assert!(self.states.contains_key(&asset_addr), "unknown asset!");
+            self.states.get(&asset_addr).unwrap().get_interest_rates(Decimal::ZERO)
+        }
+
         pub fn supply(&mut self, deposit_asset: Bucket) -> Bucket {
             let asset_address = deposit_asset.resource_address();
             assert!(self.states.contains_key(&asset_address) && self.vaults.contains_key(&asset_address), "There is no pool of funds corresponding to the assets!");
