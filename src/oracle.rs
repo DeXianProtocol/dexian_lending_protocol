@@ -82,7 +82,7 @@ mod oracle{
                 self.usdt_price
             }
             else{
-                Decimal::from("-1")
+                Decimal::from(-1)
             }
 
         }
