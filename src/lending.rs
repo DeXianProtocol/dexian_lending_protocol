@@ -495,7 +495,7 @@ mod dexian_lending {
         }
 
         pub fn liquidation(&mut self, mut debt_bucket: Bucket, cdp_id: u64) -> Bucket{
-            let (collateral, debt, collateral_in_xrd, debt_in_xrd, collateral_price, _) = self.get_cdp_digest(cdp_id);
+            let (debt, collateral, collateral_in_xrd, debt_in_xrd, collateral_price, _) = self.get_cdp_digest(cdp_id);
             assert!(debt == debt_bucket.resource_address(), "The CDP can not support the repay by the bucket!");
             let collateral_state = self.states.get_mut(&collateral).unwrap();
             assert!(collateral_state.liquidation_threshold >= debt_in_xrd / collateral_in_xrd, "The CDP can not be liquidation yet, the timing too early!");
