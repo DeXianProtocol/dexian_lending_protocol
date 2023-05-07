@@ -1,0 +1,2 @@
+CALL_METHOD Address("account_sim1qjr6j6gf0dk0xf5wwe8adlhlam55j5mxpy0h9dr52quqd8a9uv") "create_proof" Address("resource_sim1q8dy7tdghvjh5af5wp9lzc5s340g664r2hxyqpjefklsm6ce7q")
+CALL_METHOD Address("component_sim1q0dy7tdghvjh5af5wp9lzc5s340g664r2hxyqpjefkls7yqzpg") "new_pool" Address("resource_sim1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqs6d89k") Decimal("0.6") Decimal("0.7") Decimal("0.07") Decimal("0.25") Address("component_sim1qvjha4avyzckn578p02krjgj3xhhe6gjkc75fs8vqklqzzxgy9");

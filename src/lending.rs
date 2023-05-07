@@ -209,12 +209,11 @@ mod dexian_lending {
     }
 
     impl LendingFactory {
-        // Implement the functions and methods which will manage those resources and data
-
-        // This is a function, and can be called directly on the blueprint once deployed
+        
         pub fn instantiate_lending_factory(price_oracle_address: ComponentAddress) -> (ComponentAddress, Bucket) {
             
             let admin_badge = ResourceBuilder::new_fungible()
+                //set divisibility to none to ensure that the admin badge can not be fractionalized.
                 .divisibility(DIVISIBILITY_NONE)
                 .mint_initial_supply(Decimal::ONE);
             
