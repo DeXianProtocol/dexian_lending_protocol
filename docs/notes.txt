@@ -128,6 +128,25 @@ CALL_FUNCTION
     "new";
 component_tdx_c_1q0yqpjjajea5cagu0t8dk8qtyss2hk7r0dtd8vauzajqv033vv
 
+# claim usdt
+CALL_METHOD
+    Address("component_tdx_c_1q0sa4jt6et4hzmwxk8fhlf4m43l4plwjpkwhwxmjl86sjey4r4")
+    "free_token"
+    Decimal("1000");
+CALL_METHOD
+    Address("account_tdx_c_1pxs94hu9dec94xu2t335qy4el295g6dhvswlz2pn6ppsw3qnh3")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");
+# claim usdc
+CALL_METHOD
+    Address("component_tdx_c_1qv45znzfmww6xwt8fw0xrcy6wmrazq95n7n8hr3akx4s59mnql")
+    "free_token"
+    Decimal("1000");
+CALL_METHOD
+    Address("account_tdx_c_1pxs94hu9dec94xu2t335qy4el295g6dhvswlz2pn6ppsw3qnh3")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");
+
 # instantiate_lending_factory
 CALL_FUNCTION
     Address("package_tdx_c_1qrzwn3fef9mxllqnsdt3u40tveak2y3y0kehf23lqjms9x3plk")
@@ -203,3 +222,13 @@ CALL_METHOD
     Address("component_tdx_c_1q0yqpjjajea5cagu0t8dk8qtyss2hk7r0dtd8vauzajqv033vv"); 
 
 resource_tdx_c_1qxqmf898wlpv70c5ftl6g975x3zgqglzpqa7698au98sfe7h8t #dxUSDC
+
+
+XRD-->dxXRD
+resource_tdx_c_1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq40v2wv   ---> resource_tdx_c_1qxf6njlg7xmwr73tksy99vx5yzfcdxwkn9m9ulx4ql9qsdhyc6
+
+USDT --> dxUSDT
+resource_tdx_c_1q8sa4jt6et4hzmwxk8fhlf4m43l4plwjpkwhwxmjl86scckmxw   --->  resource_tdx_c_1qxpd9jx7vsxl6nv8eeyez62pr6ew6njeqnkszvdgpj0s6smxsf
+
+USDC ---> dxUSDC
+resource_tdx_c_1qy45znzfmww6xwt8fw0xrcy6wmrazq95n7n8hr3akx4s7yfa9y   --->   resource_tdx_c_1qxqmf898wlpv70c5ftl6g975x3zgqglzpqa7698au98sfe7h8t
