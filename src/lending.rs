@@ -41,6 +41,7 @@ pub struct CollateralDebtPosition{
     pub normalized_borrow: Decimal,
     #[mutable]
     pub collateral_amount: Decimal,
+    // 这个字段需要去掉。
     #[mutable]
     pub borrow_amount: Decimal,
     #[mutable]
@@ -158,6 +159,29 @@ impl AssetState {
         (borrow_interest_rate, supply_interest_rate)
     }
 
+    pub fn get_current_supply_borrow(&self) -> (Decimal, Decimal){
+        let (supply_index, borrow_index) = self.get_current_index();
+        (
+            self.get_total_supply_with_index(supply_index),
+            self.get_total_borrow_with_index(borrow_index)
+        )
+    }
+
+    pub fn get_ltv_and_liquidation_threshold(&self) -> (Decimal, Decimal){
+        (self.ltv, self.liquidation_threshold)
+    }
+
+    pub fn get_total_supply_borrow(&self) -> (Decimal, Decimal){
+        (
+            self.get_total_normalized_supply(),
+            self.get_total_normalized_borrow()
+        )
+    }
+
+    pub fn get_last_update_epoch(&self) ->u64{
+        self.last_update_epoch
+    }
+
     fn update_interest_rate(&mut self) {
         let (borrow_interest_rate, supply_interest_rate) = self.get_interest_rates(Decimal::ZERO);
         self.borrow_interest_rate = borrow_interest_rate;
@@ -167,6 +191,10 @@ impl AssetState {
     fn get_total_normalized_supply(&self) -> Decimal{
         let token_res_mgr: ResourceManager = borrow_resource_manager!(self.token);
         token_res_mgr.total_supply()
+    }
+
+    fn get_total_normalized_borrow(&self) -> Decimal{
+        self.normalized_total_borrow
     }
 
     fn get_borrow_interest_rate(&self, borrow_ratio: Decimal) -> Decimal{
@@ -181,7 +209,7 @@ impl AssetState {
 
     fn get_total_borrow_with_index(&self, current_borrow_index: Decimal) -> Decimal{
         self.normalized_total_borrow * current_borrow_index
-    }   
+    }
 }
 
 #[blueprint]
@@ -321,6 +349,31 @@ mod dexian_lending {
             self.states.get(&asset_addr).unwrap().get_interest_rates(Decimal::ZERO)
         }
 
+        pub fn get_current_supply_borrow(&self, asset_addr: ResourceAddress) -> (Decimal, Decimal){
+            assert!(self.states.contains_key(&asset_addr), "unknown asset!");
+            self.states.get(&asset_addr).unwrap().get_current_supply_borrow()
+        }
+
+        pub fn get_avaliable(&self, asset_addr: ResourceAddress) -> Decimal{
+            assert!(self.vaults.contains_key(&asset_addr), "unknown asset addresss");
+            self.vaults.get(&asset_addr).unwrap().amount()
+        }
+
+        pub fn get_ltv_and_liquidation_threshold(&self, asset_addr:ResourceAddress) -> (Decimal, Decimal){
+            assert!(self.vaults.contains_key(&asset_addr), "unknown asset addresss");
+            self.states.get(&asset_addr).unwrap().get_ltv_and_liquidation_threshold()
+        }
+    
+        pub fn get_total_supply_borrow(&self, asset_addr:ResourceAddress) -> (Decimal, Decimal){
+            assert!(self.vaults.contains_key(&asset_addr), "unknown asset addresss");
+            self.states.get(&asset_addr).unwrap().get_total_supply_borrow()
+        }
+    
+        pub fn get_last_update_epoch(&self, asset_addr:ResourceAddress) ->u64{
+            assert!(self.vaults.contains_key(&asset_addr), "unknown asset addresss");
+            self.states.get(&asset_addr).unwrap().get_last_update_epoch()
+        }
+
         pub fn supply(&mut self, deposit_asset: Bucket) -> Bucket {
             let asset_address = deposit_asset.resource_address();
             assert!(self.states.contains_key(&asset_address) && self.vaults.contains_key(&asset_address), "There is no pool of funds corresponding to the assets!");
@@ -370,7 +423,7 @@ mod dexian_lending {
             asset_bucket
         }
 
-        pub fn borrow(&mut self, dx_bucket: Bucket, borrow_token: ResourceAddress, mut amount: Decimal) -> (Bucket, Bucket){
+        pub fn borrow(&mut self, dx_bucket: Bucket, borrow_token: ResourceAddress, amount: Decimal) -> (Bucket, Bucket){
             assert!(self.states.contains_key(&borrow_token), "unsupported the borrow token!");
             let dx_address = dx_bucket.resource_address();
             assert!(self.deposit_asset_map.contains_key(&dx_address), "unsupported the collateral token!");
@@ -389,9 +442,7 @@ mod dexian_lending {
             let deposit_amount = LendingFactory::floor(supply_amount * supply_index);
             let max_loan_amount = self.get_max_loan_amount(collateral_addr.clone(), deposit_amount, ltv, borrow_token);
             debug!("max loan amount {}, supply_amount:{} deposit_amount:{}, amount:{}", max_loan_amount, supply_amount, deposit_amount, amount);
-            if amount > max_loan_amount {
-                amount = max_loan_amount;
-            }
+            assert!(amount < max_loan_amount, "the vault insufficient balance.");
 
             if self.collateral_vaults.contains_key(&dx_address){
                 let collateral_vault = self.collateral_vaults.get_mut(&dx_address).unwrap();
@@ -452,12 +503,14 @@ mod dexian_lending {
             let borrow_index = borrow_state.borrow_index;
             assert!(borrow_index > Decimal::ZERO, "borrow index error! {}", borrow_index);
             let mut normalized_amount = LendingFactory::floor(repay_token.amount() / borrow_index);
-            let mut repay_amount = repay_token.amount();
             
-
+            
+            let mut repay_amount = repay_token.amount();
             let mut collateral_bucket: Option<Bucket> = None;
-            if cdp_data.normalized_borrow <= normalized_amount {
-                // repayAmount <= amount
+            let is_full_repayment = cdp_data.normalized_borrow <= normalized_amount;
+
+            if is_full_repayment {
+                // Full repayment repayAmount <= amount
                 // because ⌈⌊a/b⌋*b⌉ <= a
                 repay_amount = LendingFactory::ceil(cdp_data.normalized_borrow * borrow_index);
                 normalized_amount = cdp_data.normalized_borrow;
@@ -465,14 +518,14 @@ mod dexian_lending {
                 let dx_address = cdp_data.collateral_token;
                 let collateral_vault = self.collateral_vaults.get_mut(&dx_address).unwrap();
                 collateral_bucket = Some(collateral_vault.take(cdp_data.collateral_amount));
-                
+            
                 cdp_data.collateral_amount = Decimal::ZERO;
-                
+            }
+    
                 // self.minter.authorize(|| {
                 //     cdp.burn();
                 // });
                 // return (repay_token, collateral_bucket);
-            }
             debug!("repay_bucket:{}, normalized_amount:{}, normalized_borrow:{}, repay_amount:{}", repay_amount, normalized_amount, cdp_data.normalized_borrow, repay_amount);
             let borrow_vault = self.vaults.get_mut(&borrow_token).unwrap();
             borrow_vault.put(repay_token.take(repay_amount));
@@ -485,12 +538,20 @@ mod dexian_lending {
             borrow_state.update_interest_rate();
             
             self.minter.authorize(|| {
-                let mut _cdp_res_mgr: ResourceManager = borrow_resource_manager!(cdp.resource_address());
-                //TODO: 为什么需要一个字符串
-                _cdp_res_mgr.update_non_fungible_data(&cdp_id, "own", cdp_data);
+                self.update_after_repay(cdp.resource_address(), &cdp_id, cdp_data, is_full_repayment);
             });
 
-            (repay_token, cdp, collateral_bucket)
+            (repay_token, cdp, collateral_bucket, )
+        }
+
+        fn update_after_repay(&self, cdp_res_addr: ResourceAddress, cdp_id: &NonFungibleLocalId, cdp_data: CollateralDebtPosition, is_full_repayment: bool) {
+            let mut res_mgr: ResourceManager = borrow_resource_manager!(cdp_res_addr);
+            if is_full_repayment {
+                res_mgr.update_non_fungible_data(cdp_id, "collateral_amount", cdp_data.collateral_amount);
+            }
+            res_mgr.update_non_fungible_data(cdp_id, "total_repay", cdp_data.total_repay);
+            res_mgr.update_non_fungible_data(cdp_id, "normalized_borrow", cdp_data.normalized_borrow);
+            res_mgr.update_non_fungible_data(cdp_id, "last_update_epoch", cdp_data.last_update_epoch);
         }
 
         pub fn liquidation(&mut self, mut debt_bucket: Bucket, cdp_id: u64) -> Bucket{
@@ -536,8 +597,7 @@ mod dexian_lending {
             debt_state.update_interest_rate();
 
             self.minter.authorize(|| {
-                let mut cdp_res_mgr: ResourceManager = borrow_resource_manager!(self.cdp_res_addr);
-                cdp_res_mgr.update_non_fungible_data(&NonFungibleLocalId::integer(cdp_id), "own", cdp_data);
+                self.update_after_repay(self.cdp_res_addr, &NonFungibleLocalId::integer(cdp_id), cdp_data, true);
             });
 
             collateral_bucket
