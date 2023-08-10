@@ -13,14 +13,14 @@ mod stable_interest_model{
     }
 
     impl StableInterestModel{
-        pub fn new() -> ComponentAddress{
+        pub fn new() -> Global<StableInterestModel>{
             Self{
                 a: Decimal::from(55),
                 b: Decimal::from(45)
-            }.instantiate().globalize()
+            }.instantiate().prepare_to_globalize(OwnerRole::None).globalize()
         }
 
-        pub fn get_borrow_interest_rate(&self, borrow_ratio: Decimal) -> Decimal{
+        pub fn get_variable_interest_rate(&self, borrow_ratio: Decimal) -> Decimal{
             let x2 = 
                 if borrow_ratio > Decimal::ONE {
                     // let x = Decimal::ONE;
@@ -36,6 +36,10 @@ mod stable_interest_model{
             let hundred: Decimal = Decimal::from(100);
             // Decimal::from("55") * x4 / HUNDRED + Decimal::from("45") * x8 / hundred
             self.a * x4 / hundred + self.b * x8 / hundred
+        }
+
+        pub fn get_stable_interest_rate(&self, _borrow_ratio: Decimal) -> Decimal{
+            dec!("0.05")
         }
     }    
 }

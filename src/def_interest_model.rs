@@ -14,11 +14,11 @@ mod def_interest_model{
 
     impl DefInterestModel{
 
-        pub fn new() -> ComponentAddress{
+        pub fn new() -> Global<DefInterestModel>{
             Self{
                 a: Decimal::from(5),
                 b: Decimal::from(2)
-            }.instantiate().globalize()
+            }.instantiate().prepare_to_globalize(OwnerRole::None).globalize()
         }
 
         pub fn get_borrow_interest_rate(&self, borrow_ratio: Decimal) -> Decimal{
@@ -31,6 +31,10 @@ mod def_interest_model{
                 // borrow_ratio / Decimal::from("5") + borrow_ratio * borrow_ratio / Decimal::ONE / Decimal::from("2")
                 borrow_ratio / self.a + borrow_ratio * borrow_ratio / Decimal::ONE / self.b
             }
+        }
+
+        pub fn get_stable_interest_rate(&self, _borrow_ratio: Decimal) -> Decimal{
+            dec!("0.05")
         }
     }
 

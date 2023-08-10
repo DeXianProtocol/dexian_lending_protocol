@@ -1,24 +1,22 @@
 
 use scrypto::prelude::*;
+use crate::oracle::oracle::PriceOracle;
+use crate::def_interest_model::def_interest_model::*;
+// use crate::stable_interest_model::stable_interest_model::*;
 
-// external_blueprint! {
-//     PriceOraclePackageTarget {
-//       fn new new(usdt: ResourceAddress, usdt_price: Decimal, usdc: ResourceAddress, usdc_price: Decimal) -> ComponentAddress;
+// extern_component! {
+//     PriceOracleComponentTarget {
+//         fn get_price_quote_in_xrd(&self, res_addr: ResourceAddress) -> Decimal;
+//         fn set_price_quote_in_xrd(&mut self, res_addr: ResourceAddress, price_in_xrd: Decimal);
 //     }
-//   }
+// }
 
-external_component! {
-    PriceOracleComponentTarget {
-        fn get_price_quote_in_xrd(&self, res_addr: ResourceAddress) -> Decimal;
-        fn set_price_quote_in_xrd(&mut self, res_addr: ResourceAddress, price_in_xrd: Decimal);
-    }
-}
-
-external_component! {
-    InterestModelComponentTarget {
-        fn get_borrow_interest_rate(&self, borrow_ratio: Decimal) -> Decimal;
-    }
-}
+// extern_component! {
+//     InterestModelComponentTarget {
+//         fn get_variable_interest_rate(&self, borrow_ratio: Decimal) -> Decimal;
+//         fn get_stable_interest_rate(&self, borrow_ratio: Decimal) -> Decimal;
+//     }
+// }
 
 /**
 * About 15017 epochs in a year, assuming 35 minute epochs 
@@ -31,7 +29,9 @@ const EPOCH_OF_YEAR: u64 = 15017;
 pub struct CollateralDebtPosition{
     pub borrow_token: ResourceAddress,
     pub collateral_token: ResourceAddress,
-    
+
+    #[mutable]
+    pub is_stable: u64,
     #[mutable]
     pub total_borrow: Decimal,
     #[mutable]
@@ -41,17 +41,21 @@ pub struct CollateralDebtPosition{
     pub normalized_borrow: Decimal,
     #[mutable]
     pub collateral_amount: Decimal,
-    // 这个字段需要去掉。
     #[mutable]
     pub borrow_amount: Decimal,
+    
+    // for stable
     #[mutable]
-    pub last_update_epoch: u64
+    pub last_update_epoch: u64,
+    #[mutable]
+    pub stable_rate: Decimal
 }
+
 
 ///asset state
 #[derive(ScryptoSbor)]
 struct AssetState{
-    pub interest_model: InterestModelComponentTarget,
+    pub interest_model: Global<DefInterestModel>,
     // the liquidity index
     pub supply_index: Decimal,
     // the borrow index
@@ -64,7 +68,7 @@ struct AssetState{
     pub insurance_balance: Decimal,
     // the ratio for current asset insurance funding
     pub insurance_ratio: Decimal,
-    // recipet token of asset
+    // LP token of asset
     pub token: ResourceAddress,
     // normalized total borrow.
     pub normalized_total_borrow: Decimal,
@@ -73,64 +77,53 @@ struct AssetState{
     // liquidation threshold
     pub liquidation_threshold: Decimal,
     //TODO: flash loan
+    // pub flash_loan_fee: Decimal,
     // bonus for liquidator
     pub liquidation_bonus: Decimal,
     // last update timestamp
-    pub last_update_epoch: u64
+    pub last_update_epoch: u64,
+    // last update for stable lending
+    pub stable_borrow_last_update: u64,
+    // total amount for stable rate lending
+    pub stable_borrow_amount: Decimal,
+    // weight average rate
+    pub stable_avg_rate: Decimal,
 }
 
 impl AssetState {
-    
-    
-    // pub fn new(dx_token: ResourceAddress, ltv: Decimal, liquidation_threshold: Decimal, 
-    //     liquidation_bonus: Decimal, insurance_ratio: Decimal, interest_model_addr: ComponentAddress) -> AssetStateComponent{
-    //         let interest_model: InterestModelComponentTarget = interest_model_addr.into();
-    //         Self{
-    //             supply_index: Decimal::ONE,
-    //             borrow_index: Decimal::ONE,
-    //             borrow_interest_rate: Decimal::ZERO,
-    //             supply_interest_rate: Decimal::ZERO,
-    //             insurance_balance: Decimal::ZERO,
-    //             token: dx_token,
-    //             normalized_total_borrow: Decimal::ZERO,
-    //             last_update_epoch: Runtime::current_epoch(),
-    //             ltv,
-    //             liquidation_threshold,
-    //             liquidation_bonus,
-    //             insurance_ratio,
-    //             interest_model
-    //         }.instantiate()
-    //     }
-
+        
     fn update_index(&mut self) {
-        if self.last_update_epoch < Runtime::current_epoch() {
+        let delta_epoch = Runtime::current_epoch().number() - self.last_update_epoch;
+        if delta_epoch > 0u64 {
             let (current_supply_index, current_borrow_index) = self.get_current_index();
             
             // get the total equity value
             let normalized_borrow: Decimal = self.normalized_total_borrow;
-            let token_res_mgr: ResourceManager = borrow_resource_manager!(self.token);
-            let normalized_supply: Decimal = token_res_mgr.total_supply();
+            let token_res_mgr = ResourceManager::from_address(self.token);
+            let normalized_supply: Decimal = token_res_mgr.total_supply().unwrap();
 
             // interest = equity value * (current index value - starting index value)
-            let recent_borrow_interest = normalized_borrow * (current_borrow_index - self.borrow_index);
+            let recent_variable_interest = normalized_borrow * (current_borrow_index - self.borrow_index);
+            let delta_epoch_year = Decimal::from(delta_epoch) / Decimal::from(EPOCH_OF_YEAR);
+            let recent_stable_interest = self.stable_borrow_amount * self.stable_avg_rate * delta_epoch_year;
             let recent_supply_interest = normalized_supply * (current_supply_index - self.supply_index);
 
             // the interest rate spread goes into the insurance pool
-            self.insurance_balance += recent_borrow_interest - recent_supply_interest;
+            self.insurance_balance += recent_variable_interest + recent_stable_interest - recent_supply_interest;
 
-            // LOG.info(asset, borrow_index, current_borrow_index, supply_index, current_supply_index);
+            debug!("update_index({}), borrow_index:{}, current:{}, supply_index:{}, current:{}, stable:{}, stable_avg_rate:{}", self.token.to_hex(), self.borrow_index, current_borrow_index, self.supply_index, current_supply_index, self.stable_borrow_amount, self.stable_avg_rate);
             self.supply_index = current_supply_index;
             self.borrow_index = current_borrow_index;
-            self.last_update_epoch = Runtime::current_epoch();
+            self.last_update_epoch = Runtime::current_epoch().number();
 
         }
     }
 
-
     pub fn get_current_index(&self) -> (Decimal, Decimal){
-        let delta_epoch = Runtime::current_epoch() - self.last_update_epoch;
-        let delta_borrow_interest_rate = self.borrow_interest_rate * delta_epoch / EPOCH_OF_YEAR; //AssetState::EPOCH_OF_YEAR;
-        let delta_supply_interest_rate = self.supply_interest_rate * delta_epoch / EPOCH_OF_YEAR; //AssetState::EPOCH_OF_YEAR;
+        let delta_epoch = Runtime::current_epoch().number() - self.last_update_epoch;
+        let delta_epoch_year = Decimal::from(delta_epoch) / Decimal::from(EPOCH_OF_YEAR);
+        let delta_borrow_interest_rate = self.borrow_interest_rate * delta_epoch_year; //AssetState::EPOCH_OF_YEAR;
+        let delta_supply_interest_rate = self.supply_interest_rate * delta_epoch_year; //AssetState::EPOCH_OF_YEAR;
 
         (
             self.supply_index * (Decimal::ONE + delta_supply_interest_rate),
@@ -139,31 +132,33 @@ impl AssetState {
 
     }
 
-    pub fn get_interest_rates(&self, extra_borrow_amount: Decimal) -> (Decimal, Decimal){
+    pub fn get_interest_rates(&self, extra_borrow_amount: Decimal, is_stable: bool) -> (Decimal, Decimal, Decimal){
         let (current_supply_index, current_borrow_index) = self.get_current_index();
 
-        let supply = self.get_total_supply_with_index(current_supply_index);
+        let mut supply = self.get_total_supply_with_index(current_supply_index);
         if supply == Decimal::ZERO {
-            return (Decimal::ZERO, Decimal::ZERO);
+            return (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO);
         }
 
-        let borrow = self.get_total_borrow_with_index(current_borrow_index) + extra_borrow_amount;
-        let borrow_ratio = borrow / supply;
-
-        let borrow_interest_rate = self.get_borrow_interest_rate(borrow_ratio);
+        let mut variable_borrow = self.get_total_borrow_with_index(current_borrow_index);
+        let mut stable_borrow = self.get_total_stable_borrow();
+        if is_stable {
+            stable_borrow += extra_borrow_amount;
+        }
+        else{
+            variable_borrow += extra_borrow_amount;
+        }
+        supply += extra_borrow_amount;
         
-        let borrow_interest = borrow * borrow_interest_rate;
-        let supply_interest = borrow_interest * (Decimal::ONE - self.insurance_ratio);
-
-        let supply_interest_rate = supply_interest / supply;
-        (borrow_interest_rate, supply_interest_rate)
+        let (variable_borrow_rate, stable_borrow_rate, supply_rate) = self.calc_interest_rate(variable_borrow, variable_borrow, supply);
+        (variable_borrow_rate, stable_borrow_rate, supply_rate)
     }
 
     pub fn get_current_supply_borrow(&self) -> (Decimal, Decimal){
         let (supply_index, borrow_index) = self.get_current_index();
         (
             self.get_total_supply_with_index(supply_index),
-            self.get_total_borrow_with_index(borrow_index)
+            self.get_total_borrow_with_index(borrow_index) + self.get_total_stable_borrow()
         )
     }
 
@@ -178,29 +173,44 @@ impl AssetState {
         )
     }
 
-    pub fn get_last_update_epoch(&self) ->u64{
-        self.last_update_epoch
+
+    fn get_total_stable_borrow(&self) -> Decimal{
+        // last_update_epoch, 是每次计息的时刻，每次计息时：存款，借款（稳定，可变)同时计算，但时稳定利率并不
+        let delta_epoch = Runtime::current_epoch().number() - self.last_update_epoch;
+        if delta_epoch > 0u64 {
+            let delta_epoch_year = Decimal::from(delta_epoch) / Decimal::from(EPOCH_OF_YEAR);
+            return self.stable_borrow_amount * (Decimal::ONE + delta_epoch_year) * self.stable_avg_rate;
+        }
+        self.stable_borrow_amount
     }
 
-    fn update_interest_rate(&mut self) {
-        let (borrow_interest_rate, supply_interest_rate) = self.get_interest_rates(Decimal::ZERO);
+    /// 稳定币的利率只需在发生变化（借还）时变更和保存，须同时更新index
+    fn update_interest_rate(&mut self) -> Decimal {
+        let (borrow_interest_rate, stable_rate, supply_interest_rate) = self.get_interest_rates(Decimal::ZERO, false);
         self.borrow_interest_rate = borrow_interest_rate;
         self.supply_interest_rate = supply_interest_rate;
+        stable_rate
     }
 
     fn get_total_normalized_supply(&self) -> Decimal{
-        let token_res_mgr: ResourceManager = borrow_resource_manager!(self.token);
-        token_res_mgr.total_supply()
+        let token_res_mgr: ResourceManager = ResourceManager::from_address(self.token);
+        token_res_mgr.total_supply().unwrap()
     }
 
     fn get_total_normalized_borrow(&self) -> Decimal{
         self.normalized_total_borrow
     }
 
-    fn get_borrow_interest_rate(&self, borrow_ratio: Decimal) -> Decimal{
-        // let component: &Component = borrow_component!(self.interest_model);
-        // component.call::<Decimal>("get_borrow_interest_rate", args![borrow_ratio])
-        self.interest_model.get_borrow_interest_rate(borrow_ratio)
+    fn calc_interest_rate(&self, variable_borrow: Decimal, stable_borrow: Decimal, supply: Decimal) -> (Decimal, Decimal, Decimal){
+        let total_debt = variable_borrow + stable_borrow;
+        let borrow_ratio = total_debt / supply;
+        let variable_borrow_rate = self.interest_model.get_borrow_interest_rate(borrow_ratio);
+        let stable_borrow_rate = self.interest_model.get_stable_interest_rate(borrow_ratio);
+        let overall_borrow_rate = (variable_borrow * variable_borrow_rate + stable_borrow * stable_borrow_rate)/total_debt;
+
+        let interest = total_debt * overall_borrow_rate * (Decimal::ONE - self.insurance_ratio);
+        let supply_rate = interest / supply;
+        (variable_borrow_rate, stable_borrow_rate, supply_rate)
     }
 
     fn get_total_supply_with_index(&self, current_supply_index: Decimal) -> Decimal{
@@ -214,9 +224,39 @@ impl AssetState {
 
 #[blueprint]
 mod dexian_lending {
+    
+    enable_method_auth!{
+        roles{
+            admin => updatable_by: [];
+        },
+        methods {
+            new_pool => restrict_to: [admin, OWNER];
+            // withdraw_fee => restrict_to: [admin, OWNER];  // withdraw_fee should restrict to Pool?
+
+            // readonly
+            get_asset_price => PUBLIC;
+            get_current_index => PUBLIC;
+            get_interest_rate => PUBLIC;
+            get_current_supply_borrow => PUBLIC;
+            get_total_supply_borrow => PUBLIC;
+            get_avaliable => PUBLIC;
+            get_ltv_and_liquidation_threshold => PUBLIC;
+            get_last_update_epoch => PUBLIC;
+            get_cdp_digest => PUBLIC;
+
+            //business method
+            supply => PUBLIC;
+            withdraw => PUBLIC;
+            borrow => PUBLIC;
+            repay => PUBLIC;
+            liquidation => PUBLIC;
+
+        }
+    }
+    
     struct LendingFactory {
         /// Price Oracle
-        price_oracle: PriceOracleComponentTarget,
+        price_oracle: Global<PriceOracle>,
         //Status of each asset in the lending pool
         states: HashMap<ResourceAddress, AssetState>,
         // address map for supply token(K) and deposit token(V)
@@ -238,32 +278,44 @@ mod dexian_lending {
 
     impl LendingFactory {
         
-        pub fn instantiate_lending_factory(price_oracle_address: ComponentAddress) -> (ComponentAddress, Bucket) {
+        pub fn instantiate_lending_factory(price_oracle: Global<PriceOracle>) -> (Global<LendingFactory>, Bucket) {
             
-            let admin_badge = ResourceBuilder::new_fungible()
+            let admin_badge = ResourceBuilder::new_fungible(OwnerRole::None)
                 //set divisibility to none to ensure that the admin badge can not be fractionalized.
                 .divisibility(DIVISIBILITY_NONE)
                 .mint_initial_supply(Decimal::ONE);
             
-            let minter = ResourceBuilder::new_fungible()
+            let minter = ResourceBuilder::new_fungible(OwnerRole::None)
                 .divisibility(DIVISIBILITY_NONE)
                 .mint_initial_supply(Decimal::ONE);
             
-            let cdp_res_addr = ResourceBuilder::new_integer_non_fungible::<CollateralDebtPosition>()
-                .metadata("symbol", "CDP")
-                .metadata("name", "DeXian CDP Token")
-                .mintable(rule!(require(minter.resource_address())), LOCKED)
-                .burnable(rule!(require(minter.resource_address())), LOCKED)
-                .updateable_non_fungible_data(rule!(require(minter.resource_address())), LOCKED)
-                .create_with_no_initial_supply();
+            let minter_addr = minter.resource_address();
+            let cdp_res_addr = ResourceBuilder::new_integer_non_fungible::<CollateralDebtPosition>(OwnerRole::None)
+                .metadata(metadata!(init{
+                    "symbol" => "CDP", locked;
+                    "name" => "DeXian CDP Token", locked;
+                }))
+                .mint_roles(mint_roles!( 
+                    minter => rule!(require(minter_addr));
+                    minter_updater => rule!(deny_all);
+                ))
+                .burn_roles(burn_roles!(
+                    burner => rule!(require(minter_addr));
+                    burner_updater => rule!(deny_all);
+                ))
+                .non_fungible_data_update_roles(non_fungible_data_update_roles!(
+                    non_fungible_data_updater => rule!(require(minter_addr));
+                    non_fungible_data_updater_updater => rule!(deny_all);
+                ))
+                .create_with_no_initial_supply().address();
             
             // let price_oracle_component = PriceOraclePackageTarget::at(airdrop_package_address, "PriceOracle").new();
-            let price_oracle: PriceOracleComponentTarget = price_oracle_address.into();
+            // let price_oracle: PriceOracleComponentTarget = price_oracle_address.into();
 
-            let rules = AccessRulesConfig::new()
-                .method("new_pool", rule!(require(admin_badge.resource_address())),  AccessRule::DenyAll)
-                .method("withdraw_fee", rule!(require(admin_badge.resource_address())), AccessRule::DenyAll)
-                .default(AccessRule::AllowAll, AccessRule::DenyAll);
+            // let rules = AccessRulesConfig::new()
+            //     .method("new_pool", rule!(require(admin_badge.resource_address())),  AccessRule::DenyAll)
+            //     .method("withdraw_fee", rule!(require(admin_badge.resource_address())), AccessRule::DenyAll)
+            //     .default(AccessRule::AllowAll, AccessRule::DenyAll);
 
             // Instantiate a LendingFactory component
             let component = Self {
@@ -276,37 +328,56 @@ mod dexian_lending {
                 admin_badge: admin_badge.resource_address(),
                 cdp_res_addr,
                 price_oracle
-            }.instantiate();
-            let component = component.globalize_with_access_rules(rules);
+            }
+            .instantiate()
+            .prepare_to_globalize(
+                OwnerRole::Fixed(rule!(require(admin_badge.resource_address())))   // owner & admin 应该分开，互相独立？
+            ).roles(
+                roles!(
+                    admin => rule!(require(admin_badge.resource_address()));
+                )
+            ).globalize();
+            // let component = component.globalize_with_access_rules(rules);
             
             (component, admin_badge)
         }
 
         fn ceil(dec: Decimal) -> Decimal{
-            dec.round(18u32, RoundingMode::TowardsPositiveInfinity)
+            dec.round(18, RoundingMode::ToPositiveInfinity)
         }
 
         fn floor(dec: Decimal) -> Decimal{
-            dec.round(18u32, RoundingMode::TowardsNegativeInfinity)
+            dec.round(18, RoundingMode::ToNegativeInfinity)
         }
+
 
         pub fn new_pool(&mut self, asset_address: ResourceAddress, 
             ltv: Decimal,
             liquidation_threshold: Decimal,
             liquidation_bonus: Decimal,
             insurance_ratio: Decimal, 
-            interest_model_addr: ComponentAddress) -> ResourceAddress  {
-            let res_mgr = borrow_resource_manager!(asset_address);
+            interest_model: Global<DefInterestModel>) -> ResourceAddress  {
+            let res_mgr = ResourceManager::from_address(asset_address);
+            // let symbol: String = ResourceManager::from_address(resource_address).get_metadata::<&str, String>("symbol").unwrap().into();
 
-            let origin_symbol = "test";  //res_mgr.metadata().get("symbol").clone();
-            let dx_token = ResourceBuilder::new_fungible()
-                .metadata("symbol", format!("dx{}", origin_symbol))
-                .metadata("name", format!("DeXian Lending LP token({}) ", origin_symbol))
-                .mintable(rule!(require(self.minter.resource_address())), LOCKED)
-                .burnable(rule!(require(self.minter.resource_address())), LOCKED)
-                .create_with_no_initial_supply();
+            let origin_symbol: String = res_mgr.get_metadata::<&str, String>("symbol").unwrap().into();
+            let dx_token = ResourceBuilder::new_fungible(OwnerRole::None)
+                .metadata(metadata!(init{
+                    "symbol" => format!("dx{}", origin_symbol), locked;
+                    "name" => format!("DeXian Lending LP token({}) ", origin_symbol), locked;
+                }))
+                .mint_roles(mint_roles!( 
+                    minter => rule!(require(self.minter.resource_address()));
+                    minter_updater => rule!(deny_all);
+                ))
+                .burn_roles(burn_roles!(
+                    burner => rule!(require(self.minter.resource_address()));
+                    burner_updater => rule!(deny_all);
+                ))
+                .create_with_no_initial_supply().address();
             
-            let interest_model = InterestModelComponentTarget::at(interest_model_addr);
+            // let interest_model = InterestModelComponentTarget::at(interest_model_addr);
+            let current_epoch = Runtime::current_epoch().number();
             let asset_state = AssetState{
                 supply_index: Decimal::ONE,
                 borrow_index: Decimal::ONE,
@@ -315,7 +386,10 @@ mod dexian_lending {
                 insurance_balance: Decimal::ZERO,
                 token: dx_token,
                 normalized_total_borrow: Decimal::ZERO,
-                last_update_epoch: Runtime::current_epoch(),
+                stable_borrow_amount: Decimal::ZERO,
+                stable_avg_rate: Decimal::ZERO,
+                last_update_epoch: current_epoch,
+                stable_borrow_last_update: current_epoch,
                 ltv,
                 liquidation_threshold,
                 liquidation_bonus,
@@ -334,7 +408,7 @@ mod dexian_lending {
         }
 
         pub fn get_asset_price(&self, asset_addr: ResourceAddress) -> Decimal{
-            // let component: &Component = borrow_component!(self.oracle_addr);
+            // let component: &Component = resource_manager!(self.oracle_addr);
             // component.call::<Decimal>("get_price_quote_in_xrd", args![asset_addr])
             self.price_oracle.get_price_quote_in_xrd(asset_addr)
         }
@@ -344,9 +418,9 @@ mod dexian_lending {
             self.states.get(&asset_addr).unwrap().get_current_index()
         }
 
-        pub fn get_interest_rate(&self, asset_addr: ResourceAddress) -> (Decimal, Decimal){
+        pub fn get_interest_rate(&self, asset_addr: ResourceAddress) -> (Decimal, Decimal, Decimal){
             assert!(self.states.contains_key(&asset_addr), "unknown asset!");
-            self.states.get(&asset_addr).unwrap().get_interest_rates(Decimal::ZERO)
+            self.states.get(&asset_addr).unwrap().get_interest_rates(Decimal::ZERO, false)
         }
 
         pub fn get_current_supply_borrow(&self, asset_addr: ResourceAddress) -> (Decimal, Decimal){
@@ -371,7 +445,7 @@ mod dexian_lending {
     
         pub fn get_last_update_epoch(&self, asset_addr:ResourceAddress) ->u64{
             assert!(self.vaults.contains_key(&asset_addr), "unknown asset addresss");
-            self.states.get(&asset_addr).unwrap().get_last_update_epoch()
+            self.states.get(&asset_addr).unwrap().last_update_epoch
         }
 
         pub fn supply(&mut self, deposit_asset: Bucket) -> Bucket {
@@ -389,8 +463,8 @@ mod dexian_lending {
 
             let normalized_amount = LendingFactory::floor(amount / asset_state.supply_index);
             
-            let dx_token_bucket = self.minter.authorize(|| {
-                let _supply_res_mgr: ResourceManager = borrow_resource_manager!(asset_state.token);    
+            let dx_token_bucket = self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
+                let _supply_res_mgr: ResourceManager = ResourceManager::from_address(asset_state.token);    
                 _supply_res_mgr.mint(normalized_amount)
             });
 
@@ -399,6 +473,7 @@ mod dexian_lending {
 
             dx_token_bucket
         }
+
 
         pub fn withdraw(&mut self, dx_bucket: Bucket) -> Bucket {
             let dx_address = dx_bucket.resource_address();
@@ -412,8 +487,8 @@ mod dexian_lending {
             debug!("after update_index, asset_address{} indexes:{},{}", asset_address.to_hex(), asset_state.borrow_index, asset_state.supply_index);
 
             let normalized_amount = LendingFactory::floor(amount * asset_state.supply_index);
-            self.minter.authorize(|| {
-                let _supply_res_mgr: ResourceManager = borrow_resource_manager!(asset_state.token);
+            self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
+                let _supply_res_mgr: ResourceManager = ResourceManager::from_address(asset_state.token);
                 _supply_res_mgr.burn(dx_bucket);
             });
             let vault = self.vaults.get_mut(&asset_address).unwrap();
@@ -459,7 +534,7 @@ mod dexian_lending {
             
             let borrow_normalized_amount = LendingFactory::ceil(amount / borrow_asset_state.borrow_index);
             borrow_asset_state.normalized_total_borrow += borrow_normalized_amount;
-            borrow_asset_state.update_interest_rate();
+            let stable_rate = borrow_asset_state.update_interest_rate();
             debug!("{}, supply:{}, borrow:{}, rate:{},{}", borrow_token.to_hex(), borrow_asset_state.get_total_normalized_supply(), borrow_asset_state.normalized_total_borrow, borrow_asset_state.borrow_interest_rate, borrow_asset_state.supply_interest_rate);
 
             let borrow_vault = self.vaults.get_mut(&borrow_token).unwrap();
@@ -472,13 +547,15 @@ mod dexian_lending {
                 normalized_borrow: borrow_normalized_amount,
                 collateral_amount: supply_amount,
                 borrow_amount: amount,
-                last_update_epoch: Runtime::current_epoch(),
+                last_update_epoch: Runtime::current_epoch().number(),
+                stable_rate: stable_rate,
+                is_stable: 0u64,
                 borrow_token
             };
 
-            let cdp = self.minter.authorize(|| {
+            let cdp = self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
                 self.cdp_id_counter += 1;
-                let _cdp_res_mgr: ResourceManager = borrow_resource_manager!(self.cdp_res_addr);
+                let _cdp_res_mgr: ResourceManager = ResourceManager::from_address(self.cdp_res_addr);
                 _cdp_res_mgr.mint_non_fungible(&NonFungibleLocalId::integer(self.cdp_id_counter), data)
             });
             (borrow_bucket, cdp)
@@ -491,8 +568,8 @@ mod dexian_lending {
                 "We can only handle one CDP each time!"
             );
 
-            let cdp_id = cdp.non_fungible_local_id();
-            let mut cdp_data: CollateralDebtPosition = cdp.non_fungible().data();
+            let cdp_id = cdp.as_non_fungible().non_fungible_local_id();
+            let mut cdp_data = cdp.resource_manager().get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
             let borrow_token = cdp_data.borrow_token;
             assert!(borrow_token == repay_token.resource_address(), "Must return borrowed coin.");
 
@@ -522,7 +599,7 @@ mod dexian_lending {
                 cdp_data.collateral_amount = Decimal::ZERO;
             }
     
-                // self.minter.authorize(|| {
+                // self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
                 //     cdp.burn();
                 // });
                 // return (repay_token, collateral_bucket);
@@ -532,12 +609,12 @@ mod dexian_lending {
 
             cdp_data.total_repay += repay_amount;
             cdp_data.normalized_borrow -= normalized_amount;
-            cdp_data.last_update_epoch = Runtime::current_epoch();
+            cdp_data.last_update_epoch = Runtime::current_epoch().number();
             borrow_state.normalized_total_borrow -= normalized_amount;
 
             borrow_state.update_interest_rate();
             
-            self.minter.authorize(|| {
+            self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
                 self.update_after_repay(cdp.resource_address(), &cdp_id, cdp_data, is_full_repayment);
             });
 
@@ -545,7 +622,7 @@ mod dexian_lending {
         }
 
         fn update_after_repay(&self, cdp_res_addr: ResourceAddress, cdp_id: &NonFungibleLocalId, cdp_data: CollateralDebtPosition, is_full_repayment: bool) {
-            let mut res_mgr: ResourceManager = borrow_resource_manager!(cdp_res_addr);
+            let res_mgr: ResourceManager = ResourceManager::from_address(cdp_res_addr);
             if is_full_repayment {
                 res_mgr.update_non_fungible_data(cdp_id, "collateral_amount", cdp_data.collateral_amount);
             }
@@ -572,7 +649,7 @@ mod dexian_lending {
             assert!(borrow_index > Decimal::ZERO, "borrow index error! {}", borrow_index);
             let mut normalized_amount = LendingFactory::floor(debt_bucket.amount() / borrow_index);
 
-            let mut cdp_data: CollateralDebtPosition = borrow_resource_manager!(self.cdp_res_addr).get_non_fungible_data(&NonFungibleLocalId::integer(cdp_id));
+            let mut cdp_data: CollateralDebtPosition = ResourceManager::from_address(self.cdp_res_addr).get_non_fungible_data(&NonFungibleLocalId::integer(cdp_id));
             assert!(cdp_data.normalized_borrow <= normalized_amount,  "Underpayment of value of debt!");
             // repayAmount <= amount
             // because ⌈⌊a/b⌋*b⌉ <= a
@@ -596,7 +673,7 @@ mod dexian_lending {
 
             debt_state.update_interest_rate();
 
-            self.minter.authorize(|| {
+            self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
                 self.update_after_repay(self.cdp_res_addr, &NonFungibleLocalId::integer(cdp_id), cdp_data, true);
             });
 
@@ -604,7 +681,7 @@ mod dexian_lending {
         }
 
         pub fn get_cdp_digest(&self, cdp_id: u64) -> (ResourceAddress, ResourceAddress, Decimal, Decimal, Decimal, Decimal){
-            let cdp: CollateralDebtPosition = borrow_resource_manager!(self.cdp_res_addr).get_non_fungible_data(&NonFungibleLocalId::integer(cdp_id));
+            let cdp = ResourceManager::from_address(self.cdp_res_addr).get_non_fungible_data::<CollateralDebtPosition>(&NonFungibleLocalId::integer(cdp_id));
             let borrow_token = cdp.borrow_token;
             let collateral_token = cdp.collateral_token;
             let deposit_asset_addr = self.deposit_asset_map.get(&collateral_token).unwrap();

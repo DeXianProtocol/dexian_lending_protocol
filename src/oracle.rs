@@ -11,13 +11,13 @@ mod oracle{
 
     impl PriceOracle{
         
-        pub fn new(usdt: ResourceAddress, usdt_price: Decimal, usdc: ResourceAddress, usdc_price: Decimal) -> ComponentAddress {
+        pub fn new(usdt: ResourceAddress, usdt_price: Decimal, usdc: ResourceAddress, usdc_price: Decimal) -> Global<PriceOracle> {
             Self{
                 usdc,
                 usdt,
                 usdc_price,
                 usdt_price
-            }.instantiate().globalize()
+            }.instantiate().prepare_to_globalize(OwnerRole::None).globalize()
         }
 
         pub fn set_price_quote_in_xrd(&mut self, res_addr: ResourceAddress, price_in_xrd: Decimal){
