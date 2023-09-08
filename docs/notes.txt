@@ -232,3 +232,12 @@ resource_tdx_c_1q8sa4jt6et4hzmwxk8fhlf4m43l4plwjpkwhwxmjl86scckmxw   --->  resou
 
 USDC ---> dxUSDC
 resource_tdx_c_1qy45znzfmww6xwt8fw0xrcy6wmrazq95n7n8hr3akx4s7yfa9y   --->   resource_tdx_c_1qxqmf898wlpv70c5ftl6g975x3zgqglzpqa7698au98sfe7h8t
+
+
+===========
+rcnet-v3:
+
+package:
+txid_tdx_e_1xy8s784xsngfwnvzsey7v7wq9f9ra3jepqy2zqj63ga78kdzs4kqrjy3cz
+package_tdx_e_1pknw8rd8hxfgqu7w5gykju5sg9gng8trqtzlc74rr8nd42euffzqyv
+

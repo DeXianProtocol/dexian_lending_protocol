@@ -323,7 +323,7 @@ mod dexian_lending {
                 collateral_vaults: HashMap::new(),
                 vaults: HashMap::new(),
                 cdp_id_counter: 0u64,
-                minter: Vault::with_bucket(minter),
+                minter: Vault::with_bucket(minter.into()),
                 admin_badge: admin_badge.resource_address(),
                 cdp_res_addr,
                 price_oracle
@@ -338,15 +338,15 @@ mod dexian_lending {
             ).globalize();
             // let component = component.globalize_with_access_rules(rules);
             
-            (component, admin_badge)
+            (component, admin_badge.into())
         }
 
         fn ceil(dec: Decimal) -> Decimal{
-            dec.round(18, RoundingMode::ToPositiveInfinity)
+            dec.checked_round(18, RoundingMode::ToPositiveInfinity).unwrap()
         }
 
         fn floor(dec: Decimal) -> Decimal{
-            dec.round(18, RoundingMode::ToNegativeInfinity)
+            dec.checked_round(18, RoundingMode::ToNegativeInfinity).unwrap()
         }
 
 
@@ -359,7 +359,7 @@ mod dexian_lending {
             let res_mgr = ResourceManager::from_address(asset_address);
             // let symbol: String = ResourceManager::from_address(resource_address).get_metadata::<&str, String>("symbol").unwrap().into();
 
-            let origin_symbol: String = res_mgr.get_metadata::<&str, String>("symbol").unwrap().into();
+            let origin_symbol: String = res_mgr.get_metadata::<&str, String>("symbol").unwrap().unwrap();
             let dx_token = ResourceBuilder::new_fungible(OwnerRole::None)
                 .metadata(metadata!(init{
                     "symbol" => format!("dx{}", origin_symbol), locked;
