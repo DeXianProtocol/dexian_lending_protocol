@@ -135,11 +135,8 @@ impl AssetState {
     pub fn get_interest_rates(&self, change_amount: Decimal, is_stable: bool) -> (Decimal, Decimal, Decimal){
         let (current_supply_index, current_borrow_index) = self.get_current_index();
 
+        // This supply could be equal to zero.
         let supply = self.get_total_supply_with_index(current_supply_index);
-        if supply == Decimal::ZERO {
-            return (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO);
-        }
-
         let mut variable_borrow = self.get_total_borrow_with_index(current_borrow_index);
         let mut stable_borrow = self.get_total_stable_borrow();
         if is_stable {
@@ -201,13 +198,13 @@ impl AssetState {
 
     fn calc_interest_rate(&self, variable_borrow: Decimal, stable_borrow: Decimal, supply: Decimal) -> (Decimal, Decimal, Decimal){
         let total_debt = variable_borrow + stable_borrow;
-        let borrow_ratio = total_debt / supply;
+        let borrow_ratio = if supply == Decimal::ZERO { Decimal::ZERO} else {total_debt / supply};
         let variable_borrow_rate = self.interest_model.get_borrow_interest_rate(borrow_ratio);
         let stable_borrow_rate = self.interest_model.get_stable_interest_rate(borrow_ratio);
-        let overall_borrow_rate = (variable_borrow * variable_borrow_rate + stable_borrow * stable_borrow_rate)/total_debt;
+        let overall_borrow_rate = if total_debt == Decimal::ZERO { Decimal::ZERO } else {(variable_borrow * variable_borrow_rate + stable_borrow * stable_borrow_rate)/total_debt};
 
         let interest = total_debt * overall_borrow_rate * (Decimal::ONE - self.insurance_ratio);
-        let supply_rate = interest / supply;
+        let supply_rate = if supply == Decimal::ZERO { Decimal::ZERO} else {interest / supply};
         (variable_borrow_rate, stable_borrow_rate, supply_rate)
     }
 
@@ -323,7 +320,7 @@ mod dexian_lending {
                 collateral_vaults: HashMap::new(),
                 vaults: HashMap::new(),
                 cdp_id_counter: 0u64,
-                minter: Vault::with_bucket(minter),
+                minter: Vault::with_bucket(minter.into()),
                 admin_badge: admin_badge.resource_address(),
                 cdp_res_addr,
                 price_oracle
@@ -338,15 +335,15 @@ mod dexian_lending {
             ).globalize();
             // let component = component.globalize_with_access_rules(rules);
             
-            (component, admin_badge)
+            (component, admin_badge.into())
         }
 
         fn ceil(dec: Decimal) -> Decimal{
-            dec.round(18, RoundingMode::ToPositiveInfinity)
+            dec.checked_round(18, RoundingMode::ToPositiveInfinity).unwrap()
         }
 
         fn floor(dec: Decimal) -> Decimal{
-            dec.round(18, RoundingMode::ToNegativeInfinity)
+            dec.checked_round(18, RoundingMode::ToNegativeInfinity).unwrap()
         }
 
 
@@ -359,7 +356,7 @@ mod dexian_lending {
             let res_mgr = ResourceManager::from_address(asset_address);
             // let symbol: String = ResourceManager::from_address(resource_address).get_metadata::<&str, String>("symbol").unwrap().into();
 
-            let origin_symbol: String = res_mgr.get_metadata::<&str, String>("symbol").unwrap().into();
+            let origin_symbol: String = res_mgr.get_metadata::<&str, String>("symbol").unwrap().unwrap();
             let dx_token = ResourceBuilder::new_fungible(OwnerRole::None)
                 .metadata(metadata!(init{
                     "symbol" => format!("dx{}", origin_symbol), locked;

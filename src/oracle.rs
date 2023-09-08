@@ -72,7 +72,7 @@ mod oracle{
             //     }
             // }
 
-            if res_addr == RADIX_TOKEN {
+            if res_addr == XRD {
                 Decimal::ONE
             }
             else if res_addr == self.usdc {
