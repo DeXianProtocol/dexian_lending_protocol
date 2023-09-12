@@ -1,0 +1,13 @@
+CALL_FUNCTION
+    Address("${token_pkg}")
+    "Hello"
+    "instantiate_hello"
+    "USDT"
+    "USDT";
+CALL_FUNCTION
+    Address("${token_pkg}")
+    "Hello"
+    "instantiate_hello"
+    "USDC"
+    "USDC";
+

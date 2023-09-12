@@ -1,0 +1,22 @@
+CALL_METHOD
+    Address("${admin_account}")
+    "lock_fee"
+    Decimal("1000")
+;
+CALL_METHOD
+    Address("${admin_account}")
+    "create_proof_of_amount"
+    Address("${admin_badge}")
+    Decimal("1")
+;
+CALL_METHOD
+    Address("${lending_component}")
+    "new_pool"
+    Address("${usdt}")
+    Decimal("0")
+    Decimal("0")
+    Decimal("0")
+    Decimal("0.1")
+    Enum<1u8>()
+    Address("${def_interest_model}")
+;

@@ -1,0 +1,16 @@
+CALL_METHOD
+    Address("${admin_account}")
+    "lock_fee"
+    Decimal("1000")
+;
+CALL_FUNCTION
+    Address("${pkg}")
+    "LendingFactory"
+    "instantiate_lending_factory"
+    Address("${oracle}");
+
+CALL_METHOD
+    Address("${admin_account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");
+

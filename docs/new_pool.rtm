@@ -1,2 +1,0 @@
-CALL_METHOD Address("${admin}") "create_proof" Address("${admin_badge}");
-CALL_METHOD Address("${component}") "new_pool" Address("${xrd}") Decimal("0.6") Decimal("0.7") Decimal("0.07") Decimal("0.25") Address("${def_interest_model}");

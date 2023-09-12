@@ -1,0 +1,56 @@
+export admin_account=
+export pkg=package_tdx_e_1phtpkf5ry90cxdfaqevmjjuf9sjjp92fvphtvgzlny8s83p0exaqqs
+export token_pkg=package_tdx_e_1pkp6nxtwms0wynrz4fz0lratkdngxj9rpgxpa9zxk7l9cpyfl9aqm9
+export usdt_component=
+export usdc_component=
+export usdt=
+export usdc=
+export oracle=
+export def_interest_model=
+export lending_component=
+export admin_badge=
+
+
+export admin_account=account_sim1c97hwc3dv98dlyusfuugy2j2v5rsqgjrdswqqwfazkffy4z2c5nh3j
+export pkg=package_sim1pk3epy3q9x4gx0307m0wxfgl3k7mcc9mr93883zvet9ul7fn2azuzf
+# export token_pkg=package_tdx_e_1pkp6nxtwms0wynrz4fz0lratkdngxj9rpgxpa9zxk7l9cpyfl9aqm9
+# export usdt_component=
+# export usdc_component=
+export xrd=resource_sim1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxakj8n3
+export usdt=resource_sim1thtkvhxwuff6vk7weufhj9qsd8u7ekajz9zllmqd29mlm8ml76dve2
+export usdc=resource_sim1thmf90smj8c52m8r7nsrhvw9a93hxqsadjm09qtnq2paydv24sdc0x
+export oracle=component_sim1cpttnpe6myf86e2z59e45a0kyvw5gujeljh9xr9xpqlzms3kfr2du6
+export def_interest_model=component_sim1cqpw9n7lkrdfqd5pgdmrxjvgc7xsdznsj4k8n3zkqgyj3clc7n66mw
+export lending_component=component_sim1crk3gdcggjqr4nun4xh3vuqyrcaawraxr539cf0djkwvjc4c3n0r8x
+export admin_badge=resource_sim1tkwnyl3pfn955s45a2js64w8zjlptwz4y3w4wwwl944rk2l2qqua2w
+
+export account=$admin_account
+
+export dx_xrd=resource_sim1thj8flpjyldg7xsympnx6h50scc4tughsasyh8wx3zc8gs5m9eaj35
+export dx_usdt=resource_sim1t5evcrus703e80qmpajx2rmaz2dtpgs4uf8ad27rk3t8h5spwkgdrz
+export dx_usdc=resource_sim1t4ha0t0vkqr30xwnnaz3duz6qajcl7ewxezh0dyux370rh0t7xhwpk
+
+export p1=account_sim1c9nz5xvkmzjy75g4hcupyymzgv2q2a6q646cu4u9g0kkz9x9kpvmzs
+export p1_priv=e7d3b2940b03c9d4daea1ad10c28bbdf72fff911fe9a56b10512a688fdbb900a
+
+export p2=account_sim1cy3f8a6ase5ddte3vxvll6a2n4g3ynn9cky3nhg62n246xdah8k05c
+export p2_priv=fbbaed1e8710cd42b3c3ecf196f4191061c930d79eccbfa96512c0ecc8e6fc21
+
+export p3=account_sim1c8nx83wgksuwklnyxm8snt6ahpv7f0hvxjzalz8g96d2ma0cwafltu
+export p3_priv=b6a046a3959e214c368414aa53758b10c4ffbc37d98b4efd37f312ae6acef2b2
+
+resim transfer $usdt:10000 $p1
+resim transfer $usdt:10000 $p2
+resim transfer $usdt:10000 $p3
+resim transfer $usdc:10000 $p1
+resim transfer $usdc:10000 $p2
+resim transfer $usdc:10000 $p3
+
+export account=
+export supply_token=$xrd
+export amount=10000
+
+
+
+
+
