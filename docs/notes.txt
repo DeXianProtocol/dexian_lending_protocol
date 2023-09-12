@@ -389,10 +389,10 @@ CALL_METHOD
     Address("component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l")
     "new_pool"
     Address("resource_tdx_e_1t58yqtudq84wffzrqxvfkhx0w6tgd3ufeymkjcckxx0jytqa5hnr8a")
-     Decimal("0")
-    Decimal("0")
-    Decimal("0")
-    Decimal("0.1")
+    Decimal("0.6")
+    Decimal("0.7")
+    Decimal("0.07")
+    Decimal("0.25")
     Enum<1u8>()
     Address("component_tdx_e_1cqvp88e3khm5p76y3hy5qzy8d7ltw9z5aejyzp23hhpvlxjg632ua3")
 ;
@@ -415,10 +415,109 @@ TAKE_FROM_WORKTOP
   Bucket("xrd");
 
 CALL_METHOD
-    Address("component_tdx_e_1cz7cxuvpqdvy6c3v54cu8k5e0k868ncvr8nsth44n6heyqm0adu48c")
+    Address("component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l")
     "supply"
     Bucket("xrd");
 CALL_METHOD
     Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
     "deposit_batch"
     Expression("ENTIRE_WORKTOP");
+
+
+# 领usdt (p1)
+resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt
+CALL_METHOD
+    Address("component_tdx_e_1cprw4cpy2j5up2wungfepcel03yjkyyp9te2e3eaaf3307dvrsudd8")
+    "free_token"
+    255u8
+;
+ASSERT_WORKTOP_CONTAINS
+    Address("resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt")
+    Decimal("255")
+;
+CALL_METHOD
+    Address("account_tdx_e_129nsurxkr27qqypev5ggtpdfjvxumhn884x0qrfrxnmnen4tar2jk0")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;
+
+# p1 supply 100 usdt
+CALL_METHOD
+  Address("account_tdx_e_129nsurxkr27qqypev5ggtpdfjvxumhn884x0qrfrxnmnen4tar2jk0")
+  "withdraw"
+  Address("resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt")
+  Decimal("100");
+
+TAKE_FROM_WORKTOP
+  Address("resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt")
+  Decimal("100")
+  Bucket("usdt");
+
+CALL_METHOD
+    Address("component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l")
+    "supply"
+    Bucket("usdt");
+CALL_METHOD
+    Address("account_tdx_e_129nsurxkr27qqypev5ggtpdfjvxumhn884x0qrfrxnmnen4tar2jk0")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");
+
+
+# variable borrow 5 usdt
+
+CALL_METHOD
+    Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
+    "withdraw"
+    Address("resource_tdx_e_1t5ah00umzg5h0hrdy0yu84e0ffpqqt22er7lcr78mkec8vz90dudhr")
+    Decimal("1200")
+;
+TAKE_FROM_WORKTOP
+    Address("resource_tdx_e_1t5ah00umzg5h0hrdy0yu84e0ffpqqt22er7lcr78mkec8vz90dudhr")
+    Decimal("1200")
+    Bucket("dxXRD")
+;
+CALL_METHOD
+    Address("component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l")
+    "borrow_variable"
+    Bucket("dxXRD")
+    Address("resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt")
+    Decimal("5")
+;
+ASSERT_WORKTOP_CONTAINS
+    Address("resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt")
+    Decimal("5")
+;
+CALL_METHOD
+    Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;
+
+## stable borrow 5 usdt
+CALL_METHOD
+    Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
+    "withdraw"
+    Address("resource_tdx_e_1t5ah00umzg5h0hrdy0yu84e0ffpqqt22er7lcr78mkec8vz90dudhr")
+    Decimal("1200")
+;
+TAKE_FROM_WORKTOP
+    Address("resource_tdx_e_1t5ah00umzg5h0hrdy0yu84e0ffpqqt22er7lcr78mkec8vz90dudhr")
+    Decimal("1200")
+    Bucket("dxXRD")
+;
+CALL_METHOD
+    Address("component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l")
+    "borrow_stable"
+    Bucket("dxXRD")
+    Address("resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt")
+    Decimal("5")
+;
+ASSERT_WORKTOP_CONTAINS
+    Address("resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt")
+    Decimal("5")
+;
+CALL_METHOD
+    Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;
