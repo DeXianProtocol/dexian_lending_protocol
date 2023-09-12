@@ -1,5 +1,5 @@
 export admin_account=
-export pkg=package_tdx_e_1phtpkf5ry90cxdfaqevmjjuf9sjjp92fvphtvgzlny8s83p0exaqqs
+export pkg=package_tdx_e_1pk93kpv2fft965f7d7rzvf024s7wkevevndzj7m3ruc6wny8m0a2fk
 export token_pkg=package_tdx_e_1pkp6nxtwms0wynrz4fz0lratkdngxj9rpgxpa9zxk7l9cpyfl9aqm9
 export usdt_component=
 export usdc_component=
