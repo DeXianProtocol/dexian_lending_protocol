@@ -1,3 +1,8 @@
+CALL_METHOD
+    Address("${account}")
+    "lock_fee"
+    Decimal("1000")
+;
 CALL_FUNCTION
     Address("${pkg}")
     "PriceOracle"
@@ -5,4 +10,5 @@ CALL_FUNCTION
     Address("${usdt}")
     Decimal("17.85714285")
     Address("${usdc}")
-    Decimal("17.85714285");
+    Decimal("17.85714285")
+;

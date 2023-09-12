@@ -133,7 +133,7 @@ impl AssetState {
             variable_borrow += change_amount;
         }
         
-        let (variable_borrow_rate, stable_borrow_rate, supply_rate) = self.calc_interest_rate(stable_borrow, variable_borrow, supply);
+        let (variable_borrow_rate, stable_borrow_rate, supply_rate) = self.calc_interest_rate(variable_borrow, stable_borrow, supply);
         (variable_borrow_rate, stable_borrow_rate, supply_rate)
     }
 
@@ -184,14 +184,18 @@ impl AssetState {
     }
 
     fn calc_interest_rate(&self, variable_borrow: Decimal, stable_borrow: Decimal, supply: Decimal) -> (Decimal, Decimal, Decimal){
+        debug!("calc_interest_rate.0, var:{}, stable:{}, supply:{}", variable_borrow, stable_borrow, supply);
         let total_debt = variable_borrow + stable_borrow;
         let borrow_ratio = if supply == Decimal::ZERO { Decimal::ZERO} else {total_debt / supply};
+        debug!("calc_interest_rate.1, borrow_ratio:{}, ", borrow_ratio);
         let variable_borrow_rate = self.def_interest_model.get_borrow_interest_rate(borrow_ratio, self.interest_model.clone());
         let stable_borrow_rate = self.def_interest_model.get_stable_interest_rate(borrow_ratio, self.interest_model.clone());
+        debug!("calc_interest_rate.2, var_ratio:{}, stable_ratio:{} ", variable_borrow_rate, stable_borrow_rate);
         let overall_borrow_rate = if total_debt == Decimal::ZERO { Decimal::ZERO } else {(variable_borrow * variable_borrow_rate + stable_borrow * stable_borrow_rate)/total_debt};
 
         let interest = total_debt * overall_borrow_rate * (Decimal::ONE - self.insurance_ratio);
         let supply_rate = if supply == Decimal::ZERO { Decimal::ZERO} else {interest / supply};
+        debug!("calc_interest_rate.3, interest:{}, overall_borrow_rate:{}, supply_rate:{} ", interest, overall_borrow_rate, supply_rate);
         (variable_borrow_rate, stable_borrow_rate, supply_rate)
     }
 
@@ -543,13 +547,16 @@ mod dexian_lending {
         }
 
         fn _take_borrow_bucket(&mut self, borrow_token: ResourceAddress, amount: Decimal) -> (Bucket, Decimal){
-            let borrow_asset_state = self.states.get_mut(&borrow_token).unwrap();
-            borrow_asset_state.update_index();
+            let borrow_state = self.states.get_mut(&borrow_token).unwrap();
+            debug!("before update_index, asset_address{}, normalized:{}, indexes:{},{}", borrow_token.to_hex(), borrow_state.normalized_total_borrow, borrow_state.borrow_index, borrow_state.supply_index);
+            borrow_state.update_index();
+            debug!("after update_index, asset_address{}, normalized:{}, indexes:{},{}", borrow_token.to_hex(), borrow_state.normalized_total_borrow, borrow_state.borrow_index, borrow_state.supply_index);
 
-            let borrow_normalized_amount = LendingFactory::ceil(amount / borrow_asset_state.borrow_index);
-            borrow_asset_state.normalized_total_borrow += borrow_normalized_amount;
-            borrow_asset_state.update_interest_rate();
-            debug!("{}, supply:{}, borrow:{}, rate:{},{}", borrow_token.to_hex(), borrow_asset_state.get_total_normalized_supply(), borrow_asset_state.normalized_total_borrow, borrow_asset_state.borrow_interest_rate, borrow_asset_state.supply_interest_rate);
+            let borrow_normalized_amount = LendingFactory::ceil(amount / borrow_state.borrow_index);
+            borrow_state.normalized_total_borrow += borrow_normalized_amount;
+            debug!("before update_interest_rate {}, supply:{}, borrow:{}, rate:{},{}", borrow_token.to_hex(), borrow_state.get_total_normalized_supply(), borrow_state.normalized_total_borrow, borrow_state.borrow_interest_rate, borrow_state.supply_interest_rate);
+            borrow_state.update_interest_rate();
+            debug!("after update_interest_rate {}, supply:{}, borrow:{}, rate:{},{}", borrow_token.to_hex(), borrow_state.get_total_normalized_supply(), borrow_state.normalized_total_borrow, borrow_state.borrow_interest_rate, borrow_state.supply_interest_rate);
 
             let borrow_vault = self.vaults.get_mut(&borrow_token).unwrap();
             (borrow_vault.take(amount), borrow_normalized_amount)

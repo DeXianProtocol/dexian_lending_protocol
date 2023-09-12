@@ -12,10 +12,9 @@ export admin_badge=
 
 
 export admin_account=account_sim1c97hwc3dv98dlyusfuugy2j2v5rsqgjrdswqqwfazkffy4z2c5nh3j
-export pkg=package_sim1pk3epy3q9x4gx0307m0wxfgl3k7mcc9mr93883zvet9ul7fn2azuzf
-# export token_pkg=package_tdx_e_1pkp6nxtwms0wynrz4fz0lratkdngxj9rpgxpa9zxk7l9cpyfl9aqm9
-# export usdt_component=
-# export usdc_component=
+export admin_account_priv=8b857a714994cbc5268e20979da386ed15a7378299f48e8a98a50b27fc5be138
+export admin_account_badge=resource_sim1nfq8ezgchvcph978k2kn5v74rggeyh9nxqmley9a2pqjygfcua05sg:#1#
+export pkg=package_sim1p4965dg6yeexehhcf0rcfxsrw7ly3p2sje2p3wwfsdmx283rw7z4pc
 export xrd=resource_sim1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxakj8n3
 export usdt=resource_sim1thtkvhxwuff6vk7weufhj9qsd8u7ekajz9zllmqd29mlm8ml76dve2
 export usdc=resource_sim1thmf90smj8c52m8r7nsrhvw9a93hxqsadjm09qtnq2paydv24sdc0x
@@ -31,13 +30,16 @@ export dx_usdt=resource_sim1t5evcrus703e80qmpajx2rmaz2dtpgs4uf8ad27rk3t8h5spwkgd
 export dx_usdc=resource_sim1t4ha0t0vkqr30xwnnaz3duz6qajcl7ewxezh0dyux370rh0t7xhwpk
 
 export p1=account_sim1c9nz5xvkmzjy75g4hcupyymzgv2q2a6q646cu4u9g0kkz9x9kpvmzs
-export p1_priv=e7d3b2940b03c9d4daea1ad10c28bbdf72fff911fe9a56b10512a688fdbb900a
+export p1_priv=6a1b6dc030e00b2cc58d94ab3042e762d53be2e224feaff7fd9a2e34742d18b6
+export p1_badge=resource_sim1n20l2jhr3lg8mzg3gp3xsun94vtw3440w77xddvvp4cjte5g3pvcm2:#1#
 
 export p2=account_sim1cy3f8a6ase5ddte3vxvll6a2n4g3ynn9cky3nhg62n246xdah8k05c
-export p2_priv=fbbaed1e8710cd42b3c3ecf196f4191061c930d79eccbfa96512c0ecc8e6fc21
+export p2_priv=031b416ffc29a0684325ae3877c0030de9b856d5e007a2fc2ce0f49111be1064
+export p2_badge=resource_sim1ntl0xgwn32lxeedn3s5mgvr457cgjeek40xxywfc40uv2frfdfm2fn:#1#
 
 export p3=account_sim1c8nx83wgksuwklnyxm8snt6ahpv7f0hvxjzalz8g96d2ma0cwafltu
-export p3_priv=b6a046a3959e214c368414aa53758b10c4ffbc37d98b4efd37f312ae6acef2b2
+export p3_priv=e3934c7ca77169d172c69991be44de2bc0de002a537787a6c1e5db45fcd99964
+export p3_badge=resource_sim1ngph06a9t6ksvpfd7p3f3drl6fyy0ra99kez3q2mfsld5dcvmelxya:#1#
 
 resim transfer $usdt:10000 $p1
 resim transfer $usdt:10000 $p2
@@ -48,9 +50,23 @@ resim transfer $usdc:10000 $p3
 
 export account=
 export supply_token=$xrd
-export amount=10000
+export amount=4000
+
+resim set-default-account $p1 $p1_priv $p1_badge
+export account=$p1
+export supply_token=$usdt
+export amount=100
+
+resim set-default-account $p2 $p2_priv $p2_badge
+export account=$p2
+export supply_token=$usdc
+export amount=100
 
 
-
-
+resim set-default-account $admin_account $admin_account_priv $admin_account_badge
+export account=$admin_account
+export dx_token=$dx_xrd
+export amount=2000
+export borrow_token=$usdt
+export borrow_amount=10
 
