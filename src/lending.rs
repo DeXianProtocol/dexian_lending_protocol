@@ -1,22 +1,8 @@
 
 use scrypto::prelude::*;
 use crate::oracle::oracle::PriceOracle;
-use crate::def_interest_model::def_interest_model::*;
-// use crate::stable_interest_model::stable_interest_model::*;
-
-// extern_component! {
-//     PriceOracleComponentTarget {
-//         fn get_price_quote_in_xrd(&self, res_addr: ResourceAddress) -> Decimal;
-//         fn set_price_quote_in_xrd(&mut self, res_addr: ResourceAddress, price_in_xrd: Decimal);
-//     }
-// }
-
-// extern_component! {
-//     InterestModelComponentTarget {
-//         fn get_variable_interest_rate(&self, borrow_ratio: Decimal) -> Decimal;
-//         fn get_stable_interest_rate(&self, borrow_ratio: Decimal) -> Decimal;
-//     }
-// }
+use crate::def_interest_model::InterestModel;
+use crate::def_interest_model::def_interest_model::DefInterestModel;
 
 /**
 * About 15017 epochs in a year, assuming 35 minute each epoch.
@@ -55,7 +41,8 @@ pub struct CollateralDebtPosition{
 ///asset state
 #[derive(ScryptoSbor)]
 struct AssetState{
-    pub interest_model: Global<DefInterestModel>,
+    pub def_interest_model: Global<DefInterestModel>,
+    pub interest_model: InterestModel,
     // the liquidity index
     pub supply_index: Decimal,
     // the borrow index
@@ -199,8 +186,8 @@ impl AssetState {
     fn calc_interest_rate(&self, variable_borrow: Decimal, stable_borrow: Decimal, supply: Decimal) -> (Decimal, Decimal, Decimal){
         let total_debt = variable_borrow + stable_borrow;
         let borrow_ratio = if supply == Decimal::ZERO { Decimal::ZERO} else {total_debt / supply};
-        let variable_borrow_rate = self.interest_model.get_borrow_interest_rate(borrow_ratio);
-        let stable_borrow_rate = self.interest_model.get_stable_interest_rate(borrow_ratio);
+        let variable_borrow_rate = self.def_interest_model.get_borrow_interest_rate(borrow_ratio, self.interest_model.clone());
+        let stable_borrow_rate = self.def_interest_model.get_stable_interest_rate(borrow_ratio, self.interest_model.clone());
         let overall_borrow_rate = if total_debt == Decimal::ZERO { Decimal::ZERO } else {(variable_borrow * variable_borrow_rate + stable_borrow * stable_borrow_rate)/total_debt};
 
         let interest = total_debt * overall_borrow_rate * (Decimal::ONE - self.insurance_ratio);
@@ -351,8 +338,7 @@ mod dexian_lending {
             ltv: Decimal,
             liquidation_threshold: Decimal,
             liquidation_bonus: Decimal,
-            insurance_ratio: Decimal, 
-            interest_model: Global<DefInterestModel>) -> ResourceAddress  {
+            insurance_ratio: Decimal, interest_model: InterestModel, def_interest_model: Global<DefInterestModel>) -> ResourceAddress  {
             let res_mgr = ResourceManager::from_address(asset_address);
             // let symbol: String = ResourceManager::from_address(resource_address).get_metadata::<&str, String>("symbol").unwrap().into();
 
@@ -371,8 +357,7 @@ mod dexian_lending {
                     burner_updater => rule!(deny_all);
                 ))
                 .create_with_no_initial_supply().address();
-            
-            // let interest_model = InterestModelComponentTarget::at(interest_model_addr);
+
             let current_epoch = Runtime::current_epoch().number();
             let asset_state = AssetState{
                 supply_index: Decimal::ONE,
@@ -390,7 +375,8 @@ mod dexian_lending {
                 liquidation_threshold,
                 liquidation_bonus,
                 insurance_ratio,
-                interest_model
+                interest_model,
+                def_interest_model
             };
 
             self.states.insert(asset_address, asset_state);

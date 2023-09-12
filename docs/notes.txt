@@ -234,7 +234,7 @@ resource_tdx_c_1qy45znzfmww6xwt8fw0xrcy6wmrazq95n7n8hr3akx4s7yfa9y   --->   reso
 rcnet-v3:
 
 package:
-package_tdx_e_1pkadflvjl4v6uc4lhk47ccdnps6wm6evyagmyugt66ktwyh96aelvm
+package_tdx_e_1phtpkf5ry90cxdfaqevmjjuf9sjjp92fvphtvgzlny8s83p0exaqqs
 
 
 token:
@@ -288,10 +288,10 @@ CALL_METHOD
 oracle
 
 # oracle
-component_tdx_e_1cz9gsuz9ru6082u6wxleqh6ueatcang0msm5m2qnp4tqm7msyphg3d
+component_tdx_e_1cpsdg3quxw8dk3vcdynf03swklk7xrjha3wgwd46gxhzr3cfl7t7s7
 
 CALL_FUNCTION
-    Address("package_tdx_e_1pkadflvjl4v6uc4lhk47ccdnps6wm6evyagmyugt66ktwyh96aelvm")
+    Address("package_tdx_e_1phtpkf5ry90cxdfaqevmjjuf9sjjp92fvphtvgzlny8s83p0exaqqs")
     "PriceOracle"
     "new"
     Address("resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt")
@@ -300,63 +300,104 @@ CALL_FUNCTION
     Decimal("17.85714285");
 
 # interest_model
+# 
+component_tdx_e_1cqvp88e3khm5p76y3hy5qzy8d7ltw9z5aejyzp23hhpvlxjg632ua3
+
+
 
 CALL_FUNCTION
-    Address("package_tdx_e_1pkadflvjl4v6uc4lhk47ccdnps6wm6evyagmyugt66ktwyh96aelvm")
+    Address("package_tdx_e_1phtpkf5ry90cxdfaqevmjjuf9sjjp92fvphtvgzlny8s83p0exaqqs")
     "DefInterestModel"
     "new";
-component_tdx_e_1cqwdpwyve7vdywh98nw2zjyknk3a2y4qf5h5r6w5jyxr7rn72yxnj2
+component_tdx_e_1cqvp88e3khm5p76y3hy5qzy8d7ltw9z5aejyzp23hhpvlxjg632ua3
 
 
-# stable_interest_model
-CALL_FUNCTION
-    Address("package_tdx_e_1pkadflvjl4v6uc4lhk47ccdnps6wm6evyagmyugt66ktwyh96aelvm")
-    "StableInterestModel"
-    "new";
-component_tdx_e_1czjzke2kz8msfza97tcf52nzt8tkufu5vrkdpax0al0ql2e538sc4l
+
 
 
 ## instantiate_lending_factory, 参数中是orace
 CALL_FUNCTION
-    Address("package_tdx_e_1pkadflvjl4v6uc4lhk47ccdnps6wm6evyagmyugt66ktwyh96aelvm")
+    Address("package_tdx_e_1phtpkf5ry90cxdfaqevmjjuf9sjjp92fvphtvgzlny8s83p0exaqqs")
     "LendingFactory"
     "instantiate_lending_factory"
-    Address("component_tdx_e_1cz9gsuz9ru6082u6wxleqh6ueatcang0msm5m2qnp4tqm7msyphg3d");
+    Address("component_tdx_e_1cpsdg3quxw8dk3vcdynf03swklk7xrjha3wgwd46gxhzr3cfl7t7s7");
 
 CALL_METHOD
     Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
     "deposit_batch"
     Expression("ENTIRE_WORKTOP");
 
-component_tdx_e_1cz7cxuvpqdvy6c3v54cu8k5e0k868ncvr8nsth44n6heyqm0adu48c  #LendingFactory
+component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l  #LendingFactory
 
-resource_tdx_e_1t50v6qxmsmmkdj85c7w94xd3gyn337qlu7wezpwcqclhah7m8ful4t   # noname amdin
+resource_tdx_e_1t566axcx4vry87xw8uj9lgfvsfnn76zxpyg8p855hlc6ezcyjduqmh   # noname amdin
 
-resource_tdx_e_1th9hjgt2jze0n986vpaq78d565d750lfgxfu2etchdc9q3tentm5vr   # noname minter
+resource_tdx_e_1t42zenz2scljkem6kja5z4e4df9l90rzl6dakn6jcwpkzapg42rfj0   # noname minter
 
-resource_tdx_e_1ngjen5lqkjqmtpuxwm3f884tx0hsnacdwadzlkjv39t8est2e7vyet   # cdp
+resource_tdx_e_1nt77jkmj8rydh7w98vzakvtdkh9rshhq0dv9s40tqkc8glyujfaejw   # cdp
 
 ## xrd pool, default_interest
 ## new_pool
 CALL_METHOD
     Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
     "create_proof_of_amount"
-    Address("resource_tdx_e_1t50v6qxmsmmkdj85c7w94xd3gyn337qlu7wezpwcqclhah7m8ful4t")
+    Address("resource_tdx_e_1t566axcx4vry87xw8uj9lgfvsfnn76zxpyg8p855hlc6ezcyjduqmh")
     Decimal("1")
 ;
 CALL_METHOD
-    Address("component_tdx_e_1cz7cxuvpqdvy6c3v54cu8k5e0k868ncvr8nsth44n6heyqm0adu48c")
+    Address("component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l")
     "new_pool"
     Address("resource_tdx_e_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxx8rpsmc")
     Decimal("0.6")
     Decimal("0.7")
     Decimal("0.07")
     Decimal("0.25")
-    Address("component_tdx_e_1cqwdpwyve7vdywh98nw2zjyknk3a2y4qf5h5r6w5jyxr7rn72yxnj2")
+    Enum<0u8>()
+    Address("component_tdx_e_1cqvp88e3khm5p76y3hy5qzy8d7ltw9z5aejyzp23hhpvlxjg632ua3")
 ;
+
 resource_tdx_e_1t4h2h28pn2csww0gwlrpee46az073yt46v04ex3ycz02neyn86yrvf dx_token
 
+# usdt pool
+CALL_METHOD
+    Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
+    "create_proof_of_amount"
+    Address("resource_tdx_e_1t566axcx4vry87xw8uj9lgfvsfnn76zxpyg8p855hlc6ezcyjduqmh")
+    Decimal("1")
+;
+CALL_METHOD
+    Address("component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l")
+    "new_pool"
+    Address("resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt")
+     Decimal("0")
+    Decimal("0")
+    Decimal("0")
+    Decimal("0.1")
+    Enum<1u8>()
+    Address("component_tdx_e_1cqvp88e3khm5p76y3hy5qzy8d7ltw9z5aejyzp23hhpvlxjg632ua3")
+;
+resource_tdx_e_1t5ev6hqncvzxrp8zdzpy6ur0pev7wdj7l69xfp5l0cwayggtf7fyc7 #dxUSDT
 
+
+# usdc
+CALL_METHOD
+    Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
+    "create_proof_of_amount"
+    Address("resource_tdx_e_1t566axcx4vry87xw8uj9lgfvsfnn76zxpyg8p855hlc6ezcyjduqmh")
+    Decimal("1")
+;
+CALL_METHOD
+    Address("component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l")
+    "new_pool"
+    Address("resource_tdx_e_1t58yqtudq84wffzrqxvfkhx0w6tgd3ufeymkjcckxx0jytqa5hnr8a")
+     Decimal("0")
+    Decimal("0")
+    Decimal("0")
+    Decimal("0.1")
+    Enum<1u8>()
+    Address("component_tdx_e_1cqvp88e3khm5p76y3hy5qzy8d7ltw9z5aejyzp23hhpvlxjg632ua3")
+;
+
+resource_tdx_e_1t52rfpxm2y9hy32agw2xs9m7xgh625zk3p59al97vs7rrl4yld3alq  #dxUSDC
 
 ## supply
 
