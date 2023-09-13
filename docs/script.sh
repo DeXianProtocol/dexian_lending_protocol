@@ -4,6 +4,7 @@ result=$(resim new-account)
 export admin_account=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
 export admin_account_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
 export admin_account_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
+export account=$admin_account
 result=$(resim new-account)
 export p1=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
 export p1_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
@@ -88,6 +89,19 @@ resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 export borrow_token=$usdc
 export borrow_amount=10
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+
+
+resim set-default-account $p2 $p2_priv $p2_badge
+export account=$p2
+export dx_token=$dx_xrd
+export amount=2000
+export borrow_token=$usdt
+export borrow_amount=10
+resim run < ./docs/replace_holder.sh docs/transactions/borrow_stable.rtm
+export borrow_token=$usdc
+export borrow_amount=10
+resim run < ./docs/replace_holder.sh docs/transactions/borrow_stable.rtm
+
 
 
 resim call-method $lending_component 'get_interest_rate' $usdc
