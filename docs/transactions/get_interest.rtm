@@ -1,0 +1,11 @@
+CALL_METHOD
+    Address("${account}")
+    "lock_fee"
+    Decimal("10")
+;
+CALL_METHOD
+    Address("${def_interest_model}")
+    "get_borrow_interest_rate"
+    Decimal("${borrow_ratio}")
+    Enum<${enum}u8>()
+;

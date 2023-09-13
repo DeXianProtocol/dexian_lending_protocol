@@ -22,12 +22,11 @@ mod def_interest_model{
             match model{
                 InterestModel::Default => if borrow_ratio > Decimal::ONE {
                     // Decimal::ONE / Decimal::from("5") + Decimal::ONE * Decimal::ONE / Decimal::ONE / Decimal::from("2")
-                    Decimal::ONE / Decimal::from(5) + Decimal::ONE * Decimal::ONE / Decimal::ONE / Decimal::from(2)
+                    dec!("0.2") + dec!("0.5")
                 }
                 else{
                     // 0.2 * r + 0.5 * r**2
-                    // borrow_ratio / Decimal::from("5") + borrow_ratio * borrow_ratio / Decimal::ONE / Decimal::from("2")
-                    borrow_ratio /  Decimal::from(5) + borrow_ratio * borrow_ratio / Decimal::ONE / Decimal::from(2)
+                    borrow_ratio * dec!("0.2") + borrow_ratio * borrow_ratio * dec!("0.5")
                 },
                 InterestModel::Stable => {
                     let x2 = if borrow_ratio > Decimal::ONE {
@@ -36,21 +35,18 @@ mod def_interest_model{
                         Decimal::ONE
                     }
                     else{
-                        borrow_ratio * borrow_ratio / Decimal::ONE
+                        borrow_ratio * borrow_ratio
                     };
-                    let x4 = x2 * x2 / Decimal::ONE;
-                    let x8 = x4 * x4 / Decimal::ONE;
-            
-                    let hundred: Decimal = Decimal::from(100);
-                    // Decimal::from("55") * x4 / HUNDRED + Decimal::from("45") * x8 / hundred
-                    Decimal::from(55) * x4 / hundred + Decimal::from(45) * x8 / hundred
+                    let x4 = x2 * x2;
+                    let x8 = x4 * x4;
+                    dec!("0.55") * x4  + dec!("0.45")* x8
                 }
 
             }
             
         }
 
-        pub fn get_stable_interest_rate(&self, _borrow_ratio: Decimal, _model: InterestModel) -> Decimal{
+        pub fn get_stable_interest_rate(&self, _borrow_ratio: Decimal, _stable_ratio: Decimal, _model: InterestModel) -> Decimal{
             dec!("0.05")
         }
     }

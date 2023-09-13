@@ -119,22 +119,25 @@ impl AssetState {
 
     }
 
-    pub fn get_interest_rates(&self, change_amount: Decimal, is_stable: bool) -> (Decimal, Decimal, Decimal){
+    pub fn get_interest_rates(&self, change_amount: Decimal) -> (Decimal, Decimal){
         let (current_supply_index, current_borrow_index) = self.get_current_index();
 
         // This supply could be equal to zero.
         let supply = self.get_total_supply_with_index(current_supply_index);
         let mut variable_borrow = self.get_total_borrow_with_index(current_borrow_index);
+        let stable_borrow = self.get_total_stable_borrow();
+        variable_borrow += change_amount;
+
+        self.calc_interest_rate(variable_borrow, stable_borrow, supply)
+    }
+
+    pub fn get_stable_interest_rate(&self, change_amount: Decimal) -> Decimal{
+        let (current_supply_index, current_borrow_index) = self.get_current_index();
+        let supply = self.get_total_supply_with_index(current_supply_index);
+        let variable_borrow = self.get_total_borrow_with_index(current_borrow_index);
         let mut stable_borrow = self.get_total_stable_borrow();
-        if is_stable {
-            stable_borrow += change_amount;
-        }
-        else{
-            variable_borrow += change_amount;
-        }
-        
-        let (variable_borrow_rate, stable_borrow_rate, supply_rate) = self.calc_interest_rate(variable_borrow, stable_borrow, supply);
-        (variable_borrow_rate, stable_borrow_rate, supply_rate)
+        stable_borrow += change_amount;
+        self.calc_stable_interest_rate(variable_borrow, stable_borrow, supply)
     }
 
     pub fn get_current_supply_borrow(&self) -> (Decimal, Decimal){
@@ -169,7 +172,7 @@ impl AssetState {
 
     /// 稳定币的利率只需在发生变化（借还）时变更和保存，须同时更新index. 调用此方法之前已经更新AssetState相关字段。
     fn update_interest_rate(&mut self){
-        let (borrow_interest_rate, _, supply_interest_rate) = self.get_interest_rates(Decimal::ZERO, false);
+        let (borrow_interest_rate, supply_interest_rate) = self.get_interest_rates(Decimal::ZERO);
         self.borrow_interest_rate = borrow_interest_rate;
         self.supply_interest_rate = supply_interest_rate;
     }
@@ -183,20 +186,30 @@ impl AssetState {
         self.normalized_total_borrow
     }
 
-    fn calc_interest_rate(&self, variable_borrow: Decimal, stable_borrow: Decimal, supply: Decimal) -> (Decimal, Decimal, Decimal){
+    fn calc_stable_interest_rate(&self, variable_borrow: Decimal, stable_borrow: Decimal, supply: Decimal) -> Decimal{
+        debug!("calc_stable_interest_rate.0, var:{}, stable:{}, supply:{}", variable_borrow, stable_borrow, supply);
+        let total_debt = variable_borrow + stable_borrow;
+        let borrow_ratio = if supply == Decimal::ZERO { Decimal::ZERO} else {total_debt / supply};
+        let stable_ratio = stable_borrow / total_debt;
+        debug!("calc_stable_interest_rate.1, borrow_ratio:{}, stable_ratio:{} ", borrow_ratio, stable_ratio);
+        let stable_rate = self.def_interest_model.get_stable_interest_rate(borrow_ratio, stable_ratio, self.interest_model.clone());
+        debug!("calc_stable_interest_rate.2, stable_rate:{}", stable_rate);
+        stable_rate
+    }
+
+    fn calc_interest_rate(&self, variable_borrow: Decimal, stable_borrow: Decimal, supply: Decimal) -> (Decimal, Decimal){
         debug!("calc_interest_rate.0, var:{}, stable:{}, supply:{}", variable_borrow, stable_borrow, supply);
         let total_debt = variable_borrow + stable_borrow;
         let borrow_ratio = if supply == Decimal::ZERO { Decimal::ZERO} else {total_debt / supply};
         debug!("calc_interest_rate.1, borrow_ratio:{}, ", borrow_ratio);
         let variable_borrow_rate = self.def_interest_model.get_borrow_interest_rate(borrow_ratio, self.interest_model.clone());
-        let stable_borrow_rate = self.def_interest_model.get_stable_interest_rate(borrow_ratio, self.interest_model.clone());
-        debug!("calc_interest_rate.2, var_ratio:{}, stable_ratio:{} ", variable_borrow_rate, stable_borrow_rate);
-        let overall_borrow_rate = if total_debt == Decimal::ZERO { Decimal::ZERO } else {(variable_borrow * variable_borrow_rate + stable_borrow * stable_borrow_rate)/total_debt};
+        debug!("calc_interest_rate.2, var_ratio:{}, stable_ratio:{} ", variable_borrow_rate, self.stable_avg_rate);
+        let overall_borrow_rate = if total_debt == Decimal::ZERO { Decimal::ZERO } else {(variable_borrow * variable_borrow_rate + stable_borrow * self.stable_avg_rate)/total_debt};
 
         let interest = total_debt * overall_borrow_rate * (Decimal::ONE - self.insurance_ratio);
         let supply_rate = if supply == Decimal::ZERO { Decimal::ZERO} else {interest / supply};
         debug!("calc_interest_rate.3, interest:{}, overall_borrow_rate:{}, supply_rate:{} ", interest, overall_borrow_rate, supply_rate);
-        (variable_borrow_rate, stable_borrow_rate, supply_rate)
+        (variable_borrow_rate, supply_rate)
     }
 
     fn get_total_supply_with_index(&self, current_supply_index: Decimal) -> Decimal{
@@ -404,9 +417,9 @@ mod dexian_lending {
             self.states.get(&asset_addr).unwrap().get_current_index()
         }
 
-        pub fn get_interest_rate(&self, asset_addr: ResourceAddress) -> (Decimal, Decimal, Decimal){
+        pub fn get_interest_rate(&self, asset_addr: ResourceAddress) -> (Decimal, Decimal){
             assert!(self.states.contains_key(&asset_addr), "unknown asset!");
-            self.states.get(&asset_addr).unwrap().get_interest_rates(Decimal::ZERO, false)
+            self.states.get(&asset_addr).unwrap().get_interest_rates(Decimal::ZERO)
         }
 
         pub fn get_current_supply_borrow(&self, asset_addr: ResourceAddress) -> (Decimal, Decimal){
@@ -495,16 +508,51 @@ mod dexian_lending {
 
         fn _take_stable_borrow(&mut self, borrow_token: ResourceAddress, amount: Decimal) -> (Bucket, Decimal){
             let borrow_asset_state = self.states.get_mut(&borrow_token).unwrap();
+            debug!(
+                "before update: {}, supply:{},{}, borrow:{},{}, rate:{},{}, stable:{},{},{}", borrow_token.to_hex(), 
+                borrow_asset_state.get_total_normalized_supply(), 
+                borrow_asset_state.supply_index,
+                borrow_asset_state.normalized_total_borrow, 
+                borrow_asset_state.borrow_index,
+                borrow_asset_state.borrow_interest_rate, 
+                borrow_asset_state.supply_interest_rate,
+                borrow_asset_state.stable_borrow_amount,
+                borrow_asset_state.stable_avg_rate,
+                borrow_asset_state.stable_borrow_last_update
+            );
             borrow_asset_state.update_index();
+            debug!(
+                "after update: {}, supply:{},{}, borrow:{},{}, rate:{},{}, stable:{},{},{}", borrow_token.to_hex(), 
+                borrow_asset_state.get_total_normalized_supply(), 
+                borrow_asset_state.supply_index,
+                borrow_asset_state.normalized_total_borrow, 
+                borrow_asset_state.borrow_index,
+                borrow_asset_state.borrow_interest_rate, 
+                borrow_asset_state.supply_interest_rate,
+                borrow_asset_state.stable_borrow_amount,
+                borrow_asset_state.stable_avg_rate,
+                borrow_asset_state.stable_borrow_last_update
+            );
             
-            let (_, stable_rate, _) = borrow_asset_state.get_interest_rates(amount, true);
+            let stable_rate = borrow_asset_state.get_stable_interest_rate(amount);
             let weight_debt = borrow_asset_state.stable_borrow_amount * borrow_asset_state.stable_avg_rate + amount * stable_rate;
             borrow_asset_state.stable_borrow_amount += amount;
             borrow_asset_state.stable_avg_rate = weight_debt / (borrow_asset_state.stable_borrow_amount);
             borrow_asset_state.stable_borrow_last_update = Runtime::current_epoch().number();
             
             borrow_asset_state.update_interest_rate();
-            debug!("{}, supply:{}, borrow:{}, rate:{},{}", borrow_token.to_hex(), borrow_asset_state.get_total_normalized_supply(), borrow_asset_state.normalized_total_borrow, borrow_asset_state.borrow_interest_rate, borrow_asset_state.supply_interest_rate);
+            debug!(
+                "_take_stable_borrow: {}, supply:{},{}, borrow:{},{}, rate:{},{}, stable:{},{},{}", borrow_token.to_hex(), 
+                borrow_asset_state.get_total_normalized_supply(), 
+                borrow_asset_state.supply_index,
+                borrow_asset_state.normalized_total_borrow, 
+                borrow_asset_state.borrow_index,
+                borrow_asset_state.borrow_interest_rate, 
+                borrow_asset_state.supply_interest_rate,
+                borrow_asset_state.stable_borrow_amount,
+                borrow_asset_state.stable_avg_rate,
+                borrow_asset_state.stable_borrow_last_update
+            );
 
             let borrow_vault = self.vaults.get_mut(&borrow_token).unwrap();
             (borrow_vault.take(amount), stable_rate)
