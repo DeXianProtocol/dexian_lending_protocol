@@ -1,4 +1,9 @@
 CALL_METHOD
+    Address("${account}")
+    "lock_fee"
+    Decimal("1000")
+;
+CALL_METHOD
     Address("${usdt_component}")
     "free_token"
     255u8

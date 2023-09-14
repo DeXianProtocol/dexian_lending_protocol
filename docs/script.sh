@@ -102,6 +102,8 @@ export borrow_token=$usdc
 export borrow_amount=10
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_stable.rtm
 
+resim set-current-epoch 15019
+
 
 
 resim call-method $lending_component 'get_interest_rate' $usdc

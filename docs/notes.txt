@@ -1,240 +1,7 @@
-1. deploy tx: package
-6d50aa71e71eed36722f7da9af06e50d1b018f33e1e2045765882d5694a1d425
-package_tdx_c_1qpdhcyr7gym203gjdh00ghf5yesvw7kc5xqxjyujqsvq6q3d7n
-
-2.usdt:
-hello: component_tdx_c_1q0sa4jt6et4hzmwxk8fhlf4m43l4plwjpkwhwxmjl86sjey4r4
-usdt: resource_tdx_c_1q8sa4jt6et4hzmwxk8fhlf4m43l4plwjpkwhwxmjl86scckmxw
-
-3. usdc:
-CALL_FUNCTION
-    Address("package_tdx_c_1qrhx62hq0qlp4g4gpvf2xaa23g4rwf3yu72hulx46pnqha6pjt")
-    "Hello"
-    "instantiate_hello"
-    "USDC"
-    "USDC"
-    Decimal("1000000");
-hello: component_tdx_c_1qv45znzfmww6xwt8fw0xrcy6wmrazq95n7n8hr3akx4s59mnql
-usdc: resource_tdx_c_1qy45znzfmww6xwt8fw0xrcy6wmrazq95n7n8hr3akx4s7yfa9y
-
-
-# oracle
-CALL_FUNCTION
-    Address("package_tdx_c_1qpdhcyr7gym203gjdh00ghf5yesvw7kc5xqxjyujqsvq6q3d7n")
-    "PriceOracle"
-    "new"
-    Address("resource_tdx_c_1q8sa4jt6et4hzmwxk8fhlf4m43l4plwjpkwhwxmjl86scckmxw")
-    Decimal("8.88333")
-    Address("resource_tdx_c_1qy45znzfmww6xwt8fw0xrcy6wmrazq95n7n8hr3akx4s7yfa9y")
-    Decimal("8.88333");
-
-component_tdx_c_1qd0r9f5yuzyuzmgzpzjhhhaeprheeeumrhrftmu4ex8qk0kev6
-
-# def_interest_model
-CALL_FUNCTION
-    Address("package_tdx_c_1qpdhcyr7gym203gjdh00ghf5yesvw7kc5xqxjyujqsvq6q3d7n")
-    "DefInterestModel"
-    "new";
-component_tdx_c_1q0yuz4waxfvv0g6h70lg3kw3lvr2yaaxfrgdcsk96jss97zc5y
-
-# stable_interest_model
-CALL_FUNCTION
-    Address("package_tdx_c_1qpdhcyr7gym203gjdh00ghf5yesvw7kc5xqxjyujqsvq6q3d7n")
-    "StableInterestModel"
-    "new";
-component_tdx_c_1qwz0afkr3gyp3p07lad9pjutaf598cp277djmql6e4rs8gmx2f
-
-# instantiate
-CALL_FUNCTION
-    Address("package_tdx_c_1qpdhcyr7gym203gjdh00ghf5yesvw7kc5xqxjyujqsvq6q3d7n")
-    "LendingFactory"
-    "instantiate_lending_factory"
-    Address("component_tdx_c_1qd0r9f5yuzyuzmgzpzjhhhaeprheeeumrhrftmu4ex8qk0kev6");
-CALL_METHOD
-    Address("account_tdx_c_1pxte28zh2qsgpjzl8xv0ehm209wms6z29jgudd2mphuqrx3xkc")
-    "deposit_batch"
-    Expression("ENTIRE_WORKTOP");
-
-component_tdx_c_1q0gxlg7pvnfrw6qlv86sfrxksykzxasyx6lhvq6rrcfs4uh2gt   # pool
-resource_tdx_c_1q8gxlg7pvnfrw6qlv86sfrxksykzxasyx6lhvq6rrcfsla9yds    # noname amdin
-resource_tdx_c_1qy0wyha6ngftk3angr2ugj34ys3zhauwua8dsqslg7zsjmjnns    # noname minter
-resource_tdx_c_1qtgxlg7pvnfrw6qlv86sfrxksykzxasyx6lhvq6rrcfsqnj0l0    #cdp NFT(Token define)
-
-
-# CALL_METHOD ComponentAddress("${component}") "new_pool" ResourceAddress("${xrd}") Decimal("0.6") Decimal("0.7") Decimal("0.07") Decimal("0.25") ComponentAddress("${def_interest_model}");
-
-
-## new_pool
-CALL_METHOD
-    Address("account_tdx_c_1pxte28zh2qsgpjzl8xv0ehm209wms6z29jgudd2mphuqrx3xkc")
-    "lock_fee"
-    Decimal("10");
-CALL_METHOD
-    Address("account_tdx_c_1pxte28zh2qsgpjzl8xv0ehm209wms6z29jgudd2mphuqrx3xkc")
-    "create_proof"
-    Address("resource_tdx_c_1q8gxlg7pvnfrw6qlv86sfrxksykzxasyx6lhvq6rrcfsla9yds");
-CREATE_PROOF_FROM_AUTH_ZONE
-    Address("resource_tdx_c_1q8gxlg7pvnfrw6qlv86sfrxksykzxasyx6lhvq6rrcfsla9yds")
-    Proof("proof1");
-CALL_METHOD
-    Address("component_tdx_c_1q0gxlg7pvnfrw6qlv86sfrxksykzxasyx6lhvq6rrcfs4uh2gt")
-    "new_pool"
-    Address("resource_tdx_c_1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq40v2wv")
-    Decimal("0.6")
-    Decimal("0.7")
-    Decimal("0.07")
-    Decimal("0.25")
-    Address("component_tdx_c_1q0yuz4waxfvv0g6h70lg3kw3lvr2yaaxfrgdcsk96jss97zc5y");
-
-component_tdx_c_1q0gxlg7pvnfrw6qlv86sfrxksykzxasyx6lhvq6rrcfs4uh2gt   #AssetState
-resource_tdx_c_1q8nq8vrpx70tkah4yvl8k3tsh27hhmu6c742dlg92s9swnmma8    #dx_token define
-
-
-
-
-################# 2023.5.16 ##############
-package: 
-tx_id: f489acd9d68097975e3f4ad63ca14a1bb666cdb21783925899353cd82eb565d1
-pkg: package_tdx_c_1qrzwn3fef9mxllqnsdt3u40tveak2y3y0kehf23lqjms9x3plk
-
-
-# oracle
-CALL_FUNCTION
-    Address("package_tdx_c_1qrzwn3fef9mxllqnsdt3u40tveak2y3y0kehf23lqjms9x3plk")
-    "PriceOracle"
-    "new"
-    Address("resource_tdx_c_1q8sa4jt6et4hzmwxk8fhlf4m43l4plwjpkwhwxmjl86scckmxw")
-    Decimal("8.88333")
-    Address("resource_tdx_c_1qy45znzfmww6xwt8fw0xrcy6wmrazq95n7n8hr3akx4s7yfa9y")
-    Decimal("8.88333");
-
-component_tdx_c_1qvere3ukmnxhqs963q85g6008hfetflznc4tdwxpal3s7yfeuv
-
-# DefInterestModel
-CALL_FUNCTION
-    Address("package_tdx_c_1qrzwn3fef9mxllqnsdt3u40tveak2y3y0kehf23lqjms9x3plk")
-    "DefInterestModel"
-    "new";
-component_tdx_c_1qv4349scwnmd2v9sp8ugx5hz9jahxk3f8rt20698xj5ssp6nmm
-
-# StableInterestModel
-CALL_FUNCTION
-    Address("package_tdx_c_1qrzwn3fef9mxllqnsdt3u40tveak2y3y0kehf23lqjms9x3plk")
-    "StableInterestModel"
-    "new";
-component_tdx_c_1q0yqpjjajea5cagu0t8dk8qtyss2hk7r0dtd8vauzajqv033vv
-
-# claim usdt
-CALL_METHOD
-    Address("component_tdx_c_1q0sa4jt6et4hzmwxk8fhlf4m43l4plwjpkwhwxmjl86sjey4r4")
-    "free_token"
-    Decimal("1000");
-CALL_METHOD
-    Address("account_tdx_c_1pxs94hu9dec94xu2t335qy4el295g6dhvswlz2pn6ppsw3qnh3")
-    "deposit_batch"
-    Expression("ENTIRE_WORKTOP");
-# claim usdc
-CALL_METHOD
-    Address("component_tdx_c_1qv45znzfmww6xwt8fw0xrcy6wmrazq95n7n8hr3akx4s59mnql")
-    "free_token"
-    Decimal("1000");
-CALL_METHOD
-    Address("account_tdx_c_1pxs94hu9dec94xu2t335qy4el295g6dhvswlz2pn6ppsw3qnh3")
-    "deposit_batch"
-    Expression("ENTIRE_WORKTOP");
-
-# instantiate_lending_factory
-CALL_FUNCTION
-    Address("package_tdx_c_1qrzwn3fef9mxllqnsdt3u40tveak2y3y0kehf23lqjms9x3plk")
-    "LendingFactory"
-    "instantiate_lending_factory"
-    Address("component_tdx_c_1qvere3ukmnxhqs963q85g6008hfetflznc4tdwxpal3s7yfeuv");
-CALL_METHOD
-    Address("account_tdx_c_1pxte28zh2qsgpjzl8xv0ehm209wms6z29jgudd2mphuqrx3xkc")
-    "deposit_batch"
-    Expression("ENTIRE_WORKTOP");
-
-component_tdx_c_1qvped56cauc3sruqmxxudjaud6qmfwvss3ajsuy0h9sqp3knwf   # pool
-resource_tdx_c_1qyped56cauc3sruqmxxudjaud6qmfwvss3ajsuy0h9sqtsyatj    # amin_bage
-resource_tdx_c_1q8hdnsx0xkyp3h80yh9haqmw3aaxfuku8w6mealrftws24duc2    # minter
-resource_tdx_c_1qgped56cauc3sruqmxxudjaud6qmfwvss3ajsuy0h9sq57nked    # cdp NFT(Token define)
-
-# new_pool: xrd
-CALL_METHOD
-    Address("account_tdx_c_1pxte28zh2qsgpjzl8xv0ehm209wms6z29jgudd2mphuqrx3xkc")
-    "create_proof"
-    Address("resource_tdx_c_1qyped56cauc3sruqmxxudjaud6qmfwvss3ajsuy0h9sqtsyatj");
-CREATE_PROOF_FROM_AUTH_ZONE
-    Address("resource_tdx_c_1qyped56cauc3sruqmxxudjaud6qmfwvss3ajsuy0h9sqtsyatj")
-    Proof("proof1");
-CALL_METHOD
-    Address("component_tdx_c_1qvped56cauc3sruqmxxudjaud6qmfwvss3ajsuy0h9sqp3knwf")
-    "new_pool"
-    Address("resource_tdx_c_1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq40v2wv")
-    Decimal("0.6")
-    Decimal("0.7")
-    Decimal("0.07")
-    Decimal("0.25")
-    Address("component_tdx_c_1q0yqpjjajea5cagu0t8dk8qtyss2hk7r0dtd8vauzajqv033vv");   #用错了利率模型，应该是default, 这个是stable
-
-resource_tdx_c_1qxf6njlg7xmwr73tksy99vx5yzfcdxwkn9m9ulx4ql9qsdhyc6  #dxXRD
-
-# new_pool: usdt
-CALL_METHOD
-    Address("account_tdx_c_1pxte28zh2qsgpjzl8xv0ehm209wms6z29jgudd2mphuqrx3xkc")
-    "create_proof"
-    Address("resource_tdx_c_1qyped56cauc3sruqmxxudjaud6qmfwvss3ajsuy0h9sqtsyatj");
-CREATE_PROOF_FROM_AUTH_ZONE
-    Address("resource_tdx_c_1qyped56cauc3sruqmxxudjaud6qmfwvss3ajsuy0h9sqtsyatj")
-    Proof("proof1");
-CALL_METHOD
-    Address("component_tdx_c_1qvped56cauc3sruqmxxudjaud6qmfwvss3ajsuy0h9sqp3knwf")
-    "new_pool"
-    Address("resource_tdx_c_1q8sa4jt6et4hzmwxk8fhlf4m43l4plwjpkwhwxmjl86scckmxw")
-    Decimal("0")
-    Decimal("0")
-    Decimal("0")
-    Decimal("0.1")
-    Address("component_tdx_c_1q0yqpjjajea5cagu0t8dk8qtyss2hk7r0dtd8vauzajqv033vv"); 
-
-resource_tdx_c_1qxpd9jx7vsxl6nv8eeyez62pr6ew6njeqnkszvdgpj0s6smxsf  #dxUSDT
-
-# new_pool: usdc
-CALL_METHOD
-    Address("account_tdx_c_1pxte28zh2qsgpjzl8xv0ehm209wms6z29jgudd2mphuqrx3xkc")
-    "create_proof"
-    Address("resource_tdx_c_1qyped56cauc3sruqmxxudjaud6qmfwvss3ajsuy0h9sqtsyatj");
-CREATE_PROOF_FROM_AUTH_ZONE
-    Address("resource_tdx_c_1qyped56cauc3sruqmxxudjaud6qmfwvss3ajsuy0h9sqtsyatj")
-    Proof("proof1");
-CALL_METHOD
-    Address("component_tdx_c_1qvped56cauc3sruqmxxudjaud6qmfwvss3ajsuy0h9sqp3knwf")
-    "new_pool"
-    Address("resource_tdx_c_1qy45znzfmww6xwt8fw0xrcy6wmrazq95n7n8hr3akx4s7yfa9y")
-    Decimal("0.85")
-    Decimal("0.87")
-    Decimal("0.02")
-    Decimal("0.1")
-    Address("component_tdx_c_1q0yqpjjajea5cagu0t8dk8qtyss2hk7r0dtd8vauzajqv033vv"); 
-
-resource_tdx_c_1qxqmf898wlpv70c5ftl6g975x3zgqglzpqa7698au98sfe7h8t #dxUSDC
-
-
-XRD-->dxXRD
-resource_tdx_c_1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq40v2wv   ---> resource_tdx_c_1qxf6njlg7xmwr73tksy99vx5yzfcdxwkn9m9ulx4ql9qsdhyc6
-
-USDT --> dxUSDT
-resource_tdx_c_1q8sa4jt6et4hzmwxk8fhlf4m43l4plwjpkwhwxmjl86scckmxw   --->  resource_tdx_c_1qxpd9jx7vsxl6nv8eeyez62pr6ew6njeqnkszvdgpj0s6smxsf
-
-USDC ---> dxUSDC
-resource_tdx_c_1qy45znzfmww6xwt8fw0xrcy6wmrazq95n7n8hr3akx4s7yfa9y   --->   resource_tdx_c_1qxqmf898wlpv70c5ftl6g975x3zgqglzpqa7698au98sfe7h8t
-
-
-===========
 rcnet-v3:
 
 package:
-package_tdx_e_1phtpkf5ry90cxdfaqevmjjuf9sjjp92fvphtvgzlny8s83p0exaqqs
+package_tdx_e_1p44glj7cxjey9cnm6euh3ccck6gmwmgz62q5nu9vjrgukvhq3vjxmf
 
 
 token:
@@ -283,145 +50,89 @@ CALL_METHOD
     Expression("ENTIRE_WORKTOP")
 ;
 
+-----
+# faucet
+## usdt
+export usdt_component=component_tdx_e_1cprw4cpy2j5up2wungfepcel03yjkyyp9te2e3eaaf3307dvrsudd8
+export account=$p2
+./docs/replace_holder.sh ./docs/transactions/faucet_usdt.rtm
+
+## usdc
+export p3=account_tdx_e_128r89jzu5k9q40u88qgl4l9ftns3g5vjwnxfjrjna5htlfepf09ch8
+export usdc_component=component_tdx_e_1czg4tc7ycxpqhtn7qj2hf85mgme9syahmapxqur98m6ag7pu7rv74v
+export account=$p3
+./docs/replace_holder.sh ./docs/transactions/faucet_usdc.rtm
+
+
 ----
-# package_tdx_e_1pkadflvjl4v6uc4lhk47ccdnps6wm6evyagmyugt66ktwyh96aelvm
-oracle
+export pkg=package_tdx_e_1p44glj7cxjey9cnm6euh3ccck6gmwmgz62q5nu9vjrgukvhq3vjxmf
+export admin_account=account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze
+export account=$admin_account
+export usdt=resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt
+export usdc=resource_tdx_e_1t58yqtudq84wffzrqxvfkhx0w6tgd3ufeymkjcckxx0jytqa5hnr8a
 
-# oracle
-component_tdx_e_1cpsdg3quxw8dk3vcdynf03swklk7xrjha3wgwd46gxhzr3cfl7t7s7
+./docs/replace_holder.sh ./docs/transactions/new_oracle.rtm
+export oracle=component_tdx_e_1cpnfj9dtvx0r5qraffv080v6u7fd724nx35eyv6csew2pqfqgmq5hm
 
-CALL_FUNCTION
-    Address("package_tdx_e_1phtpkf5ry90cxdfaqevmjjuf9sjjp92fvphtvgzlny8s83p0exaqqs")
-    "PriceOracle"
-    "new"
-    Address("resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt")
-    Decimal("17.85714285")
-    Address("resource_tdx_e_1t58yqtudq84wffzrqxvfkhx0w6tgd3ufeymkjcckxx0jytqa5hnr8a")
-    Decimal("17.85714285");
+./docs/replace_holder.sh ./docs/transactions/new_interest.rtm
+export def_interest_model=component_tdx_e_1czr4aapt4z08zm783het3n9hclt7hd7gnvfelnp2565jywnuerqk76
 
-# interest_model
-# 
-component_tdx_e_1cqvp88e3khm5p76y3hy5qzy8d7ltw9z5aejyzp23hhpvlxjg632ua3
+./docs/replace_holder.sh ./docs/transactions/new_lending_factory.rtm
+export lending_component=component_tdx_e_1cpzhwuye509hjy5gkza0x8qtyulhr8y6kwk8ym00jxqsfmsh0xfs35
+export admin_badge=resource_tdx_e_1tktp0mca6ppuaqzm7wrcaymskkkp3xugm4h9npkgrugxd4knfp5gfl
+export cdp=resource_tdx_e_1ngq6s8n6gvttszprpm88y6tfzeksugdpjx3qv0swx2xdjlq42uhj4q
 
+# xrd pool
+export xrd=resource_tdx_e_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxx8rpsmc
+./docs/replace_holder.sh ./docs/transactions/new_xrd_pool.rtm
+export dx_xrd=resource_tdx_e_1tk78994q93rfl9wal03klpejunqpmf4fh3a4jcaf2ru5qaefeshkru
 
+#usdt pool
+./docs/replace_holder.sh ./docs/transactions/new_usdt_pool.rtm
+export dx_usdt=resource_tdx_e_1thqpxdj5f8cen07dh3hejjk5x0xjxgm4gnv373nf3ygff3st079nta
 
-CALL_FUNCTION
-    Address("package_tdx_e_1phtpkf5ry90cxdfaqevmjjuf9sjjp92fvphtvgzlny8s83p0exaqqs")
-    "DefInterestModel"
-    "new";
-component_tdx_e_1cqvp88e3khm5p76y3hy5qzy8d7ltw9z5aejyzp23hhpvlxjg632ua3
+#usdc pool
+./docs/replace_holder.sh ./docs/transactions/new_usdc_pool.rtm
+export dx_usdc=resource_tdx_e_1thjvxy47k84mzs40tz45f24g98zn4zpdn55kmdmzsre6crht852t7g
 
+# supply
+## p1 4000xrd
+export p1=account_tdx_e_129nsurxkr27qqypev5ggtpdfjvxumhn884x0qrfrxnmnen4tar2jk0
+export account=$p1
+export supply_token=$xrd
+export amount=4000
+./docs/replace_holder.sh docs/transactions/supply.rtm
 
+## p2 4000xrd
+export p2=account_tdx_e_12xcmsz0m840r7jxv6q2yjcwpgd6ljydq2k32yf764ltz6t7vgn57km
+export account=$p2
+export supply_token=$xrd
+export amount=4000
+./docs/replace_holder.sh docs/transactions/supply.rtm
 
+## p2 200usdt
+export account=$p2
+export supply_token=$usdt
+export amount=200
+./docs/replace_holder.sh docs/transactions/supply.rtm
 
+## p3 200usdc
+export account=$p3
+export supply_token=$usdc
+export amount=200
+./docs/replace_holder.sh docs/transactions/supply.rtm
 
-## instantiate_lending_factory, 参数中是orace
-CALL_FUNCTION
-    Address("package_tdx_e_1phtpkf5ry90cxdfaqevmjjuf9sjjp92fvphtvgzlny8s83p0exaqqs")
-    "LendingFactory"
-    "instantiate_lending_factory"
-    Address("component_tdx_e_1cpsdg3quxw8dk3vcdynf03swklk7xrjha3wgwd46gxhzr3cfl7t7s7");
+# borrow
+export account=$p1
+export dx_token=$dx_xrd
+export amount=2000
+export borrow_token=$usdt
+export borrow_amount=10
+./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+export borrow_token=$usdc
+export borrow_amount=10
+./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
-CALL_METHOD
-    Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
-    "deposit_batch"
-    Expression("ENTIRE_WORKTOP");
-
-component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l  #LendingFactory
-
-resource_tdx_e_1t566axcx4vry87xw8uj9lgfvsfnn76zxpyg8p855hlc6ezcyjduqmh   # noname amdin
-
-resource_tdx_e_1t42zenz2scljkem6kja5z4e4df9l90rzl6dakn6jcwpkzapg42rfj0   # noname minter
-
-resource_tdx_e_1nt77jkmj8rydh7w98vzakvtdkh9rshhq0dv9s40tqkc8glyujfaejw   # cdp
-
-## xrd pool, default_interest
-## new_pool
-CALL_METHOD
-    Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
-    "create_proof_of_amount"
-    Address("resource_tdx_e_1t566axcx4vry87xw8uj9lgfvsfnn76zxpyg8p855hlc6ezcyjduqmh")
-    Decimal("1")
-;
-CALL_METHOD
-    Address("component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l")
-    "new_pool"
-    Address("resource_tdx_e_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxx8rpsmc")
-    Decimal("0.6")
-    Decimal("0.7")
-    Decimal("0.07")
-    Decimal("0.25")
-    Enum<0u8>()
-    Address("component_tdx_e_1cqvp88e3khm5p76y3hy5qzy8d7ltw9z5aejyzp23hhpvlxjg632ua3")
-;
-
-resource_tdx_e_1t4h2h28pn2csww0gwlrpee46az073yt46v04ex3ycz02neyn86yrvf dx_token
-
-# usdt pool
-CALL_METHOD
-    Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
-    "create_proof_of_amount"
-    Address("resource_tdx_e_1t566axcx4vry87xw8uj9lgfvsfnn76zxpyg8p855hlc6ezcyjduqmh")
-    Decimal("1")
-;
-CALL_METHOD
-    Address("component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l")
-    "new_pool"
-    Address("resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt")
-     Decimal("0")
-    Decimal("0")
-    Decimal("0")
-    Decimal("0.1")
-    Enum<1u8>()
-    Address("component_tdx_e_1cqvp88e3khm5p76y3hy5qzy8d7ltw9z5aejyzp23hhpvlxjg632ua3")
-;
-resource_tdx_e_1t5ev6hqncvzxrp8zdzpy6ur0pev7wdj7l69xfp5l0cwayggtf7fyc7 #dxUSDT
-
-
-# usdc
-CALL_METHOD
-    Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
-    "create_proof_of_amount"
-    Address("resource_tdx_e_1t566axcx4vry87xw8uj9lgfvsfnn76zxpyg8p855hlc6ezcyjduqmh")
-    Decimal("1")
-;
-CALL_METHOD
-    Address("component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l")
-    "new_pool"
-    Address("resource_tdx_e_1t58yqtudq84wffzrqxvfkhx0w6tgd3ufeymkjcckxx0jytqa5hnr8a")
-    Decimal("0.6")
-    Decimal("0.7")
-    Decimal("0.07")
-    Decimal("0.25")
-    Enum<1u8>()
-    Address("component_tdx_e_1cqvp88e3khm5p76y3hy5qzy8d7ltw9z5aejyzp23hhpvlxjg632ua3")
-;
-
-resource_tdx_e_1t52rfpxm2y9hy32agw2xs9m7xgh625zk3p59al97vs7rrl4yld3alq  #dxUSDC
-
-## supply
-
-
-# withdraw 10 XRD from account, which goes to the worktop
-CALL_METHOD
-  Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
-  "withdraw"
-  Address("resource_tdx_e_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxx8rpsmc")
-  Decimal("2550");
-
-TAKE_FROM_WORKTOP
-  Address("resource_tdx_e_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxx8rpsmc")
-  Decimal("2550")
-  Bucket("xrd");
-
-CALL_METHOD
-    Address("component_tdx_e_1crwzqtps6ve84073g8g7zhwgkf82haq47tkxcpjxp44s9sne45mg8l")
-    "supply"
-    Bucket("xrd");
-CALL_METHOD
-    Address("account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze")
-    "deposit_batch"
-    Expression("ENTIRE_WORKTOP");
 
 
 # 领usdt (p1)
