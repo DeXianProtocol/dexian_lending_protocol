@@ -50,6 +50,13 @@ CALL_METHOD
     Expression("ENTIRE_WORKTOP")
 ;
 
+-------
+# init
+export admin_account=account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze
+export p1=account_tdx_e_129nsurxkr27qqypev5ggtpdfjvxumhn884x0qrfrxnmnen4tar2jk0
+export p2=account_tdx_e_12xcmsz0m840r7jxv6q2yjcwpgd6ljydq2k32yf764ltz6t7vgn57km
+export p3=account_tdx_e_128r89jzu5k9q40u88qgl4l9ftns3g5vjwnxfjrjna5htlfepf09ch8
+
 -----
 # faucet
 ## usdt
@@ -66,7 +73,6 @@ export account=$p3
 
 ----
 export pkg=package_tdx_e_1p44glj7cxjey9cnm6euh3ccck6gmwmgz62q5nu9vjrgukvhq3vjxmf
-export admin_account=account_tdx_e_12y9gs6fmwnudjg9c3t5ggf7tva8j0plgjv8pxsdnw6a580s8ffxlze
 export account=$admin_account
 export usdt=resource_tdx_e_1t49qww0cx6z3j60x9230ft744n3yn442v2fj05t8v9khvc3swkyklt
 export usdc=resource_tdx_e_1t58yqtudq84wffzrqxvfkhx0w6tgd3ufeymkjcckxx0jytqa5hnr8a
