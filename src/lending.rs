@@ -520,6 +520,7 @@ mod dexian_lending {
                 borrow_asset_state.stable_avg_rate,
                 borrow_asset_state.stable_borrow_last_update
             );
+            // 修改stable_avg_rate前，一定要先更新index. 这样已才能将应付利息（变化前的利率）和变化后利率交割清楚。
             borrow_asset_state.update_index();
             debug!(
                 "after update: {}, supply:{},{}, borrow:{},{}, rate:{},{}, stable:{},{},{}", borrow_token.to_hex(), 
