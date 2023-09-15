@@ -18,8 +18,10 @@ pub struct CollateralDebtPosition{
 
     #[mutable]
     pub is_stable: bool,
+    //The total amount borrowed from the user's perspective.
     #[mutable]
     pub total_borrow: Decimal,
+    //The total amount repaid from the user's perspective.
     #[mutable]
     pub total_repay: Decimal,
     
@@ -165,7 +167,7 @@ impl AssetState {
         let delta_epoch = Runtime::current_epoch().number() - self.last_update_epoch;
         if delta_epoch > 0u64 {
             let delta_epoch_year = Decimal::from(delta_epoch) / Decimal::from(EPOCH_OF_YEAR);
-            return self.stable_borrow_amount * (Decimal::ONE + delta_epoch_year) * self.stable_avg_rate;
+            return self.stable_borrow_amount * (Decimal::ONE + delta_epoch_year * self.stable_avg_rate);
         }
         self.stable_borrow_amount
     }
@@ -247,6 +249,7 @@ mod dexian_lending {
             supply => PUBLIC;
             withdraw => PUBLIC;
             borrow_variable => PUBLIC;
+            extend_borrow => PUBLIC;
             borrow_stable => PUBLIC;
             repay => PUBLIC;
             liquidation => PUBLIC;
@@ -309,14 +312,6 @@ mod dexian_lending {
                 ))
                 .create_with_no_initial_supply().address();
             
-            // let price_oracle_component = PriceOraclePackageTarget::at(airdrop_package_address, "PriceOracle").new();
-            // let price_oracle: PriceOracleComponentTarget = price_oracle_address.into();
-
-            // let rules = AccessRulesConfig::new()
-            //     .method("new_pool", rule!(require(admin_badge.resource_address())),  AccessRule::DenyAll)
-            //     .method("withdraw_fee", rule!(require(admin_badge.resource_address())), AccessRule::DenyAll)
-            //     .default(AccessRule::AllowAll, AccessRule::DenyAll);
-
             // Instantiate a LendingFactory component
             let component = Self {
                 states: HashMap::new(),
@@ -498,15 +493,51 @@ mod dexian_lending {
         }
 
         pub fn borrow_stable(&mut self, dx_bucket: Bucket, borrow_token: ResourceAddress, amount: Decimal) -> (Bucket, Bucket){
+            assert!(self.states.contains_key(&borrow_token), "unsupported the borrow token!");
             let dx_address = dx_bucket.resource_address();
-            let deposit_amount = self._update_collateral_and_validate(&dx_bucket, borrow_token, amount);
+            assert!(self.deposit_asset_map.contains_key(&dx_address), "unsupported the collateral token!");
+            let dx_amount = dx_bucket.amount();
+
+            let deposit_amount = self._update_collateral_and_validate(dx_address, dx_amount, borrow_token, amount, Decimal::ZERO);
             self._put_dx_bucket(dx_bucket);
             let (borrow_bucket, cdp_stable_rate) = self._take_stable_borrow(borrow_token, amount);
             let cdp = self._new_cdp(dx_address, borrow_token, amount, deposit_amount, Decimal::ZERO, cdp_stable_rate, true);
             (borrow_bucket, cdp)
         }
 
+        // pub fn extend_borrow_stable(&mut self, cdp:Bucket, amount: Decimal) -> (Bucket, Bucket){
+        //     assert!(
+        //         cdp.resource_address() == self.cdp_res_addr && cdp.amount() == Decimal::ONE,
+        //         "Only one CDP can be processed at a time!"
+        //     );
+            
+        //     let cdp_id = cdp.as_non_fungible().non_fungible_local_id();
+        //     let cdp_data = cdp.resource_manager().get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
+
+        //     assert!(cdp_data.is_stable, "Only the stable rate CDP can be processed!");
+            
+        //     let delta_epoch = Runtime::current_epoch().number() - cdp_data.last_update_epoch;
+        //     let delta_epoch_year = Decimal::from(delta_epoch) / Decimal::from(EPOCH_OF_YEAR);
+        //     let increment_accumlate = LendingFactory::ceil(cdp_data.borrow_amount * delta_epoch_year * cdp_data.stable_rate);
+        //     let exist_borrow = cdp_data.borrow_amount + increment_accumlate;
+
+        //     let dx_token = cdp_data.collateral_token;
+        //     let borrow_token = cdp_data.borrow_token;
+        //     let dx_amount = cdp_data.collateral_amount;     
+        //     let _deposit_amount = self._update_collateral_and_validate(dx_token, dx_amount, borrow_token, amount, exist_borrow);
+
+            
+        //     let (borrow_bucket, new_rate) = self._take_stable_borrow(borrow_token, amount);
+        //     let delta_normalized_borrow = amount + increment_accumlate;
+        //     let cdp_avg_rate = (cdp_data.borrow_amount * cdp_data.stable_rate + delta_normalized_borrow * new_rate) / (cdp_data.borrow_amount + delta_normalized_borrow);
+        //     self._update_cdp_data(amount, increment_accumlate, Decimal::ZERO, delta_normalized_borrow, cdp_avg_rate, cdp_id, cdp_data);
+        //     (borrow_bucket, cdp)
+
+        // }
+
         fn _take_stable_borrow(&mut self, borrow_token: ResourceAddress, amount: Decimal) -> (Bucket, Decimal){
+            let borrow_vault = self.vaults.get_mut(&borrow_token).unwrap();
+            assert!(borrow_vault.amount() > amount, "The borrow vault balance insufficient");
             let borrow_asset_state = self.states.get_mut(&borrow_token).unwrap();
             debug!(
                 "before update: {}, supply:{},{}, borrow:{},{}, rate:{},{}, stable:{},{},{}", borrow_token.to_hex(), 
@@ -555,30 +586,29 @@ mod dexian_lending {
                 borrow_asset_state.stable_borrow_last_update
             );
 
-            let borrow_vault = self.vaults.get_mut(&borrow_token).unwrap();
             (borrow_vault.take(amount), stable_rate)
         }
 
-        fn _update_collateral_and_validate(&mut self, dx_bucket: &Bucket, borrow_token: ResourceAddress, amount: Decimal) -> Decimal {
+        fn _update_collateral_and_validate(&mut self, dx_address: ResourceAddress, dx_amount:Decimal, borrow_token: ResourceAddress,
+            amount: Decimal, exist_borrow:Decimal) -> Decimal {
             assert!(self.states.contains_key(&borrow_token), "unsupported the borrow token!");
-            let dx_address = dx_bucket.resource_address();
-            assert!(self.deposit_asset_map.contains_key(&dx_address), "unsupported the collateral token!");
-            let collateral_addr = self.deposit_asset_map.get(&dx_address).unwrap();
-
-            debug!("borrow dx_bucket {}, collateral_addr {}, ", dx_address.to_hex(), collateral_addr.to_hex());
-            let collateral_state = self.states.get_mut(&collateral_addr).unwrap();
+            
+            let underlying_address = self.deposit_asset_map.get(&dx_address).unwrap();
+            debug!("borrow dx_bucket {}, underlying_address {}, ", dx_address.to_hex(), underlying_address.to_hex());
+            let collateral_state = self.states.get_mut(&underlying_address).unwrap();
             assert!(collateral_state.ltv > Decimal::ZERO, "Then token is not colleteral asset!");
             
+            debug!("before collateral_state update_index, supply normalized:{} total_borrow_normailized:{} indexes:{},{}", collateral_state.get_total_normalized_supply(), collateral_state.normalized_total_borrow, collateral_state.supply_index, collateral_state.borrow_index);
             collateral_state.update_index();
+            debug!("after collateral_state update_index, supply normalized:{} total_borrow_normailized:{} indexes:{},{}", collateral_state.get_total_normalized_supply(), collateral_state.normalized_total_borrow, collateral_state.supply_index, collateral_state.borrow_index);
             
             let supply_index = collateral_state.supply_index;
             let ltv = collateral_state.ltv;
-            let supply_amount = dx_bucket.amount();
 
-            let deposit_amount = LendingFactory::floor(supply_amount * supply_index);
-            let max_loan_amount = self.get_max_loan_amount(collateral_addr.clone(), deposit_amount, ltv, borrow_token);
-            debug!("max loan amount {}, supply_amount:{} deposit_amount:{}, amount:{}", max_loan_amount, supply_amount, deposit_amount, amount);
-            assert!(amount < max_loan_amount, "the vault insufficient balance.");
+            let deposit_amount = LendingFactory::floor(dx_amount * supply_index);
+            let max_loan_amount = self.get_max_loan_amount(underlying_address.clone(), deposit_amount, ltv, borrow_token);
+            debug!("max loan amount {}, dx_amount:{} deposit_amount:{}, amount:{}", max_loan_amount, dx_amount, deposit_amount, amount);
+            assert!(amount + exist_borrow < max_loan_amount, "exceeds the maximum borrowing amount.");
             
             deposit_amount
         }
@@ -596,6 +626,9 @@ mod dexian_lending {
         }
 
         fn _take_borrow_bucket(&mut self, borrow_token: ResourceAddress, amount: Decimal) -> (Bucket, Decimal){
+            let borrow_vault = self.vaults.get_mut(&borrow_token).unwrap();
+            assert!(borrow_vault.amount() > amount, "The borrow vault balance insufficient");
+            
             let borrow_state = self.states.get_mut(&borrow_token).unwrap();
             debug!("before update_index, asset_address{}, normalized:{}, indexes:{},{}", borrow_token.to_hex(), borrow_state.normalized_total_borrow, borrow_state.borrow_index, borrow_state.supply_index);
             borrow_state.update_index();
@@ -606,32 +639,34 @@ mod dexian_lending {
             debug!("before update_interest_rate {}, supply:{}, borrow:{}, rate:{},{}", borrow_token.to_hex(), borrow_state.get_total_normalized_supply(), borrow_state.normalized_total_borrow, borrow_state.borrow_interest_rate, borrow_state.supply_interest_rate);
             borrow_state.update_interest_rate();
             debug!("after update_interest_rate {}, supply:{}, borrow:{}, rate:{},{}", borrow_token.to_hex(), borrow_state.get_total_normalized_supply(), borrow_state.normalized_total_borrow, borrow_state.borrow_interest_rate, borrow_state.supply_interest_rate);
-
-            let borrow_vault = self.vaults.get_mut(&borrow_token).unwrap();
             (borrow_vault.take(amount), borrow_normalized_amount)
         }
 
-        fn _renew_cdp(&mut self, dx_address: ResourceAddress, borrow_token: ResourceAddress, amount: Decimal, collateral_amount: Decimal, borrow_normalized_amount: Decimal, cdp: Bucket) {
-
-            let cdp_id = cdp.as_non_fungible().non_fungible_local_id();
-            let mut data = cdp.resource_manager().get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
-            assert!(data.borrow_token == borrow_token && data.collateral_token == dx_address , "collateral token and borrow must matches the exists CDP!");
-            data.total_borrow += amount;
-            data.borrow_amount += amount;
-            data.normalized_borrow += borrow_normalized_amount;
-            if collateral_amount > Decimal::ZERO{
-                data.collateral_amount += collateral_amount;
-            }
-            data.last_update_epoch =  Runtime::current_epoch().number();
+        fn _update_cdp_data(&mut self, delta_borrow: Decimal, increment_accumlate: Decimal, delta_collateral: Decimal,
+            delta_normalized_borrow: Decimal, cdp_avg_rate:Decimal, cdp_id: NonFungibleLocalId, data: CollateralDebtPosition) {
+            // if delta_borrow != Decimal::ZERO || increment_accumlate != 0 {
+            //     data.total_borrow += delta_borrow;
+            //     data.borrow_amount += delta_borrow + increment_accumlate;
+            //     data.normalized_borrow += delta_normalized_borrow;
+            // }
+            // if delta_collateral != Decimal::ZERO{
+            //     data.collateral_amount += delta_collateral;
+            // }
+            // data.last_update_epoch =  Runtime::current_epoch().number();
             self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
                 let cdp_res_mgr: ResourceManager = ResourceManager::from_address(self.cdp_res_addr);
-                cdp_res_mgr.update_non_fungible_data(&cdp_id, "total_borrow", data.total_borrow);
-                cdp_res_mgr.update_non_fungible_data(&cdp_id, "borrow_amount", data.borrow_amount);
-                cdp_res_mgr.update_non_fungible_data(&cdp_id, "normalized_borrow", data.normalized_borrow);
-                if collateral_amount > Decimal::ZERO {
-                    cdp_res_mgr.update_non_fungible_data(&cdp_id, "collateral_amount", data.collateral_amount);
+                if delta_borrow != Decimal::ZERO || increment_accumlate != Decimal::ZERO {
+                    cdp_res_mgr.update_non_fungible_data(&cdp_id, "total_borrow", data.total_borrow + delta_borrow);
+                    cdp_res_mgr.update_non_fungible_data(&cdp_id, "borrow_amount", data.borrow_amount + delta_borrow + increment_accumlate);
+                    cdp_res_mgr.update_non_fungible_data(&cdp_id, "normalized_borrow", data.normalized_borrow + delta_normalized_borrow);
                 }
-                cdp_res_mgr.update_non_fungible_data(&cdp_id, "last_update_epoch", data.total_repay);
+                if delta_collateral != Decimal::ZERO {
+                    cdp_res_mgr.update_non_fungible_data(&cdp_id, "collateral_amount", data.collateral_amount + delta_collateral);
+                }
+                if cdp_avg_rate != Decimal::ZERO {
+                    cdp_res_mgr.update_non_fungible_data(&cdp_id, "stable_rate", cdp_avg_rate);
+                }
+                cdp_res_mgr.update_non_fungible_data(&cdp_id, "last_update_epoch", Runtime::current_epoch().number());
             });
         }
 
@@ -658,11 +693,49 @@ mod dexian_lending {
 
         pub fn borrow_variable(&mut self, dx_bucket: Bucket, borrow_token: ResourceAddress, amount: Decimal) -> (Bucket, Bucket){
             let dx_address = dx_bucket.resource_address();
-            let deposit_amount = self._update_collateral_and_validate(&dx_bucket, borrow_token, amount);
+            let dx_amount = dx_bucket.amount();
+            let deposit_amount = self._update_collateral_and_validate(dx_address, dx_amount, borrow_token, amount, Decimal::ZERO);
             self._put_dx_bucket(dx_bucket);
             let (borrow_bucket, normalized_borrow_amount) = self._take_borrow_bucket(borrow_token, amount);
             let cdp = self._new_cdp(dx_address, borrow_token, amount, deposit_amount, normalized_borrow_amount, Decimal::ZERO, false);
             (borrow_bucket, cdp)
+        }
+
+        pub fn extend_borrow(&mut self, cdp: Bucket, amount: Decimal) -> (Bucket, Bucket){
+            assert!(
+                cdp.resource_address() == self.cdp_res_addr && cdp.amount() == Decimal::ONE,
+                "Only one CDP can be processed at a time!"
+            );
+            
+            let cdp_id = cdp.as_non_fungible().non_fungible_local_id();
+            let cdp_data = cdp.resource_manager().get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
+
+            let borrow_token = cdp_data.borrow_token;
+            let dx_token = cdp_data.collateral_token;
+            let dx_amount = cdp_data.collateral_amount;
+            if cdp_data.is_stable{
+                let delta_epoch = Runtime::current_epoch().number() - cdp_data.last_update_epoch;
+                let delta_epoch_year = Decimal::from(delta_epoch) / Decimal::from(EPOCH_OF_YEAR);
+                let increment_accumlate = LendingFactory::ceil(cdp_data.borrow_amount * delta_epoch_year * cdp_data.stable_rate);
+                let exist_borrow = cdp_data.borrow_amount + increment_accumlate;
+
+                let _deposit_amount = self._update_collateral_and_validate(dx_token, dx_amount, borrow_token, amount, exist_borrow);
+
+                let (borrow_bucket, new_rate) = self._take_stable_borrow(borrow_token, amount);
+                let delta_normalized_borrow = amount + increment_accumlate;
+                let cdp_avg_rate = (cdp_data.borrow_amount * cdp_data.stable_rate + delta_normalized_borrow * new_rate) / (cdp_data.borrow_amount + delta_normalized_borrow);
+                self._update_cdp_data(amount, increment_accumlate, Decimal::ZERO, delta_normalized_borrow, cdp_avg_rate, cdp_id, cdp_data);
+                (borrow_bucket, cdp)
+            }
+            else{
+                let (_, current_borrow_index) = self.get_current_index(borrow_token);
+                let exist_borrow = cdp_data.normalized_borrow * current_borrow_index;
+                let _deposit_amount = self._update_collateral_and_validate(dx_token, dx_amount, borrow_token, amount, exist_borrow);
+                let (borrow_bucket, normalized_borrow_amount) = self._take_borrow_bucket(borrow_token, amount);
+                self._update_cdp_data(amount, Decimal::ZERO, Decimal::ZERO, normalized_borrow_amount, Decimal::ZERO, cdp_id, cdp_data);
+                (borrow_bucket, cdp)
+            }
+
         }
 
         pub fn repay(&mut self, mut repay_token: Bucket, cdp: Bucket) -> (Bucket, Bucket, Option<Bucket>) {
