@@ -251,6 +251,7 @@ mod dexian_lending {
             borrow_stable => PUBLIC;
             extend_borrow => PUBLIC;
             addition_collateral => PUBLIC;
+            withdraw_collateral => PUBLIC;
             repay => PUBLIC;
             liquidation => PUBLIC;
 
@@ -452,7 +453,7 @@ mod dexian_lending {
         pub fn withdraw(&mut self, dx_bucket: Bucket) -> Bucket {
             let dx_address = dx_bucket.resource_address();
             assert!(self.deposit_asset_map.contains_key(&dx_address), "unsupported the token!");
-            let amount = dx_bucket.amount();
+            let dx_amount = dx_bucket.amount();
             let asset_address = self.deposit_asset_map.get(&dx_address).unwrap();
             let asset_state = self.states.get_mut(&asset_address).unwrap();
 
@@ -460,16 +461,50 @@ mod dexian_lending {
             asset_state.update_index();
             debug!("after update_index, asset_address{} indexes:{},{}", asset_address.to_hex(), asset_state.borrow_index, asset_state.supply_index);
 
-            let normalized_amount = LendingFactory::floor(amount * asset_state.supply_index);
+            let amount = LendingFactory::floor(dx_amount * asset_state.supply_index);
             self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
-                let _supply_res_mgr: ResourceManager = ResourceManager::from_address(asset_state.token);
-                _supply_res_mgr.burn(dx_bucket);
+                let supply_res_mgr: ResourceManager = ResourceManager::from_address(dx_address);
+                supply_res_mgr.burn(dx_bucket);
             });
             let vault = self.vaults.get_mut(&asset_address).unwrap();
-            let asset_bucket = vault.take(normalized_amount);
+            let asset_bucket = vault.take(amount);
             asset_state.update_interest_rate();
             debug!("{}, supply:{}, borrow:{}, rate:{},{}", asset_address.to_hex(), asset_state.get_total_normalized_supply(), asset_state.normalized_total_borrow, asset_state.borrow_interest_rate, asset_state.supply_interest_rate);
             asset_bucket
+        }
+
+        pub fn withdraw_collateral(&mut self, cdp: Bucket, amount: Decimal) -> (Bucket, Bucket){
+            assert!(
+                cdp.resource_address() == self.cdp_res_addr && cdp.amount() == Decimal::ONE,
+                "Only one CDP can be processed at a time!"
+            );
+            let cdp_id = cdp.as_non_fungible().non_fungible_local_id();
+            let cdp_data = cdp.resource_manager().get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
+            let dx_token = cdp_data.collateral_token;
+            let underlying_token = self.deposit_asset_map.get(&dx_token).unwrap();
+
+            let debt_token_price = self.get_asset_price(cdp_data.borrow_token);
+            let debt_state = self.states.get(&cdp_data.borrow_token).unwrap();
+            let liquidation_threshold = debt_state.liquidation_threshold;
+            let (borrow_index, _) = self.get_current_index(cdp_data.borrow_token);
+            let debt_in_xrd = cdp_data.normalized_borrow * borrow_index * debt_token_price;
+
+            let underlying_price = self.get_asset_price(underlying_token.clone());
+            let underlying_state = self.states.get_mut(underlying_token).unwrap();
+            underlying_state.update_index();
+            
+            let collateral_in_xrd = (cdp_data.collateral_amount * underlying_state.supply_index + amount) * underlying_price;
+            assert!(liquidation_threshold > debt_in_xrd / collateral_in_xrd, "Collateral can't be withdrawn in such a way that the CDP is above the liquidation threshold.");
+
+            let normalized_amount = LendingFactory::floor(amount / underlying_state.supply_index);
+            self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
+                let supply_res_mgr: ResourceManager = ResourceManager::from_address(dx_token);
+                supply_res_mgr.burn(self.collateral_vaults.get_mut(&dx_token).unwrap().take(normalized_amount));
+            });
+            underlying_state.update_interest_rate();
+            let underlying_bucket = self.vaults.get_mut(&underlying_token).unwrap();
+            let withdraw_bucket = underlying_bucket.take(LendingFactory::floor(normalized_amount * underlying_state.supply_index));
+            (cdp, withdraw_bucket)
         }
 
         pub fn borrow_stable(&mut self, dx_bucket: Bucket, borrow_token: ResourceAddress, amount: Decimal) -> (Bucket, Bucket){
@@ -689,10 +724,8 @@ mod dexian_lending {
                 cdp.resource_address() == self.cdp_res_addr && cdp.amount() == Decimal::ONE,
                 "Only one CDP can be processed at a time!"
             );
-            
             let cdp_id = cdp.as_non_fungible().non_fungible_local_id();
             let cdp_data = cdp.resource_manager().get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
-
             let borrow_token = cdp_data.borrow_token;
             let dx_token = cdp_data.collateral_token;
             let dx_amount = cdp_data.collateral_amount;
