@@ -26,6 +26,7 @@ result=$(resim new-token-fixed --symbol=USDC --name=USDC 1000000)
 # export usdc=$(echo $result | grep "Resource:" | awk -F " " '{print $3}')
 export usdc=$(echo $result | awk -F "Resource: " '{print $2}')
 resim transfer $usdt:100000 $p2
+resim transfer $usdc:100000 $p2
 resim transfer $usdc:100000 $p3
 resim transfer $usdt:200 $p1
 resim transfer $usdc:200 $p1
@@ -79,10 +80,11 @@ export supply_token=$usdc
 export amount=200
 resim run < ./docs/replace_holder.sh docs/transactions/supply.rtm
 
+# borrow
 resim set-default-account $p1 $p1_priv $p1_badge
 export account=$p1
 export dx_token=$dx_xrd
-export amount=2000
+export amount=1000
 export borrow_token=$usdt
 export borrow_amount=10
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
@@ -90,11 +92,11 @@ export borrow_token=$usdc
 export borrow_amount=10
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
-
+# borrow_stable
 resim set-default-account $p2 $p2_priv $p2_badge
 export account=$p2
 export dx_token=$dx_xrd
-export amount=2000
+export amount=1000
 export borrow_token=$usdt
 export borrow_amount=10
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_stable.rtm
@@ -104,6 +106,37 @@ resim run < ./docs/replace_holder.sh docs/transactions/borrow_stable.rtm
 
 resim set-current-epoch 15019
 
+# extend_borrow
+export account=$p2
+export cdp_id="#3#"
+export borrow_amount=10
+resim run < ./docs/replace_holder.sh docs/transactions/extend_borrow.rtm
+export cdp_id="#4#"
+export borrow_amount=10
+resim run < ./docs/replace_holder.sh docs/transactions/extend_borrow.rtm
+
+resim set-current-epoch 30038
+
+# repay
+export account=$p2
+export cdp_id=3
+export repay_token=$usdt
+export amount=100
+resim run < ./docs/replace_holder.sh docs/transactions/repay.rtm
+export repay_token=$usdc
+export cdp_id=4
+export amount=200
+resim run < ./docs/replace_holder.sh docs/transactions/repay.rtm
+
+
+# repay
+export account=$p2
+export cdp_id="#3#"
+export amount=100
+resim run < ./docs/replace_holder.sh docs/transactions/withdraw_collateral.rtm
+export cdp_id="#4#"
+export amount=1000
+resim run < ./docs/replace_holder.sh docs/transactions/withdraw_collateral.rtm
 
 
 resim call-method $lending_component 'get_interest_rate' $usdc

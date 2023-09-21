@@ -1,0 +1,28 @@
+CALL_METHOD
+    Address("${account}")
+    "lock_fee"
+    Decimal("1000")
+;
+CALL_METHOD
+  Address("${account}")
+  "withdraw_non_fungibles"
+  Address("${cdp}")
+  Array<NonFungibleLocalId>(
+      NonFungibleLocalId("${cdp_id}")
+  )
+;
+TAKE_ALL_FROM_WORKTOP
+  Address("${cdp}")
+  Bucket("bucket1")
+;
+CALL_METHOD
+    Address("${lending_component}")
+    "extend_borrow"
+    Bucket("bucket1")
+    Decimal("${borrow_amount}")
+;
+CALL_METHOD
+    Address("${account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;

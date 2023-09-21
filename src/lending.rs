@@ -494,7 +494,7 @@ mod dexian_lending {
             underlying_state.update_index();
             
             let collateral_in_xrd = (cdp_data.collateral_amount * underlying_state.supply_index + amount) * underlying_price;
-            assert!(liquidation_threshold > debt_in_xrd / collateral_in_xrd, "Collateral can't be withdrawn in such a way that the CDP is above the liquidation threshold.");
+            assert!(liquidation_threshold < debt_in_xrd / collateral_in_xrd, "Collateral can't be withdrawn in such a way that the CDP is above the liquidation threshold.");
 
             let normalized_amount = LendingFactory::floor(amount / underlying_state.supply_index);
             self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
@@ -863,7 +863,7 @@ mod dexian_lending {
             
             let debt_in_xrd = LendingFactory::ceil(normalized_borrow * debet_borrow_index * debet_asset_price);
             
-            assert!(liquidation_threshold >= debt_in_xrd / collateral_in_xrd, "The CDP can not be liquidation yet, the timing too early!");
+            assert!(liquidation_threshold <= debt_in_xrd / collateral_in_xrd, "The CDP can not be liquidation yet, the timing too early!");
 
             debug!("before update_index, borrow in xrd:{} total_borrow_normailized:{} indexes:{},{}", debt_in_xrd, debt_state.normalized_total_borrow, debt_state.supply_index, debt_state.borrow_index);
             debt_state.update_index();
