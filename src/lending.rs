@@ -494,7 +494,7 @@ mod dexian_lending {
             underlying_state.update_index();
             
             let collateral_in_xrd = (cdp_data.collateral_amount * underlying_state.supply_index + amount) * underlying_price;
-            assert!(liquidation_threshold < debt_in_xrd / collateral_in_xrd, "Collateral can't be withdrawn in such a way that the CDP is above the liquidation threshold.");
+            assert!(liquidation_threshold > debt_in_xrd / collateral_in_xrd, "Collateral can't be withdrawn in such a way that the CDP is above the liquidation threshold.");
 
             let normalized_amount = LendingFactory::floor(amount / underlying_state.supply_index);
             self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
@@ -779,12 +779,8 @@ mod dexian_lending {
             if cdp_data.is_stable{
                 let delta_year = LendingFactory::ceil(Decimal::from(Runtime::current_epoch().number() - cdp_data.last_update_epoch) / Decimal::from(EPOCH_OF_YEAR));
                 let interest = LendingFactory::ceil(cdp_data.borrow_amount * cdp_data.stable_rate * delta_year);
-                if repay_amount >= cdp_data.borrow_amount + interest {
-                    repay_amount = cdp_data.borrow_amount + interest;
-                    repay_in_borrow = cdp_data.borrow_amount;
-                    borrow_state.stable_borrow_amount -= repay_in_borrow;
-                }
                 let previous_debt = borrow_state.stable_borrow_amount * borrow_state.stable_avg_rate;
+                
                 if repay_amount < interest {
                     let outstanding_interest = interest - repay_amount;
                     repay_in_borrow = outstanding_interest * Decimal::from(-1);
@@ -792,9 +788,22 @@ mod dexian_lending {
                     borrow_state.stable_avg_rate = (previous_debt + outstanding_interest * cdp_data.stable_rate) / borrow_state.stable_borrow_amount;
                 }
                 else{
-                    repay_in_borrow = repay_amount - interest;
-                    borrow_state.stable_borrow_amount -= repay_in_borrow;
-                    borrow_state.stable_avg_rate = (previous_debt - repay_in_borrow * cdp_data.stable_rate) / borrow_state.stable_borrow_amount;
+                    if repay_amount >= cdp_data.borrow_amount + interest {
+                        repay_amount = cdp_data.borrow_amount + interest;
+                        repay_in_borrow = cdp_data.borrow_amount;
+                    }
+                    else{
+                        repay_in_borrow = repay_amount - interest;
+                    }
+                    //最后一笔还款可能大于总借款金额。因为每笔贷款还款是单独计算的。
+                    if repay_in_borrow >= borrow_state.stable_borrow_amount{
+                        borrow_state.stable_borrow_amount = Decimal::ZERO;
+                        borrow_state.stable_avg_rate = Decimal::ZERO;
+                    }
+                    else{
+                        borrow_state.stable_borrow_amount -= repay_in_borrow;
+                        borrow_state.stable_avg_rate = (previous_debt - repay_in_borrow * cdp_data.stable_rate) / borrow_state.stable_borrow_amount;
+                    }
                 }
             }
             else{

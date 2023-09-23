@@ -80,6 +80,9 @@ export supply_token=$usdc
 export amount=200
 resim run < ./docs/replace_holder.sh docs/transactions/supply.rtm
 
+
+resim show $lending_component
+
 # borrow
 resim set-default-account $p1 $p1_priv $p1_badge
 export account=$p1
@@ -92,17 +95,36 @@ export borrow_token=$usdc
 export borrow_amount=10
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
+resim show $lending_component
+resim call-method $lending_component 'get_interest_rate' $usdt
+resim call-method $lending_component 'get_interest_rate' $usdc
 resim set-current-epoch 15019
 # repay
+resim show $p1
 export account=$p1
 export cdp_id=1
 export repay_token=$usdt
 export amount=100
 resim run < ./docs/replace_holder.sh docs/transactions/repay.rtm
+
+resim show $p1
+resim show $lending_component
+resim call-method $lending_component 'get_current_index' $usdt
+resim call-method $lending_component 'get_interest_rate' $usdt
+resim call-method $lending_component 'get_interest_rate' $usdc
+
+resim set-current-epoch 30038
+
 export repay_token=$usdc
 export cdp_id=2
 export amount=200
 resim run < ./docs/replace_holder.sh docs/transactions/repay.rtm
+
+resim show $p1
+resim show $lending_component
+resim call-method $lending_component 'get_current_index' $usdc
+resim call-method $lending_component 'get_interest_rate' $usdt
+resim call-method $lending_component 'get_interest_rate' $usdc
 
 
 # borrow_stable
@@ -117,6 +139,7 @@ export borrow_token=$usdc
 export borrow_amount=10
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_stable.rtm
 
+resim set-current-epoch 40056
 # extend_borrow
 export account=$p2
 export cdp_id="#3#"
@@ -126,8 +149,13 @@ export cdp_id="#4#"
 export borrow_amount=10
 resim run < ./docs/replace_holder.sh docs/transactions/extend_borrow.rtm
 
-resim set-current-epoch 30038
+resim show $p2
+resim show $lending_component
+resim call-method $lending_component 'get_current_index' $usdc
+resim call-method $lending_component 'get_interest_rate' $usdt
+resim call-method $lending_component 'get_interest_rate' $usdc
 
+resim set-current-epoch 50074
 # repay
 export account=$p2
 export cdp_id=3
