@@ -49,7 +49,7 @@ export admin_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if
 export cdp=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $4}')
 
 
-xrd="resource_sim1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxakj8n3"
+export xrd="resource_sim1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxakj8n3"
 result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_xrd_pool.rtm)
 export dx_xrd=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}')
 result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_usdt_pool.rtm)
@@ -92,6 +92,19 @@ export borrow_token=$usdc
 export borrow_amount=10
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
+resim set-current-epoch 15019
+# repay
+export account=$p1
+export cdp_id=1
+export repay_token=$usdt
+export amount=100
+resim run < ./docs/replace_holder.sh docs/transactions/repay.rtm
+export repay_token=$usdc
+export cdp_id=2
+export amount=200
+resim run < ./docs/replace_holder.sh docs/transactions/repay.rtm
+
+
 # borrow_stable
 resim set-default-account $p2 $p2_priv $p2_badge
 export account=$p2
@@ -103,8 +116,6 @@ resim run < ./docs/replace_holder.sh docs/transactions/borrow_stable.rtm
 export borrow_token=$usdc
 export borrow_amount=10
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_stable.rtm
-
-resim set-current-epoch 15019
 
 # extend_borrow
 export account=$p2

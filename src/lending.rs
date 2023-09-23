@@ -652,13 +652,15 @@ mod dexian_lending {
             (borrow_vault.take(amount), borrow_normalized_amount)
         }
 
-        fn _update_cdp_data(&mut self, delta_borrow: Decimal, increment_accumlate: Decimal, delta_collateral: Decimal,
+        fn _update_cdp_data(&mut self, delta_borrow: Decimal, interest: Decimal, delta_collateral: Decimal,
             delta_normalized_borrow: Decimal, cdp_avg_rate:Decimal, cdp_id: NonFungibleLocalId, data: CollateralDebtPosition) {
             self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
                 let cdp_res_mgr: ResourceManager = ResourceManager::from_address(self.cdp_res_addr);
-                if delta_borrow != Decimal::ZERO || increment_accumlate != Decimal::ZERO {
+                if delta_borrow != Decimal::ZERO || interest != Decimal::ZERO {
                     cdp_res_mgr.update_non_fungible_data(&cdp_id, "total_borrow", data.total_borrow + delta_borrow);
-                    cdp_res_mgr.update_non_fungible_data(&cdp_id, "borrow_amount", data.borrow_amount + delta_borrow + increment_accumlate);
+                    cdp_res_mgr.update_non_fungible_data(&cdp_id, "borrow_amount", data.borrow_amount + delta_borrow + interest);
+                }
+                if delta_normalized_borrow != Decimal::ZERO {
                     cdp_res_mgr.update_non_fungible_data(&cdp_id, "normalized_borrow", data.normalized_borrow + delta_normalized_borrow);
                 }
                 if delta_collateral != Decimal::ZERO {
@@ -715,7 +717,7 @@ mod dexian_lending {
 
             let dx_amount = dx_bucket.amount();
             self._put_dx_bucket(dx_bucket);
-            self._update_cdp_data(Decimal::ZERO, Decimal::ZERO, Decimal::ZERO, Decimal::ZERO, dx_amount, cdp_id, cdp_data);
+            self._update_cdp_data(Decimal::ZERO, Decimal::ZERO, dx_amount, Decimal::ZERO, Decimal::ZERO, cdp_id, cdp_data);
 
         }
 
@@ -729,29 +731,35 @@ mod dexian_lending {
             let borrow_token = cdp_data.borrow_token;
             let dx_token = cdp_data.collateral_token;
             let dx_amount = cdp_data.collateral_amount;
-            if cdp_data.is_stable{
+
+            let mut cdp_avg_rate = Decimal::ZERO;
+            let mut interest = Decimal::ZERO;
+            let mut delta_normalized_amount = Decimal::ZERO;
+            let borrow_bucket = if cdp_data.is_stable{
                 let delta_epoch = Runtime::current_epoch().number() - cdp_data.last_update_epoch;
                 let delta_epoch_year = Decimal::from(delta_epoch) / Decimal::from(EPOCH_OF_YEAR);
-                let increment_accumlate = LendingFactory::ceil(cdp_data.borrow_amount * delta_epoch_year * cdp_data.stable_rate);
-                let exist_borrow = cdp_data.borrow_amount + increment_accumlate;
-
+                interest = LendingFactory::ceil(cdp_data.borrow_amount * delta_epoch_year * cdp_data.stable_rate);
+                let exist_borrow = cdp_data.borrow_amount + interest;
                 let _deposit_amount = self._update_collateral_and_validate(dx_token, dx_amount, borrow_token, amount, exist_borrow);
 
                 let (borrow_bucket, new_rate) = self._take_stable_borrow(borrow_token, amount);
-                let delta_normalized_borrow = amount + increment_accumlate;
-                let cdp_avg_rate = (cdp_data.borrow_amount * cdp_data.stable_rate + delta_normalized_borrow * new_rate) / (cdp_data.borrow_amount + delta_normalized_borrow);
-                self._update_cdp_data(amount, increment_accumlate, Decimal::ZERO, delta_normalized_borrow, cdp_avg_rate, cdp_id, cdp_data);
-                (borrow_bucket, cdp)
+                let increase_amount = amount + interest;
+                cdp_avg_rate = (cdp_data.borrow_amount * cdp_data.stable_rate + increase_amount * new_rate) / (cdp_data.borrow_amount + increase_amount);
+                borrow_bucket
             }
             else{
                 let (_, current_borrow_index) = self.get_current_index(borrow_token);
                 let exist_borrow = cdp_data.normalized_borrow * current_borrow_index;
                 let _deposit_amount = self._update_collateral_and_validate(dx_token, dx_amount, borrow_token, amount, exist_borrow);
-                let (borrow_bucket, normalized_borrow_amount) = self._take_borrow_bucket(borrow_token, amount);
-                self._update_cdp_data(amount, Decimal::ZERO, Decimal::ZERO, normalized_borrow_amount, Decimal::ZERO, cdp_id, cdp_data);
-                (borrow_bucket, cdp)
-            }
-
+                let (borrow_bucket, normalized_amount) = self._take_borrow_bucket(borrow_token, amount);
+                delta_normalized_amount = normalized_amount;
+                borrow_bucket
+            };
+            self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
+                self._update_cdp_data(amount, interest, Decimal::ZERO, delta_normalized_amount, cdp_avg_rate, cdp_id, cdp_data);
+            });
+            
+            (borrow_bucket, cdp)
         }
 
         pub fn repay(&mut self, mut repay_bucket: Bucket, id: u64) -> Bucket {
@@ -760,43 +768,73 @@ mod dexian_lending {
             let borrow_token = cdp_data.borrow_token;
             assert!(borrow_token == repay_bucket.resource_address(), "Borrowed asset must be returned.");
 
+            let mut repay_amount = repay_bucket.amount();
+            let mut repay_in_borrow = Decimal::ZERO;
+            let mut normalized_amount = Decimal::ZERO;
             let borrow_state = self.states.get_mut(&borrow_token).unwrap();
             debug!("before update_index, borrow normalized:{} total_borrow_normailized:{} indexes:{},{}", cdp_data.normalized_borrow, borrow_state.normalized_total_borrow, borrow_state.supply_index, borrow_state.borrow_index);
             borrow_state.update_index();
             debug!("after update_index, borrow normalized:{} total_borrow_normailized:{} indexes:{},{}", cdp_data.normalized_borrow, borrow_state.normalized_total_borrow, borrow_state.supply_index, borrow_state.borrow_index);
-            let borrow_index = borrow_state.borrow_index;
-            let mut repay_amount = repay_bucket.amount();
-            let mut normalized_amount = LendingFactory::floor(repay_amount / borrow_index);
-            
-            if cdp_data.normalized_borrow <= normalized_amount {
-                // Full repayment repayAmount <= amount
-                // because ⌈⌊a/b⌋*b⌉ <= a
-                repay_amount = LendingFactory::ceil(cdp_data.normalized_borrow * borrow_index);
-                normalized_amount = cdp_data.normalized_borrow;
+
+            if cdp_data.is_stable{
+                let delta_year = LendingFactory::ceil(Decimal::from(Runtime::current_epoch().number() - cdp_data.last_update_epoch) / Decimal::from(EPOCH_OF_YEAR));
+                let interest = LendingFactory::ceil(cdp_data.borrow_amount * cdp_data.stable_rate * delta_year);
+                if repay_amount >= cdp_data.borrow_amount + interest {
+                    repay_amount = cdp_data.borrow_amount + interest;
+                    repay_in_borrow = cdp_data.borrow_amount;
+                    borrow_state.stable_borrow_amount -= repay_in_borrow;
+                }
+                let previous_debt = borrow_state.stable_borrow_amount * borrow_state.stable_avg_rate;
+                if repay_amount < interest {
+                    let outstanding_interest = interest - repay_amount;
+                    repay_in_borrow = outstanding_interest * Decimal::from(-1);
+                    borrow_state.stable_borrow_amount += outstanding_interest;
+                    borrow_state.stable_avg_rate = (previous_debt + outstanding_interest * cdp_data.stable_rate) / borrow_state.stable_borrow_amount;
+                }
+                else{
+                    repay_in_borrow = repay_amount - interest;
+                    borrow_state.stable_borrow_amount -= repay_in_borrow;
+                    borrow_state.stable_avg_rate = (previous_debt - repay_in_borrow * cdp_data.stable_rate) / borrow_state.stable_borrow_amount;
+                }
             }
-    
-            debug!("repay_bucket:{}, normalized_amount:{}, normalized_borrow:{}, repay_amount:{}", repay_amount, normalized_amount, cdp_data.normalized_borrow, repay_amount);
+            else{
+                let borrow_index = borrow_state.borrow_index;
+                normalized_amount = LendingFactory::floor(repay_amount / borrow_index);
+                if cdp_data.normalized_borrow <= normalized_amount {
+                    // Full repayment repayAmount <= amount
+                    // because ⌈⌊a/b⌋*b⌉ <= a
+                    repay_amount = LendingFactory::ceil(cdp_data.normalized_borrow * borrow_index);
+                    normalized_amount = cdp_data.normalized_borrow;
+                }
+                debug!("repay_bucket:{}, normalized_amount:{}, normalized_borrow:{}, repay_amount:{}", repay_amount, normalized_amount, cdp_data.normalized_borrow, repay_amount);
+                borrow_state.normalized_total_borrow -= normalized_amount;
+            }
             let borrow_vault = self.vaults.get_mut(&borrow_token).unwrap();
             borrow_vault.put(repay_bucket.take(repay_amount));
-
-            borrow_state.normalized_total_borrow -= normalized_amount;
+            
             borrow_state.update_interest_rate();
             
             self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
-                self._update_after_repay(&cdp_id, cdp_data, repay_amount, normalized_amount, Decimal::ZERO);
+                self._update_after_repay(&cdp_id, cdp_data, repay_amount, repay_in_borrow, normalized_amount, Decimal::ZERO);
             });
 
             repay_bucket
         }
 
         fn _update_after_repay(&self, cdp_id: &NonFungibleLocalId, cdp_data: CollateralDebtPosition,
-            repay_amount: Decimal, normalized_amount: Decimal, delta_collateral: Decimal
+            repay_amount: Decimal, delta_borrow: Decimal, delta_normalized_amount: Decimal, delta_collateral: Decimal
             ) {
             let res_mgr: ResourceManager = ResourceManager::from_address(self.cdp_res_addr);
             res_mgr.update_non_fungible_data(cdp_id, "total_repay", cdp_data.total_repay + repay_amount);
-            res_mgr.update_non_fungible_data(cdp_id, "normalized_borrow", cdp_data.normalized_borrow - normalized_amount);
-            if cdp_data.is_stable{
-                res_mgr.update_non_fungible_data(cdp_id, "borrow_amount", cdp_data.borrow_amount - repay_amount);
+            if delta_normalized_amount != Decimal::ZERO {
+                res_mgr.update_non_fungible_data(cdp_id, "normalized_borrow", cdp_data.normalized_borrow - delta_normalized_amount);
+            }
+            if cdp_data.is_stable && delta_borrow != Decimal::ZERO {
+                let new_borrow_amount = cdp_data.borrow_amount - delta_borrow;
+                res_mgr.update_non_fungible_data(cdp_id, "borrow_amount", new_borrow_amount);
+                if new_borrow_amount == Decimal::ZERO {
+                    res_mgr.update_non_fungible_data(cdp_id, "stable_rate", Decimal::ZERO);
+                }
             }
             if delta_collateral != Decimal::ZERO{
                 res_mgr.update_non_fungible_data(&cdp_id, "collateral_amount", cdp_data.collateral_amount + delta_collateral);
@@ -835,7 +873,7 @@ mod dexian_lending {
 
             let delta_collateral = collateral_bucket.amount() * Decimal::from(-1);
             self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
-                self._update_after_repay(&cdp_id, cdp, Decimal::ZERO, normalized_amount, delta_collateral);
+                self._update_after_repay(&cdp_id, cdp, Decimal::ZERO, Decimal::ZERO, normalized_amount, delta_collateral);
             });
 
             collateral_bucket

@@ -137,7 +137,7 @@ export borrow_amount=10
 ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 export borrow_token=$usdc
 export borrow_amount=10
-./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+./docs/replace_holder.sh docs/transactions/borrow_stable.rtm
 
 
 
