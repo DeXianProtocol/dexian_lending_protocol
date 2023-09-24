@@ -473,6 +473,48 @@ mod dexian_lending {
             asset_bucket
         }
 
+        fn get_debt_in_xrd(&self, cdp_data:CollateralDebtPosition) -> Decimal{
+            if (cdp_data.is_stable && cdp_data.borrow_amount == Decimal::ZERO) || (!cdp_data.is_stable && cdp_data.normalized_borrow == Decimal::ZERO) {
+                return Decimal::ZERO;
+            }
+            
+            let debt_token_price = self.get_asset_price(cdp_data.borrow_token);
+            let (borrow_index, _) = self.get_current_index(cdp_data.borrow_token);
+            let debt_in_xrd = if cdp_data.is_stable {
+                let delta_epoch = Runtime::current_epoch().number() - cdp_data.last_update_epoch;
+                let delta_epoch_year = Decimal::from(delta_epoch) / Decimal::from(EPOCH_OF_YEAR);
+                let debt_amount = LendingFactory::ceil(cdp_data.borrow_amount * (Decimal::ONE + delta_epoch_year * cdp_data.stable_rate));
+                debt_amount * debt_token_price
+            } else {
+                cdp_data.normalized_borrow * borrow_index * debt_token_price
+            };
+            debug!("debt{}=normalized_amount:{}, index:{}, price:{} ", debt_in_xrd, cdp_data.normalized_borrow, borrow_index, debt_token_price);
+            debt_in_xrd
+        }
+
+        fn _validate_normalized_collateral(&mut self, debt_in_xrd: Decimal, dx_token:ResourceAddress, collateral_amount:Decimal, amount: Decimal) -> (Decimal,Decimal){
+            let underlying_token = self.deposit_asset_map.get(&dx_token).unwrap();
+            let underlying_price = self.get_asset_price(underlying_token.clone());
+            let underlying_state = self.states.get_mut(&underlying_token).unwrap();
+            let liquidation_threshold = underlying_state.liquidation_threshold;
+            underlying_state.update_index();
+            
+            if debt_in_xrd > Decimal::ZERO{
+                let collateral_in_xrd = (collateral_amount * underlying_state.supply_index - amount) * underlying_price;
+                debug!("collateral_in_xrd:{}=collateral_amount:{}, supply_index:{}, amount:{}, underlying_price:{} | liquidation_threshold:{}",collateral_in_xrd, collateral_amount, underlying_state.supply_index, amount, underlying_price, liquidation_threshold);
+                assert!(liquidation_threshold > debt_in_xrd / collateral_in_xrd, "Collateral can't be withdrawn in such a way that the CDP is above the liquidation threshold.");
+            }
+
+            let normalized_amount = LendingFactory::floor(amount / underlying_state.supply_index);
+            self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
+                let supply_res_mgr: ResourceManager = ResourceManager::from_address(dx_token);
+                supply_res_mgr.burn(self.collateral_vaults.get_mut(&dx_token).unwrap().take(normalized_amount));
+            });
+            underlying_state.update_interest_rate();
+            
+            (normalized_amount, underlying_state.supply_index)
+        }
+
         pub fn withdraw_collateral(&mut self, cdp: Bucket, amount: Decimal) -> (Bucket, Bucket){
             assert!(
                 cdp.resource_address() == self.cdp_res_addr && cdp.amount() == Decimal::ONE,
@@ -481,29 +523,13 @@ mod dexian_lending {
             let cdp_id = cdp.as_non_fungible().non_fungible_local_id();
             let cdp_data = cdp.resource_manager().get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
             let dx_token = cdp_data.collateral_token;
-            let underlying_token = self.deposit_asset_map.get(&dx_token).unwrap();
-
-            let debt_token_price = self.get_asset_price(cdp_data.borrow_token);
-            let debt_state = self.states.get(&cdp_data.borrow_token).unwrap();
-            let liquidation_threshold = debt_state.liquidation_threshold;
-            let (borrow_index, _) = self.get_current_index(cdp_data.borrow_token);
-            let debt_in_xrd = cdp_data.normalized_borrow * borrow_index * debt_token_price;
-
-            let underlying_price = self.get_asset_price(underlying_token.clone());
-            let underlying_state = self.states.get_mut(underlying_token).unwrap();
-            underlying_state.update_index();
+            let collateral_amount = cdp_data.collateral_amount;
             
-            let collateral_in_xrd = (cdp_data.collateral_amount * underlying_state.supply_index + amount) * underlying_price;
-            assert!(liquidation_threshold > debt_in_xrd / collateral_in_xrd, "Collateral can't be withdrawn in such a way that the CDP is above the liquidation threshold.");
-
-            let normalized_amount = LendingFactory::floor(amount / underlying_state.supply_index);
-            self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
-                let supply_res_mgr: ResourceManager = ResourceManager::from_address(dx_token);
-                supply_res_mgr.burn(self.collateral_vaults.get_mut(&dx_token).unwrap().take(normalized_amount));
-            });
-            underlying_state.update_interest_rate();
+            let debt_in_xrd = self.get_debt_in_xrd(cdp_data);
+            let (normalized_amount, supply_index) = self._validate_normalized_collateral(debt_in_xrd, dx_token, collateral_amount, amount);
+            let underlying_token = self.deposit_asset_map.get(&dx_token).unwrap();
             let underlying_bucket = self.vaults.get_mut(&underlying_token).unwrap();
-            let withdraw_bucket = underlying_bucket.take(LendingFactory::floor(normalized_amount * underlying_state.supply_index));
+            let withdraw_bucket = underlying_bucket.take(LendingFactory::floor(normalized_amount * supply_index));
             (cdp, withdraw_bucket)
         }
 

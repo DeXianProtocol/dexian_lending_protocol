@@ -98,9 +98,11 @@ resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 resim show $lending_component
 resim call-method $lending_component 'get_interest_rate' $usdt
 resim call-method $lending_component 'get_interest_rate' $usdc
+
 resim set-current-epoch 15019
 # repay
 resim show $p1
+
 export account=$p1
 export cdp_id=1
 export repay_token=$usdt
