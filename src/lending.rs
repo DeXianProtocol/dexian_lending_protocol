@@ -507,8 +507,8 @@ mod dexian_lending {
 
             let normalized_amount = LendingFactory::floor(amount / underlying_state.supply_index);
             self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
-                let supply_res_mgr: ResourceManager = ResourceManager::from_address(dx_token);
-                supply_res_mgr.burn(self.collateral_vaults.get_mut(&dx_token).unwrap().take(normalized_amount));
+                let res_mgr: ResourceManager = ResourceManager::from_address(dx_token);
+                res_mgr.burn(self.collateral_vaults.get_mut(&dx_token).unwrap().take(normalized_amount));
             });
             underlying_state.update_interest_rate();
             
@@ -527,6 +527,10 @@ mod dexian_lending {
             
             let debt_in_xrd = self.get_debt_in_xrd(cdp_data);
             let (normalized_amount, supply_index) = self._validate_normalized_collateral(debt_in_xrd, dx_token, collateral_amount, amount);
+            self.minter.as_fungible().create_proof_of_amount(Decimal::ONE).authorize(|| {
+                let cdp_res_mgr: ResourceManager = ResourceManager::from_address(self.cdp_res_addr);
+                cdp_res_mgr.update_non_fungible_data(&cdp_id, "collateral_amount", collateral_amount - normalized_amount);
+            });
             let underlying_token = self.deposit_asset_map.get(&dx_token).unwrap();
             let underlying_bucket = self.vaults.get_mut(&underlying_token).unwrap();
             let withdraw_bucket = underlying_bucket.take(LendingFactory::floor(normalized_amount * supply_index));
@@ -698,6 +702,8 @@ mod dexian_lending {
                 cdp_res_mgr.update_non_fungible_data(&cdp_id, "last_update_epoch", Runtime::current_epoch().number());
             });
         }
+
+        
 
         fn _new_cdp(&mut self, dx_address: ResourceAddress, borrow_token: ResourceAddress, amount: Decimal, collateral_amount: Decimal, 
             borrow_normalized_amount: Decimal, cdp_avg_rate:Decimal, is_stable: bool) -> Bucket {
