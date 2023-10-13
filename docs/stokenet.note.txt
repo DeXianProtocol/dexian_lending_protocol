@@ -1,24 +1,24 @@
 stokenet:
 
 package:
-package_tdx_2_1p59qpu586mg809kz9w7s6e8s28qlylgn4hq0suqsegqd3atmc9s2yj
+package_tdx_2_1p56737cnmgpfv9793wtt4e6rzjwkmpjte80kqge0vta7erumdskvq7
 
 
 token:
-package_tdx_2_1p4kgdwpyquxqvf72m9tk2lfr72lf2jy8s3r8p0t394e87z0trnrl82
+package_tdx_2_1pkapsk3evvvxqx5uw8pqw84ffkrs7uet9les294kltp2m4aunpgdrv
 
 usdt:
-resource_tdx_2_1th96pk50wn743yhuykfcqhh8zvz7lsk72667a27krn5neyzkpelf3l
+resource_tdx_2_1thnzj7nfawdec4tztfr9fmsh33kmwlstz2fs9t99yzj0awg43xxkpk
 CALL_FUNCTION
-    Address("package_tdx_2_1p4kgdwpyquxqvf72m9tk2lfr72lf2jy8s3r8p0t394e87z0trnrl82")
+    Address("package_tdx_2_1pkapsk3evvvxqx5uw8pqw84ffkrs7uet9les294kltp2m4aunpgdrv")
     "Hello"
     "instantiate_hello"
     "USDT"
     "USDT";
-component_tdx_2_1cpmhshe7e55kqkywn0mqlvq2k80vhz5v7c2f4lw2awqhpr4d488c9y
-resource_tdx_2_1th96pk50wn743yhuykfcqhh8zvz7lsk72667a27krn5neyzkpelf3l
+component_tdx_2_1czgjkdc8r0ufu8ux00dypzrznh7hs323t3neca4px0u3xlxcav6cgv
+resource_tdx_2_1thnzj7nfawdec4tztfr9fmsh33kmwlstz2fs9t99yzj0awg43xxkpk
 CALL_METHOD
-    Address("component_tdx_2_1cpmhshe7e55kqkywn0mqlvq2k80vhz5v7c2f4lw2awqhpr4d488c9y")
+    Address("component_tdx_2_1czgjkdc8r0ufu8ux00dypzrznh7hs323t3neca4px0u3xlxcav6cgv")
     "free_token"
     255u8
 ;
@@ -31,15 +31,15 @@ CALL_METHOD
 
 usdc:
 CALL_FUNCTION
-    Address("package_tdx_2_1p4kgdwpyquxqvf72m9tk2lfr72lf2jy8s3r8p0t394e87z0trnrl82")
+    Address("package_tdx_2_1pkapsk3evvvxqx5uw8pqw84ffkrs7uet9les294kltp2m4aunpgdrv")
     "Hello"
     "instantiate_hello"
     "USDC"
     "USDC";
-component_tdx_2_1czkwc9sl2ntzzqtzaq4fgpu8ed5zeykk227s37l4yje87khucr3a3c
-resource_tdx_2_1tkunyvq57e8f8aeyrcpar0fm5szcfhqcqjl9hs2q76hn3d857yl9kn
+component_tdx_2_1crhu05ah8yek50snjz5mqux82h9w0u7h2dytuggq977nhtt0n36hsn
+resource_tdx_2_1tkaegwwrttt6jrzvn2ag6dsvjs64dfwya6sckvlxnf794y462lhtx0
 CALL_METHOD
-    Address("component_tdx_2_1czkwc9sl2ntzzqtzaq4fgpu8ed5zeykk227s37l4yje87khucr3a3c")
+    Address("component_tdx_2_1crhu05ah8yek50snjz5mqux82h9w0u7h2dytuggq977nhtt0n36hsn")
     "free_token"
     255u8
 ;
@@ -59,45 +59,45 @@ export p3=account_tdx_2_129v2sa7652vlmwr5z4fyushc3kpvygzvu6glyvwvvmd349rg9xsz5p
 -----
 # faucet
 ## usdt
-export usdt_component=component_tdx_2_1cpmhshe7e55kqkywn0mqlvq2k80vhz5v7c2f4lw2awqhpr4d488c9y
+export usdt_component=component_tdx_2_1czgjkdc8r0ufu8ux00dypzrznh7hs323t3neca4px0u3xlxcav6cgv
 export account=$p2
 ./docs/replace_holder.sh ./docs/transactions/faucet_usdt.rtm
 
 ## usdc
-export usdc_component=component_tdx_2_1czkwc9sl2ntzzqtzaq4fgpu8ed5zeykk227s37l4yje87khucr3a3c
+export usdc_component=component_tdx_2_1crhu05ah8yek50snjz5mqux82h9w0u7h2dytuggq977nhtt0n36hsn
 export account=$p3
 ./docs/replace_holder.sh ./docs/transactions/faucet_usdc.rtm
 
 
 ----
-export pkg=package_tdx_2_1p59qpu586mg809kz9w7s6e8s28qlylgn4hq0suqsegqd3atmc9s2yj
+export pkg=package_tdx_2_1p56737cnmgpfv9793wtt4e6rzjwkmpjte80kqge0vta7erumdskvq7
 export account=$admin_account
-export usdt=resource_tdx_2_1th96pk50wn743yhuykfcqhh8zvz7lsk72667a27krn5neyzkpelf3l
-export usdc=resource_tdx_2_1tkunyvq57e8f8aeyrcpar0fm5szcfhqcqjl9hs2q76hn3d857yl9kn
+export usdt=resource_tdx_2_1thnzj7nfawdec4tztfr9fmsh33kmwlstz2fs9t99yzj0awg43xxkpk
+export usdc=resource_tdx_2_1tkaegwwrttt6jrzvn2ag6dsvjs64dfwya6sckvlxnf794y462lhtx0
 
 ./docs/replace_holder.sh ./docs/transactions/new_oracle.rtm
-export oracle=component_tdx_2_1cqrqrvrzn0f03j4cge2tfrj6fmegzqk6yt9nukxr9uracxj4q25sjv
+export oracle=component_tdx_2_1crp6dsxdvq2599nklfpashz5jzyfvnrz8yx5wydrrdm95x76ryqn2r
 
 ./docs/replace_holder.sh ./docs/transactions/new_interest.rtm
-export def_interest_model=component_tdx_2_1cqz85af4vsdd5wpmf0ewa2ma79xp2munc3xe3d9gnqnpxgd2ea4prx
+export def_interest_model=component_tdx_2_1cz2p0mu24m5dm402r69um58n99fwtk4fes8fpmnt6d0gryql52rx3t
 
 ./docs/replace_holder.sh ./docs/transactions/new_lending_factory.rtm
-export lending_component=component_tdx_2_1cr6uv2dxlexcxvd3zjaua5p9xj470808ma3wzdgy7l3p8ca2c928ml
-export admin_badge=resource_tdx_2_1theqd3ugc53a420hw2armhzjav07nz8hgesgk7w52xl0zhkxyd5kwy
-export cdp=resource_tdx_2_1ng27jqj003627z8rupr2pznlrrgjtlz5yqs9dpdfg4ycqrhdltffx9
+export lending_component=component_tdx_2_1cpazt5dt4eukwr3uxzyzz2nwpqq0r62t98vj0rw30mrfhdgxhm2f53
+export admin_badge=resource_tdx_2_1t4x290emsxevprf7px9veqvp2uwyx4v07qwuvfdgxe3q6gynvdddgz
+export cdp=resource_tdx_2_1ngghqxvfn8d47p93s63qtyccnc9g3kfn3ux2f2xwahh4hj0nxf9e0y
 
 # xrd pool
 export xrd=resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc
 ./docs/replace_holder.sh ./docs/transactions/new_xrd_pool.rtm
-export dx_xrd=resource_tdx_2_1t4pllwxn8eaf9ldcmn8zqtl5wm93zyj4dfd97envkv46xme0v7e8hm
+export dx_xrd=resource_tdx_2_1t4p206700f4mw4g3hjrehj97vhm5h8nzzrhqvswd8fx3kaszndmmte
 
 #usdt pool
 ./docs/replace_holder.sh ./docs/transactions/new_usdt_pool.rtm
-export dx_usdt=resource_tdx_2_1t443mjlwny3c2zuz9xnkued9jl0aaa6cqml5zaz9skv4da0lnkh23m
+export dx_usdt=resource_tdx_2_1t5q6ar49rl9gcuzmdprnd2h640f9cmvvy5gzres0t0cm5glyr3nd5s
 
 #usdc pool
 ./docs/replace_holder.sh ./docs/transactions/new_usdc_pool.rtm
-export dx_usdc=resource_tdx_2_1th4lqw5sdn37y8etmrgrhdryu5ny9ag74h4t58nt0achn3yefh97mt
+export dx_usdc=resource_tdx_2_1ths4cjxu99jxtmlunnll3syf7ek9msl2shfav8y63cpf66kl6d0pu4
 
 # supply
 ## p1 4000xrd
