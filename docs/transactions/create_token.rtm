@@ -1,0 +1,91 @@
+CREATE_FUNGIBLE_RESOURCE_WITH_INITIAL_SUPPLY
+    Enum<OwnerRole::None>()
+    false
+    18u8
+    Decimal("${supply}")
+    Tuple(
+        None,
+        None,        # Burn Roles (if None: defaults to DenyAll, DenyAll)
+        None,        # Freeze Roles (if None: defaults to DenyAll, DenyAll)
+        None,        # Recall Roles (if None: defaults to DenyAll, DenyAll)
+        None,        # Withdraw Roles (if None: defaults to AllowAll, DenyAll)
+        None         # Deposit Roles (if None: defaults to AllowAll, DenyAll)
+    )
+    Tuple(
+        Map<String, Tuple>(
+            "name" => Tuple(
+                Enum<1u8>(
+                    Enum<0u8>(
+                        "${name}"
+                    )
+                ),
+                true
+            ),
+            "symbol" => Tuple(
+                Enum<1u8>(
+                    Enum<0u8>(
+                        "${symbol}"
+                    )
+                ),
+                true
+            ),
+            "dapp_definitions" => Tuple(
+                Enum<1u8>(
+                    Enum<136u8>(
+                        Array<Address>(
+                            Address("${dapp_definition}")
+                        )
+                    )
+                ),
+                false
+            ),
+            "description" => Tuple(
+                Enum<1u8>(
+                    Enum<0u8>(
+                        "${description}"
+                    )
+                ),
+                true
+            ),
+            "tags" => Tuple(
+                Enum<1u8>(
+                    Enum<128u8>(
+                        Array<String>(
+                            "${tag1}",
+                            "${tag2}"
+                        )
+                    )
+                ),
+                false
+            ),
+            "icon_url" => Tuple(
+                Enum<1u8>(
+                    Enum<13u8>(
+                        "${icon_url}"
+                    )
+                ),
+                true
+            ),
+            "info_url" => Tuple(
+                Enum<1u8>(
+                    Enum<13u8>(
+                        "${info_url}"
+                    )
+                ),
+                true
+            )
+        ),
+        Map<String, Enum>(                                                   # Metadata roles
+            "metadata_setter" => Some(Enum<AccessRule::DenyAll>()),         # Metadata setter role
+            "metadata_setter_updater" => None,                               # Metadata setter updater role as None defaults to OWNER
+            "metadata_locker" => Some(Enum<AccessRule::DenyAll>()),          # Metadata locker role
+            "metadata_locker_updater" => None                                # Metadata locker updater role as None defaults to OWNER
+        )
+    )
+    Enum<0u8>()
+;
+CALL_METHOD
+    Address("${account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;
