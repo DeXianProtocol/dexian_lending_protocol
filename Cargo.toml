@@ -4,14 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.12.1" }
-scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.12.1" }
+sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
+scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
+
+hex = { version = "0.4.3", default-features = false }
+serde = { version = "1.0.144", default-features = false, optional = true }
+ed25519-dalek = { version = "1.0.1", default-features = false, features = ["u64_backend"]}
 
 [dev-dependencies]
-transaction = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.12.1" }
-radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.12.1" }
-scrypto-unit = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.12.1" }
-
+transaction = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
+radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
+scrypto-unit = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
+scrypto-test = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
+radix-engine-interface = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
 [profile.release]
 opt-level = 'z'        # Optimize for size.
 lto = true             # Enable Link Time Optimization.

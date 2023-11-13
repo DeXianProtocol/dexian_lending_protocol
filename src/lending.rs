@@ -1,8 +1,8 @@
 
 use scrypto::prelude::*;
 use crate::oracle::oracle::PriceOracle;
-use crate::def_interest_model::InterestModel;
-use crate::def_interest_model::def_interest_model::DefInterestModel;
+use crate::interest::InterestModel;
+use crate::interest::def_interest_model::DefInterestModel;
 
 /**
 * About 15017 epochs in a year, assuming 35 minute each epoch.
@@ -204,7 +204,7 @@ impl AssetState {
         let total_debt = variable_borrow + stable_borrow;
         let borrow_ratio = if supply == Decimal::ZERO { Decimal::ZERO} else {total_debt / supply};
         debug!("calc_interest_rate.1, borrow_ratio:{}, ", borrow_ratio);
-        let variable_borrow_rate = self.def_interest_model.get_borrow_interest_rate(borrow_ratio, self.interest_model.clone());
+        let variable_borrow_rate = self.def_interest_model.get_variable_interest_rate(borrow_ratio, self.interest_model.clone());
         debug!("calc_interest_rate.2, var_ratio:{}, stable_ratio:{} ", variable_borrow_rate, self.stable_avg_rate);
         let overall_borrow_rate = if total_debt == Decimal::ZERO { Decimal::ZERO } else {(variable_borrow * variable_borrow_rate + stable_borrow * self.stable_avg_rate)/total_debt};
 

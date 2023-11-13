@@ -1,0 +1,139 @@
+mainnet:
+
+package:
+package_rdx1p4d5aqxj7lcustgf7wydn3f85he3ze36z7pca3w0wje5u5sz55pq0j
+
+
+token:
+package_tdx_2_1pkapsk3evvvxqx5uw8pqw84ffkrs7uet9les294kltp2m4aunpgdrv
+
+usdt:
+resource_rdx1thrvr3xfs2tarm2dl9emvs26vjqxu6mqvfgvqjne940jv0lnrrg7rw
+CALL_FUNCTION
+    Address("package_tdx_2_1pkapsk3evvvxqx5uw8pqw84ffkrs7uet9les294kltp2m4aunpgdrv")
+    "Hello"
+    "instantiate_hello"
+    "USDT"
+    "USDT";
+component_tdx_2_1czgjkdc8r0ufu8ux00dypzrznh7hs323t3neca4px0u3xlxcav6cgv
+resource_rdx1thrvr3xfs2tarm2dl9emvs26vjqxu6mqvfgvqjne940jv0lnrrg7rw
+CALL_METHOD
+    Address("component_tdx_2_1czgjkdc8r0ufu8ux00dypzrznh7hs323t3neca4px0u3xlxcav6cgv")
+    "free_token"
+    255u8
+;
+CALL_METHOD
+    Address("account_tdx_2_12x7ljug6zxrsalvgqlekufr676la4xt4qy8q0e98utw92e55409e30")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;
+
+
+usdc:
+CALL_FUNCTION
+    Address("package_tdx_2_1pkapsk3evvvxqx5uw8pqw84ffkrs7uet9les294kltp2m4aunpgdrv")
+    "Hello"
+    "instantiate_hello"
+    "USDC"
+    "USDC";
+component_tdx_2_1crhu05ah8yek50snjz5mqux82h9w0u7h2dytuggq977nhtt0n36hsn
+resource_rdx1t4upr78guuapv5ept7d7ptekk9mqhy605zgms33mcszen8l9fac8vf
+CALL_METHOD
+    Address("component_tdx_2_1crhu05ah8yek50snjz5mqux82h9w0u7h2dytuggq977nhtt0n36hsn")
+    "free_token"
+    255u8
+;
+CALL_METHOD
+    Address("account_tdx_2_12x7ljug6zxrsalvgqlekufr676la4xt4qy8q0e98utw92e55409e30")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;
+
+-------
+# init
+export admin_account=account_rdx12xfv4auqudtejxh48aayzwdjruhush5esdc44e5dezjps5xaj3x8zx
+export p1=account_tdx_2_12x7ljug6zxrsalvgqlekufr676la4xt4qy8q0e98utw92e55409e30
+export p2=account_tdx_2_1286na8966hx2qar2c5k6gp56jgdk2lyyvsst59req34wej86ue9xdc
+export p3=account_tdx_2_129v2sa7652vlmwr5z4fyushc3kpvygzvu6glyvwvvmd349rg9xsz5p
+
+-----
+# faucet
+## usdt
+export usdt_component=component_tdx_2_1czgjkdc8r0ufu8ux00dypzrznh7hs323t3neca4px0u3xlxcav6cgv
+export account=$p2
+./docs/replace_holder.sh ./docs/transactions/faucet_usdt.rtm
+
+## usdc
+export usdc_component=component_tdx_2_1crhu05ah8yek50snjz5mqux82h9w0u7h2dytuggq977nhtt0n36hsn
+export account=$p3
+./docs/replace_holder.sh ./docs/transactions/faucet_usdc.rtm
+
+
+----
+export pkg=package_rdx1p4d5aqxj7lcustgf7wydn3f85he3ze36z7pca3w0wje5u5sz55pq0j
+export account=$admin_account
+export usdt=resource_rdx1thrvr3xfs2tarm2dl9emvs26vjqxu6mqvfgvqjne940jv0lnrrg7rw
+export usdc=resource_rdx1t4upr78guuapv5ept7d7ptekk9mqhy605zgms33mcszen8l9fac8vf
+
+./docs/replace_holder.sh ./docs/transactions/new_oracle.rtm
+export oracle=component_rdx1cz0xvg82acdcr3klv8595e4xr5605svgvynp6s99hzln20qj0hr7ku
+
+./docs/replace_holder.sh ./docs/transactions/new_interest.rtm
+export def_interest_model=component_rdx1cr423206ly28zqvttn0whut4jyrqan8zkhqzuatxj0rvj86j2l0c95
+
+./docs/replace_holder.sh ./docs/transactions/new_lending_factory.rtm
+export lending_component=component_rdx1crh33drkrdutr2hxl03nycjhnyy69h8nye794uqhyvqraxs5w3dlr7
+export admin_badge=resource_rdx1tknad6w25utjmkhvzw20q8jvg4ugr2gwgucp489zhc68jzpflxyjdt
+export cdp=resource_rdx1n2xe99wv776d24999nt0ckwgpc4nr5cz6799782e50zfmhxcr3tamk
+
+# xrd pool
+export xrd=resource_rdx1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxradxrd
+./docs/replace_holder.sh ./docs/transactions/new_xrd_pool.rtm
+export dx_xrd=resource_rdx1t40nns2j49nu6dhw7a5zn3hs03qt0ed3dlnk03j6cqlvz7esgkcgsk
+
+#usdt pool
+./docs/replace_holder.sh ./docs/transactions/new_usdt_pool.rtm
+export dx_usdt=resource_rdx1t40h02dnsaw6e3kzt6met9xjatysjm9ug50yd8kuu6xffr233f0zm7
+
+#usdc pool
+./docs/replace_holder.sh ./docs/transactions/new_usdc_pool.rtm
+export dx_usdc=resource_rdx1t4gmu97xmd6z3a83rcmau20zyee3m2zdvr2v4k0kf4pemh059cnm00
+
+# supply
+## p1 4000xrd
+export account=$p1
+export supply_token=$xrd
+export amount=4000
+./docs/replace_holder.sh docs/transactions/supply.rtm
+
+## p2 4000xrd
+export account=$p2
+export supply_token=$xrd
+export amount=4000
+./docs/replace_holder.sh docs/transactions/supply.rtm
+
+## p2 200usdt
+export account=$p2
+export supply_token=$usdt
+export amount=200
+./docs/replace_holder.sh docs/transactions/supply.rtm
+
+## p3 200usdc
+export account=$p3
+export supply_token=$usdc
+export amount=200
+./docs/replace_holder.sh docs/transactions/supply.rtm
+
+# borrow
+export account=$p1
+export dx_token=$dx_xrd
+export amount=2000
+export borrow_token=$usdt
+export borrow_amount=10
+./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+export borrow_token=$usdc
+export borrow_amount=10
+./docs/replace_holder.sh docs/transactions/borrow_stable.rtm
+
+
+
