@@ -20,7 +20,7 @@ mod lend_pool {
             get_interest_rate => PUBLIC;
             get_variable_share_quantity => PUBLIC;
             get_deposit_share_quantity => PUBLIC;
-            get_loan_value => PUBLIC;
+            get_stable_interest => PUBLIC;
             get_available => PUBLIC;
             get_last_update => PUBLIC;
             get_redemption_value => PUBLIC;
@@ -134,7 +134,8 @@ mod lend_pool {
         pub fn add_liquity(&mut self, bucket: Bucket) -> Bucket{
             assert_resource(&bucket.resource_address(), &self.underlying_token);
             let deposit_amount = bucket.amount();
-            let mint_amount = floor(deposit_amount.checked_div(self.deposit_index).unwrap());
+            let divisibility = get_divisibility(self.deposit_share_token).unwrap();
+            let mint_amount = floor(deposit_amount.checked_div(self.deposit_index).unwrap(), divisibility);
             let deposit_share_res_mgr = ResourceManager::from_address(self.deposit_share_token);
             let bucket = deposit_share_res_mgr.mint(mint_amount);
             
@@ -163,23 +164,20 @@ mod lend_pool {
         //     withdraw_strategy: WithdrawStrategy,
         // ) -> Bucket;
 
-        pub fn borrow_variable(&mut self, borrow_amount: Decimal) -> Bucket{
+        pub fn borrow_variable(&mut self, borrow_amount: Decimal) -> (Bucket, Decimal){
             assert_vault_amount(&self.vault, borrow_amount);
             let variable_share = borrow_amount.checked_div(self.loan_index).unwrap();
             self.variable_loan_share_quantity = self.variable_loan_share_quantity.checked_add(variable_share).unwrap();
             
             self.update_interest_rate();
             
-            self.vault.take(borrow_amount)
+            (self.vault.take(borrow_amount), variable_share)
         }
 
         pub fn borrow_stable(&mut self, borrow_amount: Decimal, stable_rate: Decimal) -> Bucket{
             assert_vault_amount(&self.vault, borrow_amount);
-            let new_amount = self.stable_loan_amount.checked_add(borrow_amount).unwrap();
-            self.stable_loan_interest_rate = self.stable_loan_amount.checked_mul(self.stable_loan_interest_rate).unwrap()
-                .checked_add(borrow_amount.checked_mul(stable_rate).unwrap()).unwrap()
-                .checked_div(new_amount).unwrap();
-            self.stable_loan_amount = new_amount;
+            self.stable_loan_interest_rate = get_weight_rate(self.stable_loan_amount, self.stable_loan_interest_rate, borrow_amount, stable_rate);
+            self.stable_loan_amount = self.stable_loan_amount.checked_add(borrow_amount).unwrap();
 
             self.update_interest_rate();
 
@@ -190,6 +188,9 @@ mod lend_pool {
 
         pub fn repay_variable(&mut self, repay_bucket: Bucket) -> Decimal{
             assert_resource(&repay_bucket.resource_address(), &self.underlying_token);
+            
+            self.update_index();
+
             let amount = repay_bucket.amount();
             let loan_share = amount.checked_div(self.loan_index).unwrap();
 
@@ -208,10 +209,7 @@ mod lend_pool {
             last_epoch_at: u64
         ) -> (Decimal, Decimal, Decimal, u64){
             let current_epoch_at = Runtime::current_epoch().number();
-            let interest = ceil(loan_amount 
-                .checked_mul(rate).unwrap()
-                .checked_mul(Decimal::from( current_epoch_at - last_epoch_at).checked_div(Decimal::from(EPOCH_OF_YEAR)).unwrap()).unwrap()
-                );
+            let interest = self.get_stable_interest( loan_amount, last_epoch_at, rate);
             
             let previous_debt = self.stable_loan_amount.checked_mul(self.stable_loan_interest_rate).unwrap();
 
@@ -340,13 +338,8 @@ mod lend_pool {
         }
 
         fn get_stable_loan_value(&self) -> Decimal{
-            let delta_epoch = Runtime::current_epoch().number() - self.last_update;
-            if delta_epoch == 0u64 {
-                return self.stable_loan_amount;
-            }
-            self.stable_loan_amount.checked_mul(Decimal::ONE
-                .checked_add(Decimal::from(delta_epoch).checked_mul(self.stable_loan_interest_rate).unwrap().checked_div(Decimal::from(EPOCH_OF_YEAR)).unwrap()).unwrap()
-            ).unwrap()
+            let interest = self.get_stable_interest(self.stable_loan_amount, self.stable_loan_last_update, self.stable_loan_interest_rate);
+            self.stable_loan_amount.checked_add(interest).unwrap()
         }
 
         pub fn get_redemption_value(&self, amount_of_pool_units: Decimal) -> Decimal{
@@ -366,8 +359,10 @@ mod lend_pool {
             res_mgr.total_supply().unwrap()
         }
 
-        pub fn get_loan_value(&self) -> Decimal{
-            Decimal::ZERO
+        /// .
+        pub fn get_stable_interest(&self, borrow_amount: Decimal, last_epoch: u64, stable_rate: Decimal) -> Decimal{
+            let delta_epoch = Runtime::current_epoch().number() - last_epoch;
+            calc_compound_interest(borrow_amount, stable_rate, Decimal::from(EPOCH_OF_YEAR), delta_epoch)
         }
 
         pub fn get_variable_share_quantity(&self) -> Decimal{
@@ -375,11 +370,11 @@ mod lend_pool {
         }
 
         fn get_variable_rate_from_component(&self, borrow_ratio: Decimal) -> Decimal{
-            self.interest_model_cmp.call_raw::<Decimal>("get_variable_interest_rate", scrypto_args!(borrow_ratio, self.interest_model))
+            self.interest_model_cmp.call_raw::<Decimal>("get_variable_interest_rate", scrypto_args!(borrow_ratio, self.interest_model.clone()))
         }
 
         fn get_stable_rate_from_component(&self, borrow_ratio: Decimal, stable_ratio: Decimal) -> Decimal{
-            self.interest_model_cmp.call_raw::<Decimal>("get_stable_interest_rate", scrypto_args!(borrow_ratio, stable_ratio, self.interest_model))
+            self.interest_model_cmp.call_raw::<Decimal>("get_stable_interest_rate", scrypto_args!(borrow_ratio, stable_ratio, self.interest_model.clone()))
         }
     }   
 

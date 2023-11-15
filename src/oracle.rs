@@ -37,7 +37,7 @@ mod oracle{
     
     impl PriceOracle{
         
-        pub fn new(
+        pub fn instantiate(
             owner_role: OwnerRole,
             op_rule: AccessRule,
             admin_rule: AccessRule,
@@ -95,8 +95,7 @@ mod oracle{
             );
             let hash = hash(message);
             if let Ok(sig) = Ed25519Signature::from_str(&signature){
-                let current_epoch = Runtime::current_epoch().number();
-                if !Self::verify_ed25519(hash, self.price_signer, sig) || epoch_at < current_epoch {
+                if !Self::verify_ed25519(hash, self.price_signer, sig){
                     return Decimal::ZERO;
                 }
             }

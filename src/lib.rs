@@ -3,5 +3,5 @@ mod oracle;
 mod interest;
 mod signature;
 mod pools;
-mod collateral;
+mod cdp;
 mod dlp;
