@@ -15,7 +15,7 @@ pub struct Ed25519Signature(
 );
 
 /// Ed25519 signature verifier.
-pub struct Ed25519Verifier;
+// pub struct Ed25519Verifier;
 
 impl Ed25519Signature {
     pub const LENGTH: usize = 64;

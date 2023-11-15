@@ -1,6 +1,6 @@
 use scrypto::prelude::*;
 use crate::pools::lending::lend_pool::LendResourcePool;
-use crate::interest::{def_interest_model::DefInterestModel, InterestModel};
+use crate::interest::InterestModel;
 use crate::oracle::oracle::PriceOracle;
 use crate::utils::*;
 

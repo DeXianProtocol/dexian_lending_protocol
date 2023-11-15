@@ -48,7 +48,7 @@ pub fn calc_compound_interest(amount: Decimal, apy: Decimal, epoch_of_year: Deci
 pub fn get_weight_rate(amount: Decimal, rate: Decimal, new_amount:Decimal, new_rate:Decimal) -> Decimal{
     let latest_amount = amount.checked_add(new_amount).unwrap();
     amount.checked_mul(rate).unwrap()
-        .checked_add(new_amount.checked_mul(new_amount).unwrap()).unwrap()
+        .checked_add(new_amount.checked_mul(new_rate).unwrap()).unwrap()
         .checked_div(latest_amount).unwrap()
 }
 
