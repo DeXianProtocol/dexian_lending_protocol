@@ -1,5 +1,6 @@
 mod utils;
 mod oracle;
+mod validator;
 mod interest;
 mod signature;
 mod pools;
