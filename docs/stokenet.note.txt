@@ -1,7 +1,7 @@
 stokenet:
 
 package:
-package_tdx_2_1p56737cnmgpfv9793wtt4e6rzjwkmpjte80kqge0vta7erumdskvq7
+package_tdx_2_1p4qnxnrur8ujluvpamjg2y8x76txw6hjp2t6x37zlpp97stdfs9xlm
 
 
 token:
@@ -70,7 +70,7 @@ export account=$p3
 
 
 ----
-export pkg=package_tdx_2_1p56737cnmgpfv9793wtt4e6rzjwkmpjte80kqge0vta7erumdskvq7
+export pkg=package_tdx_2_1p4qnxnrur8ujluvpamjg2y8x76txw6hjp2t6x37zlpp97stdfs9xlm
 export account=$admin_account
 export usdt=resource_tdx_2_1thnzj7nfawdec4tztfr9fmsh33kmwlstz2fs9t99yzj0awg43xxkpk
 export usdc=resource_tdx_2_1tkaegwwrttt6jrzvn2ag6dsvjs64dfwya6sckvlxnf794y462lhtx0

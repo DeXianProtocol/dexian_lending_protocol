@@ -47,15 +47,16 @@ struct AssetState{
 #[blueprint]
 mod cdp_mgr{
     
-
-
     enable_method_auth!{
         roles{
-            comp_owner => updatable_by: [];
             admin => updatable_by: [];
+            operator => updatable_by: [];
         },
         methods{
             new_pool => restrict_to:[admin, OWNER];
+
+            withdraw_insurance => restrict_to: [operator, OWNER];
+
             supply => PUBLIC;
             withdraw => PUBLIC;
             borrow_variable => PUBLIC;
@@ -64,7 +65,6 @@ mod cdp_mgr{
             withdraw_collateral => PUBLIC;
             repay => PUBLIC;
             addition_collateral => PUBLIC;
-
         }
     }
 
@@ -87,7 +87,7 @@ mod cdp_mgr{
 
     impl CollateralDebtManager{
 
-        pub fn instantiate(owner_role: OwnerRole, pool_mgr_rule: AccessRule, price_oracle: Global<PriceOracle>)->(Global<CollateralDebtManager>, ResourceAddress){
+        pub fn instantiate(admin_rule: AccessRule, pool_mgr_rule: AccessRule, price_oracle: Global<PriceOracle>)->(Global<CollateralDebtManager>, ResourceAddress){
             let (address_reservation, address) = Runtime::allocate_component_address(CollateralDebtManager::blueprint_id());
             let cdp_res_mgr = ResourceBuilder::new_integer_non_fungible::<CollateralDebtPosition>(OwnerRole::None)
                 .metadata(metadata!(init{
@@ -118,11 +118,13 @@ mod cdp_mgr{
                 cdp_id_counter: 0u64,
                 cdp_res_mgr,
             }.instantiate()
-            .prepare_to_globalize(owner_role)
+            .prepare_to_globalize(OwnerRole::Fixed(admin_rule.clone()))
             .with_address(address_reservation)
-            // .roles(
-
-            // ).globalize();
+            .roles(roles!{
+                admin => admin_rule.clone();
+                operator => pool_mgr_rule.clone();
+            }
+            )
             .globalize();
             (component, cdp_res_mgr.address())
         }
@@ -135,8 +137,7 @@ mod cdp_mgr{
             liquidation_threshold: Decimal,
             liquidation_bonus: Decimal,
             insurance_ratio: Decimal,
-            collateral_token: ResourceAddress,
-            owner_role: OwnerRole
+            admin_rule: AccessRule,
         ) -> ResourceAddress{
             let pool_mgr_rule = rule!(require(global_caller(self.self_cmp_addr)));
             let (lend_res_pool, dx_token_addr) = LendResourcePool::instantiate(
@@ -144,19 +145,19 @@ mod cdp_mgr{
                 interest_model_cmp_addr,
                 interest_model.clone(),
                 insurance_ratio,
-                owner_role,
+                admin_rule,
                 pool_mgr_rule
                 );
             let asset_state = AssetState{
                 interest_model: interest_model.clone(),
-                collateral_token,
+                collateral_token: dx_token_addr,
                 ltv,
                 liquidation_threshold,
                 liquidation_bonus
             };
             self.pools.entry(underlying_token_addr).or_insert(lend_res_pool);
             self.states.entry(underlying_token_addr).or_insert(asset_state);
-            self.collateral_vaults.entry(collateral_token).or_insert(Vault::new(collateral_token));
+            self.collateral_vaults.entry(dx_token_addr).or_insert(Vault::new(dx_token_addr));
             self.deposit_asset_map.entry(dx_token_addr).or_insert(underlying_token_addr);
             dx_token_addr
         }
@@ -392,6 +393,12 @@ mod cdp_mgr{
             }
 
             Bucket::new(borrow_token)
+        }
+
+        pub fn withdraw_insurance(&mut self, underlying_token_addr: ResourceAddress, amount: Decimal) -> Bucket{
+            assert!(self.pools.contains_key(&underlying_token_addr), "unknow token resource address.");
+            let pool = self.pools.get_mut(&underlying_token_addr).unwrap();
+            pool.withdraw_insurance(amount)
         }
 
         fn update_cdp_data(&mut self,

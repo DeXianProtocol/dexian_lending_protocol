@@ -87,25 +87,23 @@ mod oracle{
         pub fn get_valid_price_in_xrd(&self, quote_addr: ResourceAddress, xrd_price_in_quote: String, timestamp: u64, signature: String) -> Decimal{
             assert!(self.price_map.contains_key(&quote_addr), "unknow resource address");
             let epoch_at = Runtime::current_epoch().number();
-            let base = XRD.to_hex();
-            let quote = quote_addr.to_hex();
+            let base = Runtime::bech32_encode_address(XRD);
+            let quote = Runtime::bech32_encode_address(quote_addr);
             let message = format!(
-                "{base}/{quote}{price}{epoch_at}{timestamp}",
+                "{base}/{quote}{price}{epoch_at}{timestamp}", base=base, quote=quote,
                 price=xrd_price_in_quote, epoch_at=epoch_at, timestamp=timestamp
             );
             let hash = hash(message);
             if let Ok(sig) = Ed25519Signature::from_str(&signature){
-                if !Self::verify_ed25519(hash, self.price_signer, sig){
-                    return Decimal::ZERO;
+                if Self::verify_ed25519(hash, self.price_signer, sig){
+                    if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
+                        // XRD/USDT --> USDT/XRD
+                        return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
+                    }
                 }
             }
 
-            if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
-                return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
-            }
-            
-            Decimal::ZERO
-            
+            Decimal::ZERO 
         }
 
         pub fn verify_ed25519(

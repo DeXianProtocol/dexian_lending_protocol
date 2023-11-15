@@ -9,11 +9,16 @@ mod lend_pool {
 
     enable_method_auth!{
         roles{
-            pool_owner => updatable_by: [];
+            admin => updatable_by:[];
+            operator => updatable_by: [];
         },
         methods {
-            // new_pool => restrict_to: [admin, OWNER];
-            // withdraw_fee => restrict_to: [admin, OWNER];  // withdraw_fee should restrict to Pool?
+            withdraw_insurance => restrict_to: [operator, OWNER];  // withdraw_fee should restrict to Pool?
+
+            borrow_variable => restrict_to: [operator, OWNER];
+            borrow_stable => restrict_to: [operator, OWNER];
+            repay_stable => restrict_to: [operator, OWNER];
+            repay_variable => restrict_to: [operator, OWNER];
 
             // readonly
             get_current_index => PUBLIC;
@@ -29,10 +34,6 @@ mod lend_pool {
             //business method
             add_liquity => PUBLIC;
             remove_liquity => PUBLIC;
-            borrow_variable => PUBLIC;
-            borrow_stable => PUBLIC;
-            repay_stable => PUBLIC;
-            repay_variable => PUBLIC;
         }
     }
     
@@ -72,28 +73,27 @@ mod lend_pool {
             interest_model_cmp_addr: ComponentAddress,
             interest_model: InterestModel,
             insurance_ratio: Decimal,
-            owner_role: OwnerRole,
+            admin_rule: AccessRule,
             pool_mgr_rule: AccessRule
         ) -> (Global<LendResourcePool>, ResourceAddress) {
-            // Validate that the resource is a fungible resource - a pool can't be created with non
-            // fungible resources.
             let res_mgr = ResourceManager::from_address(underlying_token);
             let origin_symbol: String = res_mgr.get_metadata::<&str, String>("symbol").unwrap().unwrap();
 
             let (address_reservation, address) = Runtime::allocate_component_address(LendResourcePool::blueprint_id());
 
-            let deposit_share_res_mgr = ResourceBuilder::new_fungible(owner_role.clone())
+            let dx_rule = rule!(require(global_caller(address)));
+            let deposit_share_res_mgr = ResourceBuilder::new_fungible(OwnerRole::None)
                 .metadata(metadata!(init{
                     "pool" => address, locked;
                     "symbol" => format!("dx{}", origin_symbol), locked;
                     "name" => format!("DeXian Staking Earning LP token({}) ", origin_symbol), locked;
                 }))
                 .mint_roles(mint_roles! {
-                    minter => pool_mgr_rule.clone();
+                    minter => dx_rule.clone();
                     minter_updater => rule!(deny_all);
                 })
                 .burn_roles(burn_roles! {
-                    burner => pool_mgr_rule.clone();
+                    burner => dx_rule.clone();
                     burner_updater => rule!(deny_all);
                 })
                 .create_with_no_initial_supply();
@@ -117,12 +117,23 @@ mod lend_pool {
                 insurance_ratio,
                 underlying_token
             }.instantiate()
-            .prepare_to_globalize(owner_role)
+            .prepare_to_globalize(OwnerRole::Fixed((admin_rule.clone())))
+            .roles(
+                roles!{
+                    admin => admin_rule.clone();
+                    operator => pool_mgr_rule.clone();
+                }
+            )
             .with_address(address_reservation)
             .globalize();
             
             (component, deposit_share_addr)
 
+        }
+
+        pub fn withdraw_insurance(&mut self, amount: Decimal) -> Bucket{
+            assert_amount(amount, self.insurance_balance);
+            self.vault.take(amount)
         }
 
         pub fn get_underlying_value(&self) -> Decimal{
