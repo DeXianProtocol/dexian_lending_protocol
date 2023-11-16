@@ -1,7 +1,7 @@
 use scrypto::prelude::*;
 
 pub const EPOCH_OF_YEAR: u64 = 105120;
-pub const BABYLON_START_EPOCH: u64 = 32719;
+pub const BABYLON_START_EPOCH: u64 = 0;  //32719; //mainnet: 32719, stokenet: 0
 pub const A_WEEK_EPOCHS: u64 = 60/5*24*7;
 pub const RESERVE_WEEKS: usize = 52;
 
@@ -35,12 +35,12 @@ mod validator_keeper{
             admin => updatable_by: [];
         },
         methods {
-            //op
-            log_validator_staking => restrict_to: [operator, OWNER];
+            // admin
+            log_validator_staking => restrict_to: [admin, OWNER];
+            // op
             register_validator_address => restrict_to: [operator, OWNER];
 
-
-            //public
+            // public
             get_active_set_apy => PUBLIC;
             get_validator_address => PUBLIC;
 
@@ -54,21 +54,42 @@ mod validator_keeper{
 
     impl ValidatorKeeper {
         pub fn instantiate(
-            owner_role: OwnerRole,
-            op_rule: AccessRule,
-            admin_rule: AccessRule,
-        ) -> Global<ValidatorKeeper>{
-            Self{
+        ) -> (Global<ValidatorKeeper>, Bucket, Bucket){
+            let admin_badge = ResourceBuilder::new_fungible(OwnerRole::None)
+                .divisibility(DIVISIBILITY_NONE)
+                .metadata(metadata!(
+                    init {
+                        "name" => "Admin Badge".to_owned(), locked;
+                        "description" => 
+                        "This is a DeXian Lending Protocol admin badge used to authenticate the admin.".to_owned(), locked;
+                    }
+                ))
+                .mint_initial_supply(1);
+            let op_badge = ResourceBuilder::new_fungible(OwnerRole::None)
+                .divisibility(DIVISIBILITY_NONE)
+                .metadata(metadata!(
+                    init {
+                        "name" => "Operator Badge".to_owned(), locked;
+                        "description" => 
+                        "This is a DeXian Lending Protocol operator badge used to authenticate the operator.".to_owned(), locked;
+                    }
+                ))
+                .mint_initial_supply(1);
+            let admin_rule = rule!(require(admin_badge.resource_address()));
+            let op_rule = rule!(require(op_badge.resource_address()));
+            
+            let component = Self{
                 validator_map: HashMap::new(),
                 res_validator_map: HashMap::new()
             }.instantiate()
-            .prepare_to_globalize(owner_role)
+            .prepare_to_globalize(OwnerRole::Fixed(rule!(require(admin_badge.resource_address()))))
             .roles(
                 roles!(
                     admin => admin_rule;
                     operator => op_rule;
                 )
-            ).globalize()
+            ).globalize();
+            (component, admin_badge.into(), op_badge.into())
         }
 
         
@@ -200,15 +221,15 @@ mod validator_keeper{
         }
         
 
-        fn get_validator_apy(&self, _validator_addr: &ComponentAddress, queue: &Vec<StakeData>, current_week_index: usize) -> Option<Decimal> {
-            let latest = queue.first()?;
+        fn get_validator_apy(&self, _validator_addr: &ComponentAddress, vec: &Vec<StakeData>, current_week_index: usize) -> Option<Decimal> {
+            let latest = vec.first()?;
             let latest_week_index = Self::get_week_index(latest.last_stake_epoch);
         
             if latest_week_index != current_week_index {
                 return None;
             }
         
-            if let Some(previous) = queue.get(1) {
+            if let Some(previous) = vec.get(1) {
                 let previous_week_index = Self::get_week_index(previous.last_stake_epoch);
         
                 if previous_week_index == latest_week_index - 1 {

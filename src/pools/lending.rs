@@ -117,7 +117,7 @@ mod lend_pool {
                 insurance_ratio,
                 underlying_token
             }.instantiate()
-            .prepare_to_globalize(OwnerRole::Fixed((admin_rule.clone())))
+            .prepare_to_globalize(OwnerRole::Fixed(admin_rule.clone()))
             .roles(
                 roles!{
                     admin => admin_rule.clone();

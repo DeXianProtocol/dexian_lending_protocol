@@ -201,3 +201,23 @@ resim call-method $lending_component 'repay' "$usdc:200" "$cdp:#2#"
 
 
 
+===================
+scrypto build
+resim reset
+result=$(resim new-account)
+export admin_account=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
+export admin_account_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
+export admin_account_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
+export account=$admin_account
+
+
+result=$(resim publish ".")
+export pkg=$(echo $result | awk -F ": " '{print $2}')
+
+result=$(resim call-function $pkg "ValidatorKeeper" "instantiate")
+export admin_badge=resource_sim1t4h3kupr5l95w6ufpuysl0afun0gfzzw7ltmk7y68ks5ekqh4cpx9w
+export op_badge=resource_sim1t42sszc99etfj6hwmuqytu9t3vkkpq0zhmpys6zt5j6u9vp7nxzx0s
+export keeper=component_sim1czgjpm8ye3naay5hqva05ap8ck6dz37fwhexfd707m74zvc5jsjeq2
+
+
+

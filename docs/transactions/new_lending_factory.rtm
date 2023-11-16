@@ -1,16 +1,24 @@
-CALL_METHOD
-    Address("${admin_account}")
-    "lock_fee"
-    Decimal("1000")
-;
 CALL_FUNCTION
     Address("${pkg}")
-    "LendingFactory"
-    "instantiate_lending_factory"
-    Address("${oracle}");
-
-CALL_METHOD
-    Address("${admin_account}")
-    "deposit_batch"
-    Expression("ENTIRE_WORKTOP");
-
+    "LendingProtocol"
+    "instantiate"
+    Enum<AccessRule::Protected>(
+        Enum<AccessRuleNode::ProofRule>(
+            Enum<ProofRule::Require>(
+                Enum<ResourceOrNonFungible::Resource>(
+                    Address("${admin_badge}")
+                )
+            )
+        )
+    )
+    Enum<AccessRule::Protected>(
+        Enum<AccessRuleNode::ProofRule>(
+            Enum<ProofRule::Require>(
+                Enum<ResourceOrNonFungible::Resource>(
+                    Address("${op_badge}")
+                )
+            )
+        )
+    )
+    "${price_signer_pk}"
+;

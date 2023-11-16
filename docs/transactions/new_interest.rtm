@@ -1,10 +1,10 @@
-CALL_METHOD
-    Address("${account}")
-    "lock_fee"
-    Decimal("1000")
-;
 CALL_FUNCTION
     Address("${pkg}")
     "DefInterestModel"
     "new"
+    Address("${keeper}")
+    Decimal("0.2")
+    Decimal("0.5")
+    Decimal("0.55")
+    Decimal("0.45")
 ;

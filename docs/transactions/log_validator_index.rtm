@@ -1,0 +1,17 @@
+CALL_METHOD
+    Address("${admin_account}")
+    "create_proof_of_amount"
+    Address("${admin_badge}")
+    Decimal("1")
+;
+CALL_METHOD
+    Address("${keeper}")
+    "log_validator_staking"
+    Array<Address>(
+        Address("validator_tdx_2_1sdkarf3cr699ptgdlnyy6nhvelzvjla3kslhlghxcvpnkn3494ttlw"),
+        Address("validator_tdx_2_1svh9h85q4dp7xaztkk8sh4vzqyesms9xk3drhjdq8l8gy090shulnr"),
+        Address("validator_tdx_2_1s086l0qqxqel2c0mxu9kspqs0ccrkytskkzus2sqscdl882qh0l7xy"),
+        Address("validator_tdx_2_1s0j35ansmur5q8kxem4edr23j2leutupveqc9g8kuuj29wc7uvmd8z")
+    )
+    Array<Address>()
+;

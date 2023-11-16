@@ -32,67 +32,47 @@ mod dexian_lending{
         price_oracle: Global<PriceOracle>,
         cdp_mgr: Global<CollateralDebtManager>,
         cdp_res_addr: ResourceAddress,
-        admin_badge_res_addr: ResourceAddress,
-        op_badge_res_addr: ResourceAddress
+        admin_rule: AccessRule,
+        op_rule: AccessRule
     }
 
     impl LendingProtocol{
 
-        pub fn instantiate(price_signer_pk: String) -> (Global<LendingProtocol>, Global<PriceOracle>, ResourceAddress, Bucket, Bucket){
-            let admin_badge = ResourceBuilder::new_fungible(OwnerRole::None)
-                .divisibility(DIVISIBILITY_NONE)
-                .metadata(metadata!(
-                    init {
-                        "name" => "Admin Badge".to_owned(), locked;
-                        "description" => 
-                        "This is a DeXian Lending Protocol admin badge used to authenticate the admin.".to_owned(), locked;
-                    }
-                ))
-                .mint_initial_supply(1);
-            let op_badge = ResourceBuilder::new_fungible(OwnerRole::None)
-                .divisibility(DIVISIBILITY_NONE)
-                .metadata(metadata!(
-                    init {
-                        "name" => "Operator Badge".to_owned(), locked;
-                        "description" => 
-                        "This is a DeXian Lending Protocol operator badge used to authenticate the operator.".to_owned(), locked;
-                    }
-                ))
-                .mint_initial_supply(1);
-
+        pub fn instantiate(admin_rule:AccessRule, op_rule:AccessRule, price_signer_pk: String) -> (Global<LendingProtocol>, Global<PriceOracle>, ResourceAddress){
+            
             let (address_reservation, component_address) =
             Runtime::allocate_component_address(LendingProtocol::blueprint_id());
 
             let cdp_mgr_rule = rule!(require(global_caller(component_address)));
 
             let price_oracle = PriceOracle::instantiate(
-                OwnerRole::Fixed(rule!(require(admin_badge.resource_address()))),
-                rule!(require(op_badge.resource_address())), 
-                rule!(require(admin_badge.resource_address())),
+                OwnerRole::Fixed(admin_rule.clone()),
+                op_rule.clone(),
+                admin_rule.clone(),
                 price_signer_pk
             );
             let (cdp_mgr, cdp_res_addr) = CollateralDebtManager::instantiate(
-                rule!(require(admin_badge.resource_address())), 
+                admin_rule.clone(),
                 cdp_mgr_rule, 
                 price_oracle
             );
 
             let component = Self{
-                admin_badge_res_addr:admin_badge.resource_address(),
-                op_badge_res_addr: op_badge.resource_address(),
+                admin_rule: admin_rule.clone(),
+                op_rule: op_rule.clone(),
                 price_oracle,
                 cdp_mgr,
                 cdp_res_addr
             }.instantiate()
-            .prepare_to_globalize(OwnerRole::Fixed(rule!(require(admin_badge.resource_address()))))
+            .prepare_to_globalize(OwnerRole::Fixed(admin_rule.clone()))
             .with_address(address_reservation)
             .roles(roles! {
-                admin => rule!(require(admin_badge.resource_address()));
-                operator => rule!(require(op_badge.resource_address()));
+                admin => admin_rule.clone();
+                operator => op_rule.clone();
             })
             .globalize();
             
-            (component, price_oracle, cdp_res_addr, admin_badge.into(), op_badge.into())
+            (component, price_oracle, cdp_res_addr)
         }
 
         pub fn new_pool(&mut self,
@@ -104,7 +84,7 @@ mod dexian_lending{
             liquidation_bonus: Decimal,
             insurance_ratio: Decimal
         ) -> ResourceAddress {
-            self.cdp_mgr.new_pool(underlying_token_addr, interest_model, interest_model_cmp_addr, ltv, liquidation_threshold, liquidation_bonus, insurance_ratio, rule!(require(self.admin_badge_res_addr)))
+            self.cdp_mgr.new_pool(underlying_token_addr, interest_model, interest_model_cmp_addr, ltv, liquidation_threshold, liquidation_bonus, insurance_ratio, self.admin_rule.clone())
         }
 
         pub fn supply(&mut self, bucket: Bucket) -> Bucket{

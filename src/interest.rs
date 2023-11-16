@@ -20,6 +20,7 @@ mod def_interest_model{
 
     impl DefInterestModel {
 
+        ///TODO: new->instantiate
         pub fn new(keeper_cmp_addr: ComponentAddress, def_primary: Decimal, def_quadratic: Decimal, stable_coin_primary: Decimal, stable_coin_quadratic:Decimal) -> Global<DefInterestModel>{
             Self{
                 validator_keeper: Global::from(keeper_cmp_addr),
