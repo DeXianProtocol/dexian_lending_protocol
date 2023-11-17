@@ -206,20 +206,22 @@ mod lend_pool {
         }
 
 
-        pub fn repay_variable(&mut self, repay_bucket: Bucket) -> Decimal{
+        pub fn repay_variable(&mut self, mut repay_bucket: Bucket, loan_amount: Decimal) -> (Bucket, Decimal){
             assert_resource(&repay_bucket.resource_address(), &self.underlying_token);
             
             self.update_index();
 
-            let amount = repay_bucket.amount();
-            let loan_share = amount.checked_div(self.loan_index).unwrap();
+            let divisibility = get_divisibility(self.underlying_token).unwrap();
+            let debt_amount = loan_amount.checked_mul(self.loan_index).unwrap();
+            let amount = if repay_bucket.amount() > debt_amount {debt_amount} else{repay_bucket.amount()};
+            let loan_share = floor(amount.checked_div(self.loan_index).unwrap(), divisibility);
 
             self.variable_loan_share_quantity = self.variable_loan_share_quantity.checked_sub(loan_share).unwrap();
-            self.vault.put(repay_bucket);
+            self.vault.put(repay_bucket.take(amount));
             
             self.update_interest_rate();
             
-            loan_share
+            (repay_bucket, loan_share)
         }
 
         pub fn repay_stable(

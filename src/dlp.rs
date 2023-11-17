@@ -198,11 +198,21 @@ mod dexian_lending{
         }
 
         pub fn addition_collateral(&mut self, id: u64, bucket: Bucket){
+            let cdp_id = NonFungibleLocalId::integer(id);
+            let amount = bucket.amount();
+            let underlying_token = bucket.resource_address();
             self.cdp_mgr.addition_collateral(id, bucket);
+            
+            Runtime::emit_event(AdditionCollateralEvent{cdp_id, underlying_token, amount});
         }
 
-        pub fn repay(&mut self, mut repay_bucket: Bucket, id: u64) -> Bucket{
-            self.cdp_mgr.repay(repay_bucket, id)
+        pub fn repay(&mut self, repay_bucket: Bucket, id: u64) -> Bucket{
+            let cdp_id: NonFungibleLocalId = NonFungibleLocalId::integer(id);
+            let repay_token = repay_bucket.resource_address();
+            let bucket_amount = repay_bucket.amount();
+            let (bucket, actual_payment) = self.cdp_mgr.repay(repay_bucket, id);
+            Runtime::emit_event(RepayEvent{cdp_id, repay_token, bucket_amount, actual_payment});
+            bucket
         }
 
         pub fn withdraw_insurance(&mut self, underlying_token_addr: ResourceAddress, amount: Decimal) -> Bucket{
@@ -310,5 +320,9 @@ pub struct WithdrawCollateralEvent{
 
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct RepayEvent{
+    pub cdp_id: NonFungibleLocalId,
+    pub repay_token: ResourceAddress,
+    pub bucket_amount: Decimal,
+    pub actual_payment: Decimal
 
 }

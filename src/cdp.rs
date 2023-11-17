@@ -274,7 +274,7 @@ mod cdp_mgr{
                 let (_variable_rate, stable_rate, _supply_rate)  = borrow_pool.get_interest_rate();
                 let borrow_bucket = borrow_pool.borrow_stable(amount, stable_rate);
                 cdp_avg_rate = get_weight_rate(cdp_data.borrow_amount.checked_add(interest).unwrap(), cdp_data.stable_rate, amount, stable_rate);
-                let increase_amount = amount + interest;
+
                 borrow_bucket
             }
             else{
@@ -348,28 +348,30 @@ mod cdp_mgr{
             self.update_cdp_data(cdp_data.is_stable, Decimal::ZERO, Decimal::ZERO, dx_amount,  Decimal::ZERO, Decimal::ZERO, cdp_id, cdp_data);
         }
 
-        pub fn repay(&mut self, mut repay_bucket: Bucket, id: u64) -> Bucket{
-            let cdp_id = NonFungibleLocalId::integer(id);
+        pub fn repay(&mut self, repay_bucket: Bucket, id: u64) -> (Bucket, Decimal){
+            let cdp_id: NonFungibleLocalId = NonFungibleLocalId::integer(id);
             let cdp_data = self.cdp_res_mgr.get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
             let borrow_token = cdp_data.borrow_token;
             assert_resource(&borrow_token, &repay_bucket.resource_address());
 
-            let mut repay_amount = repay_bucket.amount();
-            let mut repay_in_borrow = Decimal::ZERO;
-            let mut normalized_amount = Decimal::ZERO;
+            
             let borrow_pool = self.pools.get_mut(&borrow_token).unwrap();
 
-            if cdp_data.is_stable {
-                let (bucket, actual_repay_amount, repay_in_borrow, interest, current_epoch_at) = borrow_pool.repay_stable(
+            let (bucket, payment_amount) = if cdp_data.is_stable {
+                let (bucket, actual_repay_amount, repay_in_borrow, _interest, _current_epoch_at) = borrow_pool.repay_stable(
                     repay_bucket, cdp_data.borrow_amount, cdp_data.stable_rate, cdp_data.last_update_epoch
                 );
-                //TODO: update cdp
+                self.update_cdp_after_repay(&cdp_id, cdp_data, actual_repay_amount, repay_in_borrow, Decimal::ZERO, Decimal::ZERO);
+                (bucket, actual_repay_amount)
             }
             else{
-                let bucket = borrow_pool.repay_variable(repay_bucket);
-            }
 
-            Bucket::new(borrow_token)
+                let (bucket, actual_repay_amount) = borrow_pool.repay_variable(repay_bucket, cdp_data.normalized_borrow);
+                self.update_cdp_after_repay(&cdp_id, cdp_data, actual_repay_amount, Decimal::ZERO, actual_repay_amount, Decimal::ZERO);
+                (bucket, actual_repay_amount)
+            };
+
+            (bucket, payment_amount)
         }
 
         pub fn withdraw_insurance(&mut self, underlying_token_addr: ResourceAddress, amount: Decimal) -> Bucket{
@@ -390,6 +392,33 @@ mod cdp_mgr{
 
             let underlying_token = self.deposit_asset_map.get(&dx_token).unwrap();
             (borrow_token, underlying_token.clone())
+        }
+
+        fn update_cdp_after_repay(&mut self, 
+            cdp_id: &NonFungibleLocalId,
+            cdp_data: CollateralDebtPosition,
+            repay_amount: Decimal,
+            delta_borrow: Decimal,
+            delta_normalized_borrow: Decimal,
+            delta_collateral: Decimal
+        ){
+            self.cdp_res_mgr.update_non_fungible_data(cdp_id, "total_repay", cdp_data.total_repay.checked_add(repay_amount).unwrap());
+            if !cdp_data.is_stable && delta_normalized_borrow != Decimal::ZERO{
+                self.cdp_res_mgr.update_non_fungible_data(cdp_id, "normalized_borrow", cdp_data.normalized_borrow.checked_sub(delta_normalized_borrow).unwrap());
+            }
+
+            if cdp_data.is_stable && delta_borrow != Decimal::ZERO{
+                let new_borrow_amount = cdp_data.borrow_amount - delta_borrow;
+                self.cdp_res_mgr.update_non_fungible_data(cdp_id, "borrow_amount", new_borrow_amount);
+                if new_borrow_amount == Decimal::ZERO {
+                    self.cdp_res_mgr.update_non_fungible_data(cdp_id, "stable_rate", Decimal::ZERO);
+                }
+                self.cdp_res_mgr.update_non_fungible_data(cdp_id, "last_update_epoch", Runtime::current_epoch().number());
+            }
+
+            if delta_collateral != Decimal::ZERO{
+                self.cdp_res_mgr.update_non_fungible_data(&cdp_id, "collateral_amount", cdp_data.collateral_amount + delta_collateral);
+            }
         }
 
         fn update_cdp_data(&mut self,
@@ -416,6 +445,7 @@ mod cdp_mgr{
                 self.cdp_res_mgr.update_non_fungible_data(&cdp_id, "stable_rate", cdp_avg_rate);
                 self.cdp_res_mgr.update_non_fungible_data(&cdp_id, "last_update_epoch", Runtime::current_epoch().number());
             }
+            
         }
 
         fn new_cdp(&mut self,
