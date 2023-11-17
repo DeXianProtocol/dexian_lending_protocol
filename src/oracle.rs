@@ -70,7 +70,7 @@ mod oracle{
         pub fn set_verify_public_key(&mut self, price_signer_pk: String){
             self.price_signer = Ed25519PublicKey::from_str(&price_signer_pk).unwrap();
 
-            Runtime::emit_event(SetPublicKey{pub_key:price_signer_pk});
+            Runtime::emit_event(SetPublicKeyEvent{pub_key:price_signer_pk});
         }
     
         
@@ -130,7 +130,7 @@ pub struct SetPriceEvent {
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
-pub struct SetPublicKey{
+pub struct SetPublicKeyEvent{
     pub pub_key: String
 }
 

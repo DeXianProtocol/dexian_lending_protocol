@@ -209,15 +209,68 @@ export admin_account=$(echo $result|grep "Account component address: "|awk -F ":
 export admin_account_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
 export admin_account_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
 export account=$admin_account
+result=$(resim new-account)
+export p1=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
+export p1_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
+export p1_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
+result=$(resim new-account)
+export p2=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
+export p2_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
+export p2_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
+result=$(resim new-account)
+export p3=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
+export p3_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
+export p3_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
+
+
+result=$(resim new-token-fixed --symbol=USDT --name=USDT 1000000)
+# export usdt=$(echo $result | grep "Resource:" | awk -F " " '{print $3}')
+export usdt=$(echo $result | awk -F "Resource: " '{print $2}')
+result=$(resim new-token-fixed --symbol=USDC --name=USDC 1000000)
+# export usdc=$(echo $result | grep "Resource:" | awk -F " " '{print $3}')
+export usdc=$(echo $result | awk -F "Resource: " '{print $2}')
+resim transfer $usdt:100000 $p2
+resim transfer $usdc:100000 $p2
+resim transfer $usdc:100000 $p3
+resim transfer $usdt:200 $p1
+resim transfer $usdc:200 $p1
 
 
 result=$(resim publish ".")
 export pkg=$(echo $result | awk -F ": " '{print $2}')
 
 result=$(resim call-function $pkg "ValidatorKeeper" "instantiate")
-export admin_badge=resource_sim1t4h3kupr5l95w6ufpuysl0afun0gfzzw7ltmk7y68ks5ekqh4cpx9w
-export op_badge=resource_sim1t42sszc99etfj6hwmuqytu9t3vkkpq0zhmpys6zt5j6u9vp7nxzx0s
-export keeper=component_sim1czgjpm8ye3naay5hqva05ap8ck6dz37fwhexfd707m74zvc5jsjeq2
+export keeper=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
+export admin_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
+export op_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $3}' | awk -F " " '{print $1}')
 
+result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_interest.rtm)
+export def_interest_model=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
+
+result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_lending_factory.rtm)
+export lending_component=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
+export oracle=$(echo $result | grep "Component: "| awk -F "Component: " '{print $3}' | awk -F " " '{print $1}')
+export cdp_mgr=$(echo $result | grep "Component: "| awk -F "Component: " '{print $4}' | awk -F " " '{print $1}')
+export cdp=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
+
+
+export xrd="resource_sim1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxakj8n3"
+result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_xrd_pool.rtm)
+export xrd_pool=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
+export dx_xrd=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
+result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_usdt_pool.rtm)
+export usdt_pool=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
+export dx_usdt=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}')
+result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_usdc_pool.rtm)
+export usdc_pool=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
+export dx_usdc=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}')
+
+
+
+resim set-default-account $p1 $p1_priv $p1_badge
+export supply_token=$xrd
+export account=$p1
+export amount=4000
+resim run < ./docs/replace_holder.sh docs/transactions/supply.rtm
 
 

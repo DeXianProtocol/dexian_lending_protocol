@@ -36,6 +36,7 @@ mod validator_keeper{
         },
         methods {
             // admin
+            fill_validator_staking => restrict_to: [admin, OWNER];
             log_validator_staking => restrict_to: [admin, OWNER];
             // op
             register_validator_address => restrict_to: [operator, OWNER];
@@ -105,6 +106,12 @@ mod validator_keeper{
         pub fn get_validator_address(&self, res_addr: ResourceAddress) -> ComponentAddress{
             assert!(self.res_validator_map.contains_key(&res_addr), "unknow resource address");
             self.res_validator_map.get(&res_addr).unwrap().clone()
+        }
+
+        pub fn fill_validator_staking(&mut self, validator_addr: ComponentAddress, stake_data_vec: Vec<StakeData>){
+            
+            //TODO:
+            
         }
 
 

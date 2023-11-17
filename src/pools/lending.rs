@@ -146,24 +146,33 @@ mod lend_pool {
             assert_resource(&bucket.resource_address(), &self.underlying_token);
             let deposit_amount = bucket.amount();
             let divisibility = get_divisibility(self.deposit_share_token).unwrap();
+
+            self.update_index();
+            
+            self.vault.put(bucket);
             let mint_amount = floor(deposit_amount.checked_div(self.deposit_index).unwrap(), divisibility);
             let deposit_share_res_mgr = ResourceManager::from_address(self.deposit_share_token);
-            let bucket = deposit_share_res_mgr.mint(mint_amount);
+            let dx_bucket = deposit_share_res_mgr.mint(mint_amount);
             
+            info!("after interest rate:{}, {}, index:{}, {}", self.variable_loan_interest_rate, self.stable_loan_interest_rate, self.deposit_index, self.loan_index);
             self.update_interest_rate();
-            
-            bucket
+            info!("after interest rate:{}, {}, index:{}, {}", self.variable_loan_interest_rate, self.stable_loan_interest_rate, self.deposit_index, self.loan_index);
+            dx_bucket
 
         }
         pub fn remove_liquity(&mut self, bucket: Bucket) -> Bucket{
             assert_resource(&bucket.resource_address(), &self.deposit_share_token);
+            self.update_index();
+
             let burn_amount = bucket.amount();
             let withdraw_amount = self.get_redemption_value(burn_amount);
             assert_vault_amount(&self.vault, withdraw_amount);
             let deposit_share_res_mgr = ResourceManager::from_address(self.deposit_share_token);
             deposit_share_res_mgr.burn(bucket);
-            
+
+            info!("after interest rate:{}, {}, index:{}, {}", self.variable_loan_interest_rate, self.stable_loan_interest_rate, self.deposit_index, self.loan_index);
             self.update_interest_rate();
+            info!("after interest rate:{}, {}, index:{}, {}", self.variable_loan_interest_rate, self.stable_loan_interest_rate, self.deposit_index, self.loan_index);
 
             self.vault.take(withdraw_amount)
 
@@ -290,21 +299,20 @@ mod lend_pool {
 
         fn calc_interest_rate(&self, supply: Decimal, variable_borrow: Decimal, stable_borrow: Decimal) -> (Decimal, Decimal, Decimal){
 
-            debug!("calc_interest_rate.0, var:{}, stable:{}, supply:{}", variable_borrow, stable_borrow, supply);
+            info!("calc_interest_rate.0, var:{}, stable:{}, supply:{}", variable_borrow, stable_borrow, supply);
             let total_debt = variable_borrow + stable_borrow;
             let borrow_ratio = if supply == Decimal::ZERO { Decimal::ZERO } else { total_debt.checked_div(supply).unwrap() };
             let stable_ratio = if total_debt == Decimal::ZERO {Decimal::ZERO } else { stable_borrow.checked_div(total_debt).unwrap() };
-            debug!("calc_interest_rate.1, borrow_ratio:{}, ", borrow_ratio);
-            let variable_rate = self.get_variable_rate_from_component(borrow_ratio);
-            let stable_rate = self.get_stable_rate_from_component(borrow_ratio, stable_ratio);
-            debug!("calc_interest_rate.2, var_ratio:{}, stable_ratio:{} ", variable_rate, self.stable_loan_interest_rate);
+            info!("calc_interest_rate.1, borrow_ratio:{}, ", borrow_ratio);
+            let (variable_rate, stable_rate) = self.get_interest_rate_from_component(borrow_ratio, stable_ratio);
+            info!("calc_interest_rate.2, var_ratio:{}, stable_ratio:{} ", variable_rate, self.stable_loan_interest_rate);
             let overall_borrow_rate = if total_debt == Decimal::ZERO { Decimal::ZERO } else {(
                 variable_borrow * variable_rate + stable_borrow * self.stable_loan_interest_rate
             )/total_debt};
 
             let interest = total_debt * overall_borrow_rate * (Decimal::ONE - self.insurance_ratio);
             let supply_rate = if supply == Decimal::ZERO { Decimal::ZERO} else {interest / supply};
-            debug!("calc_interest_rate.3, interest:{}, overall_borrow_rate:{}, supply_rate:{} ", interest, overall_borrow_rate, supply_rate);
+            info!("calc_interest_rate.3, interest:{}, overall_borrow_rate:{}, supply_rate:{} ", interest, overall_borrow_rate, supply_rate);
         
             (variable_rate, stable_rate, supply_rate)
         }
@@ -380,12 +388,8 @@ mod lend_pool {
             self.variable_loan_share_quantity
         }
 
-        fn get_variable_rate_from_component(&self, borrow_ratio: Decimal) -> Decimal{
-            self.interest_model_cmp.call_raw::<Decimal>("get_variable_interest_rate", scrypto_args!(borrow_ratio, self.interest_model.clone()))
-        }
-
-        fn get_stable_rate_from_component(&self, borrow_ratio: Decimal, stable_ratio: Decimal) -> Decimal{
-            self.interest_model_cmp.call_raw::<Decimal>("get_stable_interest_rate", scrypto_args!(borrow_ratio, stable_ratio, self.interest_model.clone()))
+        fn get_interest_rate_from_component(&self, borrow_ratio: Decimal, stable_ratio: Decimal) -> (Decimal, Decimal){
+            self.interest_model_cmp.call_raw::<(Decimal, Decimal)>("get_interest_rate", scrypto_args!(borrow_ratio, stable_ratio, self.interest_model.clone()))
         }
     }   
 

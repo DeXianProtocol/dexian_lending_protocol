@@ -1,7 +1,7 @@
 CALL_METHOD
     Address("${admin_account}")
     "lock_fee"
-    Decimal("1000")
+    Decimal("10")
 ;
 CALL_METHOD
     Address("${admin_account}")
@@ -13,10 +13,10 @@ CALL_METHOD
     Address("${lending_component}")
     "new_pool"
     Address("${usdc}")
+    Enum<1u8>()
+    Address("${def_interest_model}")
     Decimal("0.6")
     Decimal("0.7")
     Decimal("0.07")
     Decimal("0.25")
-    Enum<1u8>()
-    Address("${def_interest_model}")
 ;

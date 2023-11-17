@@ -1,24 +1,13 @@
+CALL_METHOD
+    Address("${admin_account}")
+    "lock_fee"
+    Decimal("10")
+;
 CALL_FUNCTION
     Address("${pkg}")
     "LendingProtocol"
     "instantiate"
-    Enum<AccessRule::Protected>(
-        Enum<AccessRuleNode::ProofRule>(
-            Enum<ProofRule::Require>(
-                Enum<ResourceOrNonFungible::Resource>(
-                    Address("${admin_badge}")
-                )
-            )
-        )
-    )
-    Enum<AccessRule::Protected>(
-        Enum<AccessRuleNode::ProofRule>(
-            Enum<ProofRule::Require>(
-                Enum<ResourceOrNonFungible::Resource>(
-                    Address("${op_badge}")
-                )
-            )
-        )
-    )
+    Address("${admin_badge}")
+    Address("${op_badge}")
     "${price_signer_pk}"
 ;

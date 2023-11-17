@@ -20,8 +20,13 @@ mod def_interest_model{
 
     impl DefInterestModel {
 
-        ///TODO: new->instantiate
-        pub fn new(keeper_cmp_addr: ComponentAddress, def_primary: Decimal, def_quadratic: Decimal, stable_coin_primary: Decimal, stable_coin_quadratic:Decimal) -> Global<DefInterestModel>{
+        pub fn instantiate(
+            keeper_cmp_addr: ComponentAddress, 
+            def_primary: Decimal, 
+            def_quadratic: Decimal, 
+            stable_coin_primary: Decimal, 
+            stable_coin_quadratic:Decimal
+        ) -> Global<DefInterestModel>{
             Self{
                 validator_keeper: Global::from(keeper_cmp_addr),
                 def_primary,
@@ -31,7 +36,14 @@ mod def_interest_model{
             }.instantiate().prepare_to_globalize(OwnerRole::None).globalize()
         }
 
-        pub fn get_variable_interest_rate(&self, borrow_ratio: Decimal, model: InterestModel) -> Decimal{
+        pub fn get_interest_rate(&self, borrow_ratio: Decimal, _stable_ratio: Decimal, model: InterestModel) -> (Decimal, Decimal){
+            let apy = self.get_variable_interest_rate(borrow_ratio, model);
+            let validator_apy = self.validator_keeper
+                .call_raw::<Decimal>("get_active_set_apy", scrypto_args!());
+            (apy, if apy > validator_apy {apy} else {validator_apy})
+        }
+
+        fn get_variable_interest_rate(&self, borrow_ratio: Decimal, model: InterestModel) -> Decimal{
             match model{
                 InterestModel::Default => if borrow_ratio > Decimal::ONE {
                     // dec!("0.2") + dec!("0.5")
@@ -50,13 +62,6 @@ mod def_interest_model{
                     self.stable_coin_primary.checked_mul(r4).unwrap().checked_add(self.stable_coin_quadratic.checked_mul(r8).unwrap()).unwrap()
                 }
             }
-        }
-
-        pub fn get_stable_interest_rate(&self, borrow_ratio: Decimal, _stable_ratio: Decimal, model: InterestModel) -> Decimal{
-            let apy = self.get_variable_interest_rate(borrow_ratio, model);
-            let validator_apy = self.validator_keeper
-                .call_raw::<Decimal>("get_active_set_apy", scrypto_args!());
-            if apy > validator_apy {apy} else {validator_apy}
         }
     }
 

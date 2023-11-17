@@ -53,8 +53,7 @@ mod cdp_mgr{
             operator => updatable_by: [];
         },
         methods{
-            new_pool => restrict_to:[admin, OWNER];
-
+            new_pool => restrict_to:[operator, OWNER];
             withdraw_insurance => restrict_to: [operator, OWNER];
 
             supply => PUBLIC;

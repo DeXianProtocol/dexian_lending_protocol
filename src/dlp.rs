@@ -38,37 +38,37 @@ mod dexian_lending{
 
     impl LendingProtocol{
 
-        pub fn instantiate(admin_rule:AccessRule, op_rule:AccessRule, price_signer_pk: String) -> (Global<LendingProtocol>, Global<PriceOracle>, ResourceAddress){
+        pub fn instantiate(admin_badge_addr: ResourceAddress, op_badge_addr: ResourceAddress, price_signer_pk: String) -> (Global<LendingProtocol>, Global<PriceOracle>, ResourceAddress){
             
             let (address_reservation, component_address) =
             Runtime::allocate_component_address(LendingProtocol::blueprint_id());
 
-            let cdp_mgr_rule = rule!(require(global_caller(component_address)));
+            let cdp_mgr_rule = rule!(require(op_badge_addr) || require(global_caller(component_address)));
 
             let price_oracle = PriceOracle::instantiate(
-                OwnerRole::Fixed(admin_rule.clone()),
-                op_rule.clone(),
-                admin_rule.clone(),
+                OwnerRole::Fixed(rule!(require(admin_badge_addr))),
+                rule!(require(op_badge_addr)),
+                rule!(require(admin_badge_addr)),
                 price_signer_pk
             );
             let (cdp_mgr, cdp_res_addr) = CollateralDebtManager::instantiate(
-                admin_rule.clone(),
+                rule!(require(admin_badge_addr)),
                 cdp_mgr_rule, 
                 price_oracle
             );
 
             let component = Self{
-                admin_rule: admin_rule.clone(),
-                op_rule: op_rule.clone(),
+                admin_rule: rule!(require(admin_badge_addr)),
+                op_rule: rule!(require(op_badge_addr)),
                 price_oracle,
                 cdp_mgr,
                 cdp_res_addr
             }.instantiate()
-            .prepare_to_globalize(OwnerRole::Fixed(admin_rule.clone()))
+            .prepare_to_globalize(OwnerRole::Fixed(rule!(require(admin_badge_addr))))
             .with_address(address_reservation)
             .roles(roles! {
-                admin => admin_rule.clone();
-                operator => op_rule.clone();
+                admin => rule!(require(admin_badge_addr));
+                operator => rule!(require(op_badge_addr));
             })
             .globalize();
             
@@ -88,7 +88,15 @@ mod dexian_lending{
         }
 
         pub fn supply(&mut self, bucket: Bucket) -> Bucket{
-            self.cdp_mgr.supply(bucket)
+            let supply_token = bucket.resource_address();
+            let supply_amount = bucket.amount();
+            info!("{} supply {}", Runtime::bech32_encode_address(supply_token), supply_amount);
+            let dx_bucket = self.cdp_mgr.supply(bucket);
+            let dx_token = dx_bucket.resource_address();
+            let dx_amount = dx_bucket.amount();
+            info!("{} receipt: {}", Runtime::bech32_encode_address(dx_token), dx_amount);
+            Runtime::emit_event(SupplyEvent{supply_token, supply_amount, dx_token, dx_amount});
+            dx_bucket
         }
 
         pub fn withdraw(&mut self, bucket: Bucket) -> Bucket{
@@ -170,4 +178,18 @@ mod dexian_lending{
         }
 
     }
+}
+
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct SupplyEvent {
+    pub supply_token: ResourceAddress,
+    pub supply_amount: Decimal,
+    pub dx_token: ResourceAddress,
+    pub dx_amount: Decimal
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct WithdrawEvent{
+    pub pub_key: String
 }

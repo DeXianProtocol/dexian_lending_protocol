@@ -5,7 +5,8 @@ CALL_METHOD
 ;
 CALL_METHOD
     Address("${def_interest_model}")
-    "get_borrow_interest_rate"
+    "get_interest_rate"
     Decimal("${borrow_ratio}")
+    Decimal("${stable_ratio}")
     Enum<${enum}u8>()
 ;

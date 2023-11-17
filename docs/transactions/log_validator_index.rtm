@@ -11,7 +11,19 @@ CALL_METHOD
         Address("validator_tdx_2_1sdkarf3cr699ptgdlnyy6nhvelzvjla3kslhlghxcvpnkn3494ttlw"),
         Address("validator_tdx_2_1svh9h85q4dp7xaztkk8sh4vzqyesms9xk3drhjdq8l8gy090shulnr"),
         Address("validator_tdx_2_1s086l0qqxqel2c0mxu9kspqs0ccrkytskkzus2sqscdl882qh0l7xy"),
-        Address("validator_tdx_2_1s0j35ansmur5q8kxem4edr23j2leutupveqc9g8kuuj29wc7uvmd8z")
+        Address("validator_tdx_2_1s0j35ansmur5q8kxem4edr23j2leutupveqc9g8kuuj29wc7uvmd8z"),
+        Address("validator_tdx_2_1sdtnujyn3720ymg8lakydkvc5tw4q3zecdj95akdwt9de362mvtd94"),
+        Address("validator_tdx_2_1sdvlm4e2x0mjr7mxkpfejz8m0tfwk0j937lxsw74t9lw3evhj5tlwk"),
+        Address("validator_tdx_2_1sdatqsl6rx05yy2yvpf6ckfl7x8dluvzkcyljkn0x4lxkgucc0xz2w"),
+        Address("validator_tdx_2_1s0p6703fycery0k63f8u8nr6jetxteytup7f5zz9klt4a8zge0a799"),
+        Address("validator_tdx_2_1svr6rmtd9ts5zx8d3euwmmp6mmjdtcj2q7zlmd8xjrn4qx7q5snkas"),
+        Address("validator_tdx_2_1sw6qeyzecc36ufhvuu6va69qn3plwugcg555d3dr7spa87dtgv6hgz"),
+        Address("validator_tdx_2_1sdlkptcwjpajqawnuya8r2mgl3eqt89hw27ww6du8kxmx3thmyu8l4"),
+        Address("validator_tdx_2_1s0hly3nphfkcztjjyfyn7juxyeev523fkrrzpk9ud4e47eut4zrmp7"),
+        Address("validator_tdx_2_1s0ngaeugwu8lva7v9arhry0cnzt4sx3xnwsf80khg803kmgcmmwf5q"),
+        Address("validator_tdx_2_1swnxe92wgfurehyxl3wtedjwffmy3pmhwu88du0k2asj3c46num8c4"),
+        Address("validator_tdx_2_1swe7ec3k9szpa0qs30xhwl0g4pyhfwu45yekktrfptnj46s2xxyapf"),
+        Address("validator_tdx_2_1swfsw0wupgvdraqyw4x84mdau9yewq2zgmcf3u35az723lsr5afznd")
     )
     Array<Address>()
 ;

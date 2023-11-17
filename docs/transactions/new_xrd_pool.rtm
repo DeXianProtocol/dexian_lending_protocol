@@ -1,5 +1,10 @@
 CALL_METHOD
     Address("${admin_account}")
+    "lock_fee"
+    Decimal("10")
+;
+CALL_METHOD
+    Address("${admin_account}")
     "create_proof_of_amount"
     Address("${admin_badge}")
     Decimal("1")
