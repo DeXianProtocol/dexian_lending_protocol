@@ -247,6 +247,7 @@ export op_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (N
 result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_interest.rtm)
 export def_interest_model=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
 
+export price_signer_pk=4cb5abf6ad79fbf5abbccafcc269d85cd2651ed4b885b5869f241aedf0a5ba29
 result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_lending_factory.rtm)
 export lending_component=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
 export oracle=$(echo $result | grep "Component: "| awk -F "Component: " '{print $3}' | awk -F " " '{print $1}')
@@ -275,7 +276,7 @@ resim run < ./docs/replace_holder.sh docs/transactions/supply.rtm
 
 export withdraw_token=$dx_xrd
 export account=$p1
-export amount=4000
+export amount=1000
 resim run < ./docs/replace_holder.sh docs/transactions/withdraw.rtm
 
 
