@@ -1,6 +1,7 @@
 
 use scrypto::prelude::*;
 
+pub const EPOCH_OF_YEAR: u64 = 105120;
 /// Copies a slice to a fixed-sized array.
 pub fn copy_u8_array<const N: usize>(slice: &[u8]) -> [u8; N] {
     if slice.len() == N {

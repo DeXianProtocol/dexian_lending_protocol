@@ -8,7 +8,7 @@ pub struct QuotePrice {
 }
 
 #[blueprint]
-#[events(SetPriceEvent)]
+#[events(SetPriceEvent, SetPublicKeyEvent)]
 mod oracle{
 
     enable_method_auth!{

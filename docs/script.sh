@@ -273,4 +273,10 @@ export account=$p1
 export amount=4000
 resim run < ./docs/replace_holder.sh docs/transactions/supply.rtm
 
+export withdraw_token=$dx_xrd
+export account=$p1
+export amount=4000
+resim run < ./docs/replace_holder.sh docs/transactions/withdraw.rtm
+
+
 

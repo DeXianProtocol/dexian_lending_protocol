@@ -1,11 +1,14 @@
 use scrypto::prelude::*;
+use crate::utils::*;
 use crate::interest::InterestModel;
 use crate::oracle::oracle::PriceOracle;
 use crate::cdp::cdp_mgr::CollateralDebtManager;
 use crate::pools::lending::lend_pool::LendResourcePool;
 use crate::interest::def_interest_model::DefInterestModel;
 
+
 #[blueprint]
+#[events(SupplyEvent, WithdrawEvent, CreateCDPEvent, ExtendBorrowEvent, AdditionCollateralEvent, WithdrawCollateralEvent, RepayEvent)]
 mod dexian_lending{
 
     enable_method_auth! {
@@ -100,7 +103,15 @@ mod dexian_lending{
         }
 
         pub fn withdraw(&mut self, bucket: Bucket) -> Bucket{
-            self.cdp_mgr.withdraw(bucket)
+            let dx_token = bucket.resource_address();
+            let dx_amount = bucket.amount();
+            info!("{} burn {}", Runtime::bech32_encode_address(dx_token), dx_amount);
+            let withdraw_bucket = self.cdp_mgr.withdraw(bucket);
+            let withdraw_token = withdraw_bucket.resource_address();
+            let withdraw_amount = withdraw_bucket.amount();
+            info!("{} withdraw: {}", Runtime::bech32_encode_address(withdraw_token), withdraw_amount);
+            Runtime::emit_event(WithdrawEvent{dx_token, dx_amount, withdraw_token, withdraw_amount});
+            withdraw_bucket
         }
 
         pub fn borrow_variable(&mut self,
@@ -116,7 +127,13 @@ mod dexian_lending{
             timestamp2: Option<u64>,
             signature2: Option<String>
         ) -> (Bucket, Bucket){
-            self.cdp_mgr.borrow_variable(dx_bucket, borrow_token, borrow_amount, price1, quote1, timestamp1, signature1, price2, quote2, timestamp2, signature2)
+            let dx_token = dx_bucket.resource_address();
+            let dx_amount = dx_bucket.amount();
+            let (collateral_underlying_token,borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.extra_params(dx_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
+            
+            let (borrow_bucket, cdp_bucket) = self.cdp_mgr.borrow_variable(dx_bucket, collateral_underlying_token, borrow_token, borrow_amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
+            Runtime::emit_event(CreateCDPEvent{dx_token, dx_amount, borrow_token, borrow_amount, cdp_id:cdp_bucket.as_non_fungible().non_fungible_local_id(), is_stable:false});
+            (borrow_bucket, cdp_bucket)
         }
 
         pub fn borrow_stable(&mut self,
@@ -132,7 +149,12 @@ mod dexian_lending{
             timestamp2: Option<u64>,
             signature2: Option<String>
         ) -> (Bucket, Bucket){
-            self.cdp_mgr.borrow_stable(dx_bucket, borrow_token, borrow_amount, price1, quote1, timestamp1, signature1, price2, quote2, timestamp2, signature2)
+            let dx_token = dx_bucket.resource_address();
+            let dx_amount = dx_bucket.amount();
+            let (collateral_underlying_token,borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.extra_params(dx_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
+            let (borrow_bucket, cdp_bucket) = self.cdp_mgr.borrow_stable(dx_bucket, collateral_underlying_token, borrow_token, borrow_amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
+            Runtime::emit_event(CreateCDPEvent{dx_token, dx_amount, borrow_token, borrow_amount, cdp_id:cdp_bucket.as_non_fungible().non_fungible_local_id(), is_stable:true});
+            (borrow_bucket, cdp_bucket)
         }
 
         pub fn extend_borrow(&mut self,
@@ -147,7 +169,12 @@ mod dexian_lending{
             timestamp2: Option<u64>,
             signature2: Option<String>
         ) -> (Bucket, Bucket){
-            self.cdp_mgr.extend_borrow(cdp, amount, price1, quote1, timestamp1, signature1, price2, quote2, timestamp2, signature2)
+            let cdp_id: NonFungibleLocalId = cdp.as_non_fungible().non_fungible_local_id();
+            let (borrow_token, collateral_underlying_token) = self.cdp_mgr.get_cdp_resource_address(cdp_id.clone());
+            let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.get_price_in_xrd(collateral_underlying_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
+            let (borrow_bucket, cdp_bucket) = self.cdp_mgr.extend_borrow(cdp, amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
+            Runtime::emit_event(ExtendBorrowEvent{borrow_token, amount, cdp_id:cdp_id.clone()});
+            (borrow_bucket, cdp_bucket)
         }
 
         pub fn withdraw_collateral(&mut self,
@@ -162,7 +189,12 @@ mod dexian_lending{
             timestamp2: Option<u64>,
             signature2: Option<String>
         ) -> (Bucket, Bucket){
-            self.cdp_mgr.withdraw_collateral(cdp, amount, price1, quote1, timestamp1, signature1, price2, quote2, timestamp2, signature2)
+            let cdp_id: NonFungibleLocalId = cdp.as_non_fungible().non_fungible_local_id();
+            let (borrow_token, collateral_underlying_token) = self.cdp_mgr.get_cdp_resource_address(cdp_id.clone());
+            let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.get_price_in_xrd(collateral_underlying_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
+            let (underlying_bucket, cdp_bucket) = self.cdp_mgr.withdraw_collateral(cdp, amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
+            Runtime::emit_event(WithdrawCollateralEvent{underlying_token:collateral_underlying_token, amount, cdp_id:cdp_id.clone()});
+            (underlying_bucket, cdp_bucket)
         }
 
         pub fn addition_collateral(&mut self, id: u64, bucket: Bucket){
@@ -175,6 +207,54 @@ mod dexian_lending{
 
         pub fn withdraw_insurance(&mut self, underlying_token_addr: ResourceAddress, amount: Decimal) -> Bucket{
             self.cdp_mgr.withdraw_insurance(underlying_token_addr, amount)
+        }
+
+        fn extra_params(&self,
+            dx_token: ResourceAddress,
+            borrow_token: ResourceAddress,
+            price1: &String,
+            quote1: ResourceAddress,
+            timestamp1: u64,
+            signature1: &String,
+            price2: Option<String>,
+            quote2: Option<ResourceAddress>,
+            timestamp2: Option<u64>,
+            signature2: Option<String>
+        ) -> (ResourceAddress, Decimal, Decimal){
+            let collateral_underlying_token = self.cdp_mgr.get_underlying_token(dx_token);
+            let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.get_price_in_xrd(collateral_underlying_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
+            (collateral_underlying_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd)
+        }
+
+        fn get_price_in_xrd(&self,
+            collateral_token: ResourceAddress,
+            borrow_token: ResourceAddress,
+            price1: &String,
+            quote1: ResourceAddress,
+            timestamp1: u64,
+            signature1: &String,
+            price2: Option<String>,
+            quote2: Option<ResourceAddress>,
+            timestamp2: Option<u64>,
+            signature2: Option<String>
+        ) -> (Decimal, Decimal){
+            if borrow_token == XRD && collateral_token == quote1 {
+                let collateral_price_in_xrd = self.price_oracle.get_valid_price_in_xrd(quote1, price1.clone(), timestamp1, signature1.clone());
+                return (Decimal::ONE, collateral_price_in_xrd);
+            }
+            
+            if borrow_token == quote1 && quote2.is_some() && collateral_token == quote2.unwrap(){
+                let collateral_price_in_xrd = self.price_oracle.get_valid_price_in_xrd(quote2.unwrap(), price2.unwrap(), timestamp2.unwrap(), signature2.unwrap());
+                let borrow_price_in_xrd = self.price_oracle.get_valid_price_in_xrd(quote1, price1.clone(), timestamp1, signature1.clone());
+                return (borrow_price_in_xrd, collateral_price_in_xrd);
+            }
+            
+            if borrow_token == quote1 && collateral_token == XRD {
+                let borrow_price_in_xrd = self.price_oracle.get_valid_price_in_xrd(quote1, price1.clone(), timestamp1, signature1.clone());
+                return (borrow_price_in_xrd, Decimal::ONE);
+            }
+
+            (Decimal::ZERO, Decimal::ZERO)
         }
 
     }
@@ -191,5 +271,44 @@ pub struct SupplyEvent {
 
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct WithdrawEvent{
-    pub pub_key: String
+    pub dx_token: ResourceAddress,
+    pub dx_amount: Decimal,
+    pub withdraw_token: ResourceAddress,
+    pub withdraw_amount: Decimal,
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct CreateCDPEvent{
+    pub dx_token: ResourceAddress,
+    pub dx_amount: Decimal,
+    pub borrow_token: ResourceAddress,
+    pub borrow_amount: Decimal,
+    pub cdp_id: NonFungibleLocalId,
+    pub is_stable: bool
+
+}
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct ExtendBorrowEvent{
+    pub borrow_token: ResourceAddress,
+    pub amount: Decimal,
+    pub cdp_id: NonFungibleLocalId,
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct AdditionCollateralEvent{
+    pub underlying_token: ResourceAddress,
+    pub amount: Decimal,
+    pub cdp_id: NonFungibleLocalId,
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct WithdrawCollateralEvent{
+    pub underlying_token: ResourceAddress,
+    pub amount: Decimal,
+    pub cdp_id: NonFungibleLocalId,
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct RepayEvent{
+
 }
