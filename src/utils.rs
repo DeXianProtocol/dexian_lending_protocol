@@ -38,6 +38,8 @@ pub fn calc_linear_interest(amount: Decimal, apy: Decimal, epoch_of_year: Decima
     amount.checked_mul(apy.checked_mul(delta_epoch).unwrap().checked_div(epoch_of_year).unwrap()).unwrap()
 }
 
+///
+/// (1+apy/epoch_of_year)^delta_epoch
 pub fn calc_compound_interest(amount: Decimal, apy: Decimal, epoch_of_year: Decimal, delta_epoch: u64) -> Decimal{
     amount.checked_mul(
         Decimal::ONE.checked_add(

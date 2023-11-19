@@ -282,9 +282,9 @@ mod lend_pool {
                 return (self.deposit_index, self.loan_index);
             }
             
-            let dec_epoch = Decimal::from(EPOCH_OF_YEAR);
-            let delta_supply_interest_rate = calc_linear_interest(self.deposit_index, self.deposit_interest_rate, dec_epoch, delta_epoch);
-            let delta_borrow_interest_rate = calc_compound_interest(self.loan_index, self.variable_loan_interest_rate, dec_epoch, delta_epoch);
+            let epoch_of_year = Decimal::from(EPOCH_OF_YEAR);
+            let delta_supply_interest_rate = calc_linear_interest(self.deposit_index, self.deposit_interest_rate, epoch_of_year, delta_epoch);
+            let delta_borrow_interest_rate = calc_compound_interest(self.loan_index, self.variable_loan_interest_rate, epoch_of_year, delta_epoch);
             
             (
                 self.deposit_index.checked_mul(Decimal::ONE.checked_add(delta_supply_interest_rate).unwrap()).unwrap(),
@@ -308,14 +308,16 @@ mod lend_pool {
             let total_debt = variable_borrow.checked_add(stable_borrow).unwrap();
             let borrow_ratio = if supply == Decimal::ZERO { Decimal::ZERO } else { total_debt.checked_div(supply).unwrap() };
             let stable_ratio = if total_debt == Decimal::ZERO {Decimal::ZERO } else { stable_borrow.checked_div(total_debt).unwrap() };
+            
             info!("calc_interest_rate.1, borrow_ratio:{}, ", borrow_ratio);
             let (variable_rate, stable_rate) = self.get_interest_rate_from_component(borrow_ratio, stable_ratio);
             info!("calc_interest_rate.2, var_ratio:{}, stable_ratio:{} ", variable_rate, self.stable_loan_interest_rate);
+            
             let overall_borrow_rate = if total_debt == Decimal::ZERO { Decimal::ZERO } else {
                 variable_borrow.checked_mul(variable_rate).unwrap().checked_add(stable_borrow.checked_mul(self.stable_loan_interest_rate).unwrap()).unwrap()
                 .checked_div(total_debt).unwrap()
             };
-
+            
             //TODO: supply_rate = overall_borrow_rate * (1-insurance_ratio) * borrow_ratio ?
             let interest = total_debt.checked_mul(overall_borrow_rate).unwrap().checked_mul(Decimal::ONE.checked_sub(self.insurance_ratio).unwrap()).unwrap();
             let supply_rate = if supply == Decimal::ZERO { Decimal::ZERO} else {interest.checked_div(supply).unwrap()};
@@ -334,7 +336,7 @@ mod lend_pool {
                 let variable_borrow: Decimal = self.variable_loan_share_quantity;
                 let normalized_supply: Decimal = self.get_deposit_share_quantity();
     
-                // interest = equity value * (current index value - starting index value)
+                // interest = equity value * (current index value - [last_update] index value)
                 let epoch_of_year = Decimal::from(EPOCH_OF_YEAR);
                 let recent_variable_interest = variable_borrow.checked_mul(current_borrow_index.checked_sub(self.loan_index).unwrap()).unwrap();
                 let recent_stable_interest = calc_compound_interest(self.stable_loan_amount, self.stable_loan_interest_rate, epoch_of_year, delta_epoch);
