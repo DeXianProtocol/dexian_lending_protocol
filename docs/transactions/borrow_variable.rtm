@@ -1,19 +1,19 @@
 CALL_METHOD
     Address("${account}")
     "lock_fee"
-    Decimal("1000")
+    Decimal("10")
 ;
 CALL_METHOD
   Address("${account}")
   "withdraw"
   Address("${dx_token}")
-  Decimal("${amount}");
-
+  Decimal("${amount}")
+;
 TAKE_FROM_WORKTOP
   Address("${dx_token}")
   Decimal("${amount}")
-  Bucket("bucket1");
-
+  Bucket("bucket1")
+;
 CALL_METHOD
     Address("${lending_component}")
     "borrow_variable"

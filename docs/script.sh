@@ -328,7 +328,7 @@ export borrow_token=$usdt
 export borrow_amount=10
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
-
+resim set-default-account $p1 $p1_priv $p1_badge
 export quote="usdt"
 result=$(curl "https://price.dexian.io/xrd-$quote")
 export price1=$(echo $result | jq ".data.price")
@@ -372,3 +372,42 @@ export account=$p1
 export amount=5
 export cdp_id="#1#"
 resim run < ./docs/replace_holder.sh docs/transactions/withdraw_collateral.rtm
+
+## support xrd and dx_xrd both
+export addition_token=$xrd
+export cdp_id="1"
+export amount=1000
+export account=$p1
+resim run < ./docs/replace_holder.sh docs/transactions/addition_collateral.rtm
+
+
+resim set-default-account $p3 $p3_priv $p3_badge
+export quote="usdc"
+result=$(curl "https://price.dexian.io/xrd-$quote")
+export price1=$(echo $result | jq ".data.price")
+export quote1=$usdc
+export timestamp1=$(echo $result | jq ".data.timestamp")
+export signature1=$(echo $result | jq ".data.signature")
+#export quote="usdc"
+#result=$(curl "https://price.dexian.io/xrd-$quote")
+#export price2=$(echo $result | jq ".data.price")
+#export quote2=$(echo "Address(\"${usdc}\")")
+#export timestamp2="$(echo $result | jq ".data.timestamp")u64"
+#export signature2=$(echo $result | jq ".data.signature")
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p3
+export dx_token=$dx_usdc
+export amount=200
+export borrow_token=$xrd
+export borrow_amount=2000
+resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+
+
+export repay_token=$xrd
+export amount=3000
+export account=$p3
+export cdp_id=2
+resim run < ./docs/replace_holder.sh docs/transactions/repay.rtm
