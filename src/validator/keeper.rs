@@ -60,7 +60,7 @@ mod validator_keeper{
                 .divisibility(DIVISIBILITY_NONE)
                 .metadata(metadata!(
                     init {
-                        "name" => "Admin Badge".to_owned(), locked;
+                        "name" => "Keeper Admin Badge".to_owned(), locked;
                         "description" => 
                         "This is a DeXian Lending Protocol admin badge used to authenticate the admin.".to_owned(), locked;
                     }
@@ -70,7 +70,7 @@ mod validator_keeper{
                 .divisibility(DIVISIBILITY_NONE)
                 .metadata(metadata!(
                     init {
-                        "name" => "Operator Badge".to_owned(), locked;
+                        "name" => "Keeper Operator Badge".to_owned(), locked;
                         "description" => 
                         "This is a DeXian Lending Protocol operator badge used to authenticate the operator.".to_owned(), locked;
                     }

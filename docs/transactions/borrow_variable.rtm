@@ -20,6 +20,14 @@ CALL_METHOD
     Bucket("bucket1")
     Address("${borrow_token}")
     Decimal("${borrow_amount}")
+    ${price1}
+    Address("${quote1}")
+    ${timestamp1}u64
+    ${signature1}
+    ${price2}
+    ${quote2}
+    ${timestamp2}
+    ${signature2}
 ;
 CALL_METHOD
     Address("${account}")

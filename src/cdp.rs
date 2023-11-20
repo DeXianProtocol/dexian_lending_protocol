@@ -198,7 +198,7 @@ mod cdp_mgr{
             let underlying_token_amount = collateral_pool.get_redemption_value(dx_amount);
 
             let max_loan_amount = self.get_max_loan_amount(underlying_token.clone(), underlying_token_amount, ltv, borrow_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
-            assert_amount(max_loan_amount, borrow_amount);
+            assert_amount(borrow_amount, max_loan_amount);
 
             self.put_collateral_vault(dx_bucket);
             let lending_pool = self.pools.get_mut(&borrow_token).unwrap();
@@ -261,6 +261,7 @@ mod cdp_mgr{
             let underlying_token_amount = underlying_pool.get_redemption_value(dx_amount);
             let ltv = underlying_state.ltv;
             let max_loan_amount = self.get_max_loan_amount(underlying_token.clone(), underlying_token_amount, ltv, borrow_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
+            info!("collateral: {},{}*{}, price:{}/{}, max_loan:{}", underlying_token.to_hex(), underlying_token_amount,ltv,borrow_price_in_xrd,collateral_underlying_price_in_xrd, max_loan_amount);
 
             let mut cdp_avg_rate = Decimal::ZERO;
             let mut interest = Decimal::ZERO;
@@ -269,6 +270,7 @@ mod cdp_mgr{
             let borrow_bucket: Bucket = if cdp_data.is_stable {
                 interest = borrow_pool.get_stable_interest(cdp_data.borrow_amount, cdp_data.last_update_epoch, cdp_data.stable_rate);
                 let borrow_intent = cdp_data.borrow_amount.checked_add(interest).unwrap().checked_add(amount).unwrap();
+                info!("exist stable: {}:{},{},{}", borrow_token.to_hex(), cdp_data.borrow_amount, interest, borrow_intent);
                 assert_amount(borrow_intent, max_loan_amount);
                 
                 let (_variable_rate, stable_rate, _supply_rate)  = borrow_pool.get_interest_rate();
@@ -279,14 +281,16 @@ mod cdp_mgr{
             }
             else{
                 let (_, current_borrow_index) = borrow_pool.get_current_index();
-                let exist_borrow = cdp_data.normalized_borrow * current_borrow_index;
+                let exist_borrow = cdp_data.normalized_borrow.checked_mul(current_borrow_index).unwrap();
                 let borrow_intent = exist_borrow.checked_add(amount).unwrap();
+                info!("exist variable: {}:{}*{},{}", borrow_token.to_hex(), cdp_data.normalized_borrow,current_borrow_index, borrow_intent);
                 assert_amount(borrow_intent, max_loan_amount);
                 let (borrow_bucket, normalized_amount) = borrow_pool.borrow_variable(amount);
                 delta_normalized_amount = normalized_amount;
                 borrow_bucket
             };
             self.update_cdp_data(cdp_data.is_stable, amount, interest, Decimal::ZERO, delta_normalized_amount, cdp_avg_rate, cdp_id, cdp_data);
+            
             (borrow_bucket, cdp)
         }
 
