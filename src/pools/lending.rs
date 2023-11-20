@@ -234,7 +234,7 @@ mod lend_pool {
             let current_epoch_at = Runtime::current_epoch().number();
             let epoch_of_year = Decimal::from(EPOCH_OF_YEAR);
             let delta_epoch = current_epoch_at - last_epoch_at;
-            let interest = if delta_epoch <= 0u64 {Decimal::ZERO} else { calc_compound_interest(loan_amount, rate, epoch_of_year, delta_epoch) };
+            let interest = if delta_epoch <= 0u64 {Decimal::ZERO} else { calc_compound_interest(loan_amount, rate, epoch_of_year, delta_epoch).checked_sub(loan_amount).unwrap() };
             
             let previous_debt = self.stable_loan_amount.checked_mul(self.stable_loan_interest_rate).unwrap();
 
@@ -277,18 +277,18 @@ mod lend_pool {
         }
 
         pub fn get_current_index(&self) -> (Decimal, Decimal){
-            let delta_epoch = Runtime::current_epoch().number() - self.last_update;
+            let current_epoch = Runtime::current_epoch().number();
+            let delta_epoch = current_epoch - self.last_update;
             if delta_epoch <= 0u64{
                 return (self.deposit_index, self.loan_index);
             }
             
             let epoch_of_year = Decimal::from(EPOCH_OF_YEAR);
             let delta_supply_interest_rate = calc_linear_rate(self.deposit_interest_rate, epoch_of_year, delta_epoch);
-            let delta_borrow_interest_rate = calc_compound_rate(self.variable_loan_interest_rate, epoch_of_year, delta_epoch);
-            
+            // info!("epoch:{}-{}, delta_epoch:{}, supply:{}==>{}, borrow:{}==>{}", current_epoch, self.last_update, delta_epoch, self.deposit_interest_rate,delta_supply_interest_rate, self.variable_loan_interest_rate, delta_borrow_interest_rate);
             (
                 self.deposit_index.checked_mul(Decimal::ONE.checked_add(delta_supply_interest_rate).unwrap()).unwrap(),
-                self.loan_index.checked_mul(Decimal::ONE.checked_add(delta_borrow_interest_rate).unwrap()).unwrap()
+                calc_compound_interest(self.loan_index, self.variable_loan_interest_rate, epoch_of_year, delta_epoch)
             )
         }
 
@@ -339,7 +339,7 @@ mod lend_pool {
                 // interest = equity value * (current index value - [last_update] index value)
                 let epoch_of_year = Decimal::from(EPOCH_OF_YEAR);
                 let recent_variable_interest = variable_borrow.checked_mul(current_borrow_index.checked_sub(self.loan_index).unwrap()).unwrap();
-                let recent_stable_interest = calc_compound_interest(self.stable_loan_amount, self.stable_loan_interest_rate, epoch_of_year, delta_epoch);
+                let recent_stable_interest = calc_compound_interest(self.stable_loan_amount, self.stable_loan_interest_rate, epoch_of_year, delta_epoch).checked_sub(self.stable_loan_amount).unwrap();
                 let recent_supply_interest = normalized_supply.checked_mul(current_supply_index.checked_sub(self.deposit_index).unwrap()).unwrap();
     
                 // the interest rate spread goes into the insurance pool
@@ -372,8 +372,7 @@ mod lend_pool {
             }
 
             let epoch_of_year = Decimal::from(EPOCH_OF_YEAR);
-            let interest = calc_compound_interest(self.stable_loan_amount, self.stable_loan_interest_rate, epoch_of_year, delta_epoch);
-            self.stable_loan_amount.checked_add(interest).unwrap()
+            calc_compound_interest(self.stable_loan_amount, self.stable_loan_interest_rate, epoch_of_year, delta_epoch)
         }
 
         pub fn get_redemption_value(&self, amount_of_pool_units: Decimal) -> Decimal{
@@ -396,7 +395,7 @@ mod lend_pool {
         /// .
         pub fn get_stable_interest(&self, borrow_amount: Decimal, last_epoch: u64, stable_rate: Decimal) -> Decimal{
             let delta_epoch = Runtime::current_epoch().number() - last_epoch;
-            calc_compound_interest(borrow_amount, stable_rate, Decimal::from(EPOCH_OF_YEAR), delta_epoch)
+            calc_compound_interest(borrow_amount, stable_rate, Decimal::from(EPOCH_OF_YEAR), delta_epoch).checked_sub(borrow_amount).unwrap()
         }
 
         pub fn get_variable_share_quantity(&self) -> Decimal{
