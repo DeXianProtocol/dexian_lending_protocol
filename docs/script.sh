@@ -350,3 +350,25 @@ export borrow_token=$usdt
 export borrow_amount=20
 export cdp_id="#1#"
 resim run < ./docs/replace_holder.sh docs/transactions/extend_borrow.rtm
+
+
+export quote="usdt"
+result=$(curl "https://price.dexian.io/xrd-$quote")
+export price1=$(echo $result | jq ".data.price")
+export quote1=$usdt
+export timestamp1=$(echo $result | jq ".data.timestamp")
+export signature1=$(echo $result | jq ".data.signature")
+#export quote="usdc"
+#result=$(curl "https://price.dexian.io/xrd-$quote")
+#export price2=$(echo $result | jq ".data.price")
+#export quote2=$(echo "Address(\"${usdc}\")")
+#export timestamp2="Some($(echo $result | jq ".data.timestamp")u64)"
+#export signature2=$(echo $result | jq ".data.signature")
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p1
+export amount=5
+export cdp_id="#1#"
+resim run < ./docs/replace_holder.sh docs/transactions/withdraw_collateral.rtm

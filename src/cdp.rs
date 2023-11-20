@@ -328,7 +328,7 @@ mod cdp_mgr{
             let dx_bucket = self.collateral_vaults.get_mut(&dx_token).unwrap().take(take_amount);
             let normalized_amount = ceil(amount.checked_div(supply_index).unwrap(), divisibility);
             let underlying_bucket = underlying_pool.remove_liquity(dx_bucket);
-            self.cdp_res_mgr.update_non_fungible_data(&cdp_id, "collateral_amount", dx_amount.checked_sub(normalized_amount));
+            self.cdp_res_mgr.update_non_fungible_data(&cdp_id, "collateral_amount", dx_amount.checked_sub(normalized_amount).unwrap());
             (underlying_bucket, cdp)
         }
 
