@@ -67,18 +67,18 @@ export account=$p3
 
 
 ----
-export pkg=package_tdx_2_1phxha6kjqx9n5xcvtrh924ra3c9mlt8dld0axsqmngfuavkju98306
+export pkg=package_tdx_2_1p5uuesvmw7l4mg80v786veuclh2jk9ldtvy4xua7afxvdcm57uj0dt
 export account=$admin_account
 export usdt=resource_tdx_2_1thnzj7nfawdec4tztfr9fmsh33kmwlstz2fs9t99yzj0awg43xxkpk
 export usdc=resource_tdx_2_1tkaegwwrttt6jrzvn2ag6dsvjs64dfwya6sckvlxnf794y462lhtx0
 
 ./docs/replace_holder.sh ./docs/transactions/new_keeper.rtm
-export keeper=component_tdx_2_1czct7fv9l4ag7a2wan6jvet2a44x5jghdqrnwqvx6v46emlf2c0xtq
-export keeper_admin_badge=resource_tdx_2_1t54595e9d3z4ka0z08gutcm7wf6engdexhqzdgftlcnnwj9d8f856d
-export keeper_op_badge=resource_tdx_2_1t5m6cde7nz94e0gleaf9z5gffkc8pfvelvglg4gkeptqa6v762f8gq
+export keeper=component_tdx_2_1crqq42wrut8qnk2n0d0jdz9hy0k6vzsx4yavp2l2fcja977k039wfp
+export keeper_admin_badge=resource_tdx_2_1t4mfzzg4g9n4ps86emaww7ysdp0lvcsnxnz4t67ucj94twcjrx6456
+export keeper_op_badge=resource_tdx_2_1thdfvsq5e8pemajnv529a0khfhvtvx37370c8gpqx57lm5x6ajpky6
 
 ./docs/replace_holder.sh ./docs/transactions/new_interest.rtm
-export def_interest_model=component_tdx_2_1cz6w42xqgqxnyv30vr3hgy8nyn760kslyylkp3l92s854n8kskmaf4
+export def_interest_model=component_tdx_2_1cq625sq82gnkfvwx2l4zle5vl8n52uawc9r2lel9snyzu82suugdgs
 
 account_sim1c956qr3kxlgypxwst89j9yf24tjc7zxd4up38x37zr6q4jxdx9rhma
 priv:0000000000000000000000000000000000000000000000000000000000000001
@@ -90,28 +90,30 @@ export price_signer_pk=4cb5abf6ad79fbf5abbccafcc269d85cd2651ed4b885b5869f241aedf
 
 
 ./docs/replace_holder.sh ./docs/transactions/new_lending_factory.rtm
-export lending_component=component_tdx_2_1crvanayeytgjsvfm68tnutxs2ql8ljkqmn8pwtjdkyxtp29rev8ezt
-export oracle=component_tdx_2_1czuaf4m6dsxxnu7wgzvlfyzvfjnx4082ujennhy0lfcfe7he4ww4dl
-export cdp_mgr=component_tdx_2_1cr88axjx5u39g94p0ke5n3rwklynm6r9u9yflyzjf2nkhr7gpw4j4j
-export admin_badge=resource_tdx_2_1t4dr3kkgy67s98r8mlm7696gtcqw075g9d3tk3wemcvlqmds9m2aw0
-export op_badge=resource_tdx_2_1thgzqvy5mkmcxmsrt0k53chx0nse7x2jg3pl7xre86ghcxsc3jja7g
-export cdp=resource_tdx_2_1nfln0tyd6enadz9wvt8ehjx0qp27x5ruqwa8mr5pqnqly39f2psuhr
+export lending_component=component_tdx_2_1cpvkp2l3yud0u8hxgpcsldndr3tve3mjz66n7xauauq9ruvnvpa2x0
+export oracle=component_tdx_2_1cz9ppd93tzkukyek4fmhu0wzma08k4ymks5tqp9lpsry67cg9qnq6v
+export cdp_mgr=component_tdx_2_1cqx5h6t8ukxuece4kvgv5uea73k8fga9chqjkww6flsa5rcfs0f676
+export admin_badge=resource_tdx_2_1t50dad8qq79c25npvkdsgk8afzq6ps9al3acjua2sjcxpdapvw93jl
+export op_badge=resource_tdx_2_1t5gqf6m4tczlfkus5njde9w32mmrunzjsaddeptkst2ep2n4mex0pq
+export cdp=resource_tdx_2_1n2jdzfw4fge2frrcs4fyelxel4y5ypyp6z0qjlqwwej9yfnee84lw9
 
 # xrd pool
 export xrd=resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc
 ./docs/replace_holder.sh ./docs/transactions/new_xrd_pool.rtm
-export xrd_pool=component_tdx_2_1crmejq6w3h6t9tudzzlw69jt8qskfgdfpdgzrx7vh3h89jpsseln00
-export dx_xrd=resource_tdx_2_1t5qy9225aeer97lqcznrcrn2h9nt6g668yyqlwdpqk909herzzsu0s
+export xrd_pool=component_tdx_2_1cqwvyrrsw6f6hdm9h34t8u444ypxdlzjvxkn5rpznfp87xl966s9j3
+export dx_xrd=resource_tdx_2_1th8e69nup687hqqlssg5ukvrhdx9n6emhjr6usqwz5yw6dhd2rvtrg
 
 #usdt pool
 ./docs/replace_holder.sh ./docs/transactions/new_usdt_pool.rtm
-export usdt_pool=component_tdx_2_1cp8nhwe3fychvsxmqrthz7d8pvyddfm7sna6tajgm3g0ecjge7fsze
-export dx_usdt=resource_tdx_2_1t4awk0a009j4773xhua724nfz37x3jsfnr8nzr77d062r6f83cy7kg
+export usdt_pool=component_tdx_2_1cps39ezg2qr4rplyjh6n28evsfc7urc3ae2eedz4ru3yjj0ea8qjus
+export dx_usdt=resource_tdx_2_1t550qtqyzcez9umdusccaxal0yydt7wpqrzy3uj4yaswf000fphka6
 
 #usdc pool
 ./docs/replace_holder.sh ./docs/transactions/new_usdc_pool.rtm
-export usdc_pool=component_tdx_2_1cq9q0lsd332u58yygmfy70r7pwzkqafa6z3j8uyzldn4c5g57l3tu9
-export dx_usdc=resource_tdx_2_1t5ypcv9f2yewe44l2kkdvmquel60xqd9k3rfzzxqwuz0rcehuq9jxc
+export usdc_pool=component_tdx_2_1cr3h7s5l2y95wrkjz6whylcf2am4sus5j2sk96fakptvseh024d4vw
+export dx_usdc=resource_tdx_2_1tktmw2h4y29gd36je4m02qku06fzmclzuac490yxrqr0pl27ejt88u
+
+./docs/replace_holder.sh docs/transactions/set_price.rtm
 
 # supply
 ## p1 4000xrd
@@ -155,16 +157,60 @@ export signature1=$(echo $result | jq ".data.signature")
 export price2=None
 export quote2=None
 export timestamp2=None
-export signature=None
+export signature2=None
 export account=$p1
 export dx_token=$dx_xrd
 export amount=2000
 export borrow_token=$usdt
 export borrow_amount=10
 ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+
+
+
+export quote="usdc"
+result=$(curl "https://price.dexian.io/xrd-$quote")
+export price1=$(echo $result | jq ".data.price")
+export quote1=$usdc
+export timestamp1=$(echo $result | jq ".data.timestamp")
+export signature1=$(echo $result | jq ".data.signature")
+#export quote="usdc"
+#result=$(curl "https://price.dexian.io/xrd-$quote")
+#export price2=$(echo $result | jq ".data.price")
+#export quote2=$usdc
+#export timestamp2=$(echo $result | jq ".data.timestamp")
+#export signature2=$(echo $result | jq ".data.signature")
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p1
+export dx_token=$dx_xrd
+export amount=2000
 export borrow_token=$usdc
 export borrow_amount=10
-./docs/replace_holder.sh docs/transactions/borrow_stable.rtm
+./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
 
+export quote="usdc"
+result=$(curl "https://price.dexian.io/xrd-$quote")
+export price1=$(echo $result | jq ".data.price")
+export quote1=$usdc
+export timestamp1=$(echo $result | jq ".data.timestamp")
+export signature1=$(echo $result | jq ".data.signature")
+#export quote="usdc"
+#result=$(curl "https://price.dexian.io/xrd-$quote")
+#export price2=$(echo $result | jq ".data.price")
+#export quote2=$usdc
+#export timestamp2=$(echo $result | jq ".data.timestamp")
+#export signature2=$(echo $result | jq ".data.signature")
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p3
+export dx_token=$dx_usdc
+export amount=200
+export borrow_token=$xrd
+export borrow_amount=800
+./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
