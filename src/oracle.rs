@@ -93,9 +93,16 @@ mod oracle{
                 "{base}/{quote}{price}{epoch_at}{timestamp}", base=base, quote=quote,
                 price=xrd_price_in_quote, epoch_at=epoch_at, timestamp=timestamp
             );
-            let hash = hash(message);
+            let hash = hash(message.clone());
+            info!("price message: {}, hash:{}", message.clone(), hash);
             if let Ok(sig) = Ed25519Signature::from_str(&signature){
                 if Self::verify_ed25519(hash, self.price_signer, sig){
+                    if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
+                        // XRD/USDT --> USDT/XRD
+                        return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
+                    }
+                }
+                else{  //TODO: only for test
                     if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
                         // XRD/USDT --> USDT/XRD
                         return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();

@@ -41,8 +41,31 @@ mod dexian_lending{
 
     impl LendingProtocol{
 
-        pub fn instantiate(admin_badge_addr: ResourceAddress, op_badge_addr: ResourceAddress, price_signer_pk: String) -> (Global<LendingProtocol>, Global<PriceOracle>, ResourceAddress){
+        pub fn instantiate(price_signer_pk: String) -> (Global<LendingProtocol>, Global<PriceOracle>, Bucket, Bucket, ResourceAddress){
             
+            let admin_badge = ResourceBuilder::new_fungible(OwnerRole::None)
+                .divisibility(DIVISIBILITY_NONE)
+                .metadata(metadata!(
+                    init {
+                        "name" => "Admin Badge".to_owned(), locked;
+                        "description" => 
+                        "This is a DeXian Lending Protocol admin badge used to authenticate the admin.".to_owned(), locked;
+                    }
+                ))
+                .mint_initial_supply(1);
+            let op_badge = ResourceBuilder::new_fungible(OwnerRole::None)
+                .divisibility(DIVISIBILITY_NONE)
+                .metadata(metadata!(
+                    init {
+                        "name" => "Operator Badge".to_owned(), locked;
+                        "description" => 
+                        "This is a DeXian Lending Protocol operator badge used to authenticate the operator.".to_owned(), locked;
+                    }
+                ))
+                .mint_initial_supply(1);
+            
+            let admin_badge_addr = admin_badge.resource_address();
+            let op_badge_addr = op_badge.resource_address();
             let (address_reservation, component_address) =
             Runtime::allocate_component_address(LendingProtocol::blueprint_id());
 
@@ -75,7 +98,7 @@ mod dexian_lending{
             })
             .globalize();
             
-            (component, price_oracle, cdp_res_addr)
+            (component, price_oracle, admin_badge.into(), op_badge.into(), cdp_res_addr)
         }
 
         pub fn new_pool(&mut self,
@@ -130,7 +153,7 @@ mod dexian_lending{
             let dx_token = dx_bucket.resource_address();
             let dx_amount = dx_bucket.amount();
             let (collateral_underlying_token,borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.extra_params(dx_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
-            
+            info!("collateral {}, amount:{}; {} price:{}/{}", Runtime::bech32_encode_address(dx_token), dx_amount, Runtime::bech32_encode_address(collateral_underlying_token), borrow_price_in_xrd, collateral_underlying_price_in_xrd);
             let (borrow_bucket, cdp_bucket) = self.cdp_mgr.borrow_variable(dx_bucket, collateral_underlying_token, borrow_token, borrow_amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
             Runtime::emit_event(CreateCDPEvent{dx_token, dx_amount, borrow_token, borrow_amount, cdp_id:cdp_bucket.as_non_fungible().non_fungible_local_id(), is_stable:false});
             (borrow_bucket, cdp_bucket)
@@ -172,6 +195,7 @@ mod dexian_lending{
             let cdp_id: NonFungibleLocalId = cdp.as_non_fungible().non_fungible_local_id();
             let (borrow_token, collateral_underlying_token) = self.cdp_mgr.get_cdp_resource_address(cdp_id.clone());
             let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.get_price_in_xrd(collateral_underlying_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
+            info!("collateral {}|{}, {}|{} price:{}/{}", Runtime::bech32_encode_address(collateral_underlying_token), collateral_underlying_token.to_hex(), Runtime::bech32_encode_address(collateral_underlying_token),collateral_underlying_token.to_hex() , borrow_price_in_xrd, collateral_underlying_price_in_xrd);
             let (borrow_bucket, cdp_bucket) = self.cdp_mgr.extend_borrow(cdp, amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
             Runtime::emit_event(ExtendBorrowEvent{borrow_token, amount, cdp_id:cdp_id.clone()});
             (borrow_bucket, cdp_bucket)

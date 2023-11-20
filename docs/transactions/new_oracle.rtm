@@ -1,9 +1,0 @@
-CALL_FUNCTION
-    Address("${pkg}")
-    "PriceOracle"
-    "new"
-    Address("${usdt}")
-    Decimal("17.85714285")
-    Address("${usdc}")
-    Decimal("17.85714285")
-;

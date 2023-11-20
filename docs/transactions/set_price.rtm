@@ -1,0 +1,23 @@
+CALL_METHOD
+    Address("${admin_account}")
+    "lock_fee"
+    Decimal("10")
+;
+CALL_METHOD
+    Address("${admin_account}")
+    "create_proof_of_amount"
+    Address("${op_badge}")
+    Decimal("1")
+;
+CALL_METHOD
+    Address("${oracle}")
+    "set_price_quote_in_xrd"
+    Address("${usdt}")
+    Decimal("21.25050961")
+;
+CALL_METHOD
+    Address("${oracle}")
+    "set_price_quote_in_xrd"
+    Address("${usdc}")
+    Decimal("21.25050961")
+;

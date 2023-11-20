@@ -7,7 +7,10 @@ CALL_FUNCTION
     Address("${pkg}")
     "LendingProtocol"
     "instantiate"
-    Address("${admin_badge}")
-    Address("${op_badge}")
     "${price_signer_pk}"
 ;
+CALL_METHOD
+    Address("${admin_account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");
+

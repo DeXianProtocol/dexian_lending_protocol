@@ -67,49 +67,66 @@ export account=$p3
 
 
 ----
+<<<<<<< HEAD
 export pkg=package_tdx_2_1p4ayj3zupdcdhn3wwf8dyw55srzwngkpm863sh603g640l4rjaw2mt
+=======
+export pkg=package_tdx_2_1p5uuesvmw7l4mg80v786veuclh2jk9ldtvy4xua7afxvdcm57uj0dt
+>>>>>>> dev_native_pool
 export account=$admin_account
 export usdt=resource_tdx_2_1thnzj7nfawdec4tztfr9fmsh33kmwlstz2fs9t99yzj0awg43xxkpk
 export usdc=resource_tdx_2_1tkaegwwrttt6jrzvn2ag6dsvjs64dfwya6sckvlxnf794y462lhtx0
 
 ./docs/replace_holder.sh ./docs/transactions/new_keeper.rtm
+<<<<<<< HEAD
 export keeper=component_tdx_2_1cp0yvpa2yp24pm0pffypkjqll2xvmde0htqehfkjpk8mtckyds55h0
 export admin_badge=resource_tdx_2_1tkr4lms97y8wyk5g5tnenncncpwtwurzksczem95jy0c9gws23h2ta
 export op_badge=resource_tdx_2_1tkwkhugjf44nxh2j9ls6f3q0ymtp36n4465y7q6d03lf2ltc8w44fu
 
 ./docs/replace_holder.sh ./docs/transactions/new_interest.rtm
 export def_interest_model=component_tdx_2_1cpat7j4v2d4mn5qw22eaprz5h6tl6egfgyrvq50vypehhtjnl896jy
+=======
+export keeper=component_tdx_2_1crqq42wrut8qnk2n0d0jdz9hy0k6vzsx4yavp2l2fcja977k039wfp
+export keeper_admin_badge=resource_tdx_2_1t4mfzzg4g9n4ps86emaww7ysdp0lvcsnxnz4t67ucj94twcjrx6456
+export keeper_op_badge=resource_tdx_2_1thdfvsq5e8pemajnv529a0khfhvtvx37370c8gpqx57lm5x6ajpky6
+
+./docs/replace_holder.sh ./docs/transactions/new_interest.rtm
+export def_interest_model=component_tdx_2_1cq625sq82gnkfvwx2l4zle5vl8n52uawc9r2lel9snyzu82suugdgs
+>>>>>>> dev_native_pool
 
 account_sim1c956qr3kxlgypxwst89j9yf24tjc7zxd4up38x37zr6q4jxdx9rhma
 priv:0000000000000000000000000000000000000000000000000000000000000001
 pk=4cb5abf6ad79fbf5abbccafcc269d85cd2651ed4b885b5869f241aedf0a5ba29
 
-Private key: 2c2c7b0618f14e06ded6870aede991af915b2892d41aaddf0cac2b1c31459bc2
-Owner badge: resource_sim1nfzf2h73frult99zd060vfcml5kncq3mxpthusm9lkglvhsr0guahy:#1#
+#Private key: 2c2c7b0618f14e06ded6870aede991af915b2892d41aaddf0cac2b1c31459bc2
+#Owner badge: resource_sim1nfzf2h73frult99zd060vfcml5kncq3mxpthusm9lkglvhsr0guahy:#1#
 export price_signer_pk=4cb5abf6ad79fbf5abbccafcc269d85cd2651ed4b885b5869f241aedf0a5ba29
 
 
 ./docs/replace_holder.sh ./docs/transactions/new_lending_factory.rtm
-export lending_component=component_tdx_2_1cpkuqa0y0ac3puwuvlntjc8yltnr84d2f2yjduyfnahvjx852cczjy
-export oracle=component_tdx_2_1cpy69ayf5gmz4stra9kdmeze404554j62rptt6y8vwngm7644n0m8g
-export cdp_mgr=component_tdx_2_1cqysqtqvyc88y9ed62teepg67duchfpwg5t6zqwc9hdqmq3z8cncl0
-export cdp=resource_tdx_2_1ngdxpz8rgu8mq8uv40vcmywkah9870ruvs4alwpcy8ufp07l864z9n
+export lending_component=component_tdx_2_1cpvkp2l3yud0u8hxgpcsldndr3tve3mjz66n7xauauq9ruvnvpa2x0
+export oracle=component_tdx_2_1cz9ppd93tzkukyek4fmhu0wzma08k4ymks5tqp9lpsry67cg9qnq6v
+export cdp_mgr=component_tdx_2_1cqx5h6t8ukxuece4kvgv5uea73k8fga9chqjkww6flsa5rcfs0f676
+export admin_badge=resource_tdx_2_1t50dad8qq79c25npvkdsgk8afzq6ps9al3acjua2sjcxpdapvw93jl
+export op_badge=resource_tdx_2_1t5gqf6m4tczlfkus5njde9w32mmrunzjsaddeptkst2ep2n4mex0pq
+export cdp=resource_tdx_2_1n2jdzfw4fge2frrcs4fyelxel4y5ypyp6z0qjlqwwej9yfnee84lw9
 
 # xrd pool
 export xrd=resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc
 ./docs/replace_holder.sh ./docs/transactions/new_xrd_pool.rtm
-export xrd_pool=component_tdx_2_1czy8q6m4wz9shfmr3sxqw89n49xvwjyk0qhw36s3hmpwadkpwmkfdj
-export dx_xrd=resource_tdx_2_1t4l0q06wm8n6lenh2h0mwfx3duysyvum7wjc7u5xa4lh9eazdh9wa2
+export xrd_pool=component_tdx_2_1cqwvyrrsw6f6hdm9h34t8u444ypxdlzjvxkn5rpznfp87xl966s9j3
+export dx_xrd=resource_tdx_2_1th8e69nup687hqqlssg5ukvrhdx9n6emhjr6usqwz5yw6dhd2rvtrg
 
 #usdt pool
 ./docs/replace_holder.sh ./docs/transactions/new_usdt_pool.rtm
-export usdt_pool=component_tdx_2_1cqequa0cfz7q4nldx3fruc4jndn0ax7q77npd052p6c8xfmpy7su2e
-export dx_usdt=resource_tdx_2_1t4868dc04zn0symsmgn529attj72fhhhr6mhxjhad84s9xunetjg80
+export usdt_pool=component_tdx_2_1cps39ezg2qr4rplyjh6n28evsfc7urc3ae2eedz4ru3yjj0ea8qjus
+export dx_usdt=resource_tdx_2_1t550qtqyzcez9umdusccaxal0yydt7wpqrzy3uj4yaswf000fphka6
 
 #usdc pool
 ./docs/replace_holder.sh ./docs/transactions/new_usdc_pool.rtm
-export usdc_pool=component_tdx_2_1czlveju3727w6dkzpy4dgvshqe683k3fkyslj6xetdtj5654e7hhps
-export dx_usdc=resource_tdx_2_1tk2svd5kdkqm98azqegk9pephftwpvy20gd2c9ca0j6kxll208ez9t
+export usdc_pool=component_tdx_2_1cr3h7s5l2y95wrkjz6whylcf2am4sus5j2sk96fakptvseh024d4vw
+export dx_usdc=resource_tdx_2_1tktmw2h4y29gd36je4m02qku06fzmclzuac490yxrqr0pl27ejt88u
+
+./docs/replace_holder.sh docs/transactions/set_price.rtm
 
 # supply
 ## p1 4000xrd
@@ -137,15 +154,76 @@ export amount=200
 ./docs/replace_holder.sh docs/transactions/supply.rtm
 
 # borrow
+export borrow_token=$usdt
+export quote="usdt"
+result=$(curl "https://price.dexian.io/xrd-$quote")
+export price1=$(echo $result | jq ".data.price")
+export quote1=$usdt
+export timestamp1=$(echo $result | jq ".data.timestamp")
+export signature1=$(echo $result | jq ".data.signature")
+#export quote="usdc"
+#result=$(curl "https://price.dexian.io/xrd-$quote")
+#export price2=$(echo $result | jq ".data.price")
+#export quote2=$usdc
+#export timestamp2=$(echo $result | jq ".data.timestamp")
+#export signature2=$(echo $result | jq ".data.signature")
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
 export account=$p1
 export dx_token=$dx_xrd
 export amount=2000
 export borrow_token=$usdt
 export borrow_amount=10
 ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+
+
+
+export quote="usdc"
+result=$(curl "https://price.dexian.io/xrd-$quote")
+export price1=$(echo $result | jq ".data.price")
+export quote1=$usdc
+export timestamp1=$(echo $result | jq ".data.timestamp")
+export signature1=$(echo $result | jq ".data.signature")
+#export quote="usdc"
+#result=$(curl "https://price.dexian.io/xrd-$quote")
+#export price2=$(echo $result | jq ".data.price")
+#export quote2=$usdc
+#export timestamp2=$(echo $result | jq ".data.timestamp")
+#export signature2=$(echo $result | jq ".data.signature")
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p1
+export dx_token=$dx_xrd
+export amount=2000
 export borrow_token=$usdc
 export borrow_amount=10
-./docs/replace_holder.sh docs/transactions/borrow_stable.rtm
+./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
 
+export quote="usdc"
+result=$(curl "https://price.dexian.io/xrd-$quote")
+export price1=$(echo $result | jq ".data.price")
+export quote1=$usdc
+export timestamp1=$(echo $result | jq ".data.timestamp")
+export signature1=$(echo $result | jq ".data.signature")
+#export quote="usdc"
+#result=$(curl "https://price.dexian.io/xrd-$quote")
+#export price2=$(echo $result | jq ".data.price")
+#export quote2=$usdc
+#export timestamp2=$(echo $result | jq ".data.timestamp")
+#export signature2=$(echo $result | jq ".data.signature")
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p3
+export dx_token=$dx_usdc
+export amount=200
+export borrow_token=$xrd
+export borrow_amount=800
+./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
