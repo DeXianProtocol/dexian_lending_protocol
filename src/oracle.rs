@@ -1,5 +1,4 @@
 use scrypto::prelude::*;
-// use crate::signature::Ed25519Signature;
 use crate::utils::verify_ed25519;
 
 #[derive(ScryptoSbor, Clone, PartialEq, Debug)]
@@ -89,15 +88,18 @@ mod oracle{
     
         pub fn get_valid_price_in_xrd(&self, quote_addr: ResourceAddress, xrd_price_in_quote: String, timestamp: u64, signature: String) -> Decimal{
             assert!(self.price_map.contains_key(&quote_addr), "unknow resource address");
-            let epoch_at = 48538u64;  //Runtime::current_epoch().number();
-            let base = "resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc";  //Runtime::bech32_encode_address(XRD);
-            let quote = "resource_tdx_2_1tkaegwwrttt6jrzvn2ag6dsvjs64dfwya6sckvlxnf794y462lhtx0";  //Runtime::bech32_encode_address(quote_addr);
+            // let epoch_at = 48538u64;  //Runtime::current_epoch().number();
+            // let base = "resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc";  //Runtime::bech32_encode_address(XRD);
+            // let quote = "resource_tdx_2_1tkaegwwrttt6jrzvn2ag6dsvjs64dfwya6sckvlxnf794y462lhtx0";  //Runtime::bech32_encode_address(quote_addr);
+            let epoch_at = Runtime::current_epoch().number();
+            let base = Runtime::bech32_encode_address(XRD);
+            let quote = Runtime::bech32_encode_address(quote_addr);
             let message = format!(
                 "{base}/{quote}{price}{epoch_at}{timestamp}", base=base, quote=quote,
                 price=xrd_price_in_quote, epoch_at=epoch_at, timestamp=timestamp
             );
-            let hash = hash(message.clone());
-            info!("price message: {}, hash:{}, signature:{}", message.clone(), hash, signature.clone());
+            let _hash = hash(message.clone());
+            info!("price message: {}, hash:{}, signature:{}", message.clone(), _hash, signature.clone());
             if verify_ed25519(&message, &self.pk_str, &signature){
                 info!("price verify passed. :)");
                 if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
@@ -107,30 +109,12 @@ mod oracle{
                 }
             }
             else{  //TODO: only for test
-                        if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
-                            // XRD/USDT --> USDT/XRD
-                            return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
-                        }
-                    }
-            // let hash = hash(message.clone());
-            // info!("price message: {}, hash:{}, signature:{}", message.clone(), hash, signature.clone());
-            // if let Ok(sig) = Ed25519Signature::from_str(&signature){
-            //     info!("sig.to_string: {}", sig.to_string());
-            //     if verify_ed25519(hash, self.price_signer, sig){
-            //         if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
-            //             info!("price verify passed. :)");
-            //             // XRD/USDT --> USDT/XRD
-            //             return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
-            //         }
-            //     }
-            //     else{  //TODO: only for test
-            //         if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
-            //             // XRD/USDT --> USDT/XRD
-            //             return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
-            //         }
-            //     }
-            // }
-
+                if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
+                    // XRD/USDT --> USDT/XRD
+                    return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
+                }
+            }
+            
             Decimal::ZERO 
         }
 

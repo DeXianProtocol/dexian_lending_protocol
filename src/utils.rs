@@ -1,7 +1,6 @@
 
 use scrypto::prelude::*;
-// use crate::signature::Ed25519Signature;
-use ed25519_dalek::{PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH, VerifyingKey, Verifier, Signature};
+use ed25519_dalek::{PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH, VerifyingKey, Signature};
 
 pub const EPOCH_OF_YEAR: u64 = 105120;
 /// Copies a slice to a fixed-sized array.
@@ -80,22 +79,6 @@ pub fn get_divisibility(res_addr: ResourceAddress) -> Option<u8>{
     let res_mgr = ResourceManager::from(res_addr);
     res_mgr.resource_type().divisibility()
 }
-
-// pub fn verify_ed25519(
-//     signed_hash: Hash,
-//     public_key: Ed25519PublicKey,
-//     signature: Ed25519Signature,
-// ) -> bool {
-//     if let Ok(sig) = ed25519_dalek::Signature::from_bytes(&signature.0) {
-//         info!("sig.ok");
-//         if let Ok(pk) = ed25519_dalek::PublicKey::from_bytes(&public_key.0) {
-//             info!("pk.ok");
-//             return pk.verify_strict(&signed_hash.0, &sig).is_ok();
-//         }
-//     }
-
-//     false
-// }
 
 pub fn verify_ed25519(
     msg: &str,
