@@ -1,5 +1,6 @@
 use scrypto::prelude::*;
-use super::signature::Ed25519Signature;
+use crate::signature::Ed25519Signature;
+use crate::utils::verify_ed25519;
 
 #[derive(ScryptoSbor, Clone, PartialEq, Debug)]
 pub struct QuotePrice {
@@ -69,7 +70,6 @@ mod oracle{
 
         pub fn set_verify_public_key(&mut self, price_signer_pk: String){
             self.price_signer = Ed25519PublicKey::from_str(&price_signer_pk).unwrap();
-
             Runtime::emit_event(SetPublicKeyEvent{pub_key:price_signer_pk});
         }
     
@@ -86,18 +86,20 @@ mod oracle{
     
         pub fn get_valid_price_in_xrd(&self, quote_addr: ResourceAddress, xrd_price_in_quote: String, timestamp: u64, signature: String) -> Decimal{
             assert!(self.price_map.contains_key(&quote_addr), "unknow resource address");
-            let epoch_at = Runtime::current_epoch().number();
-            let base = Runtime::bech32_encode_address(XRD);
-            let quote = Runtime::bech32_encode_address(quote_addr);
+            let epoch_at = 48538u64;  //Runtime::current_epoch().number();
+            let base = "resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc";  //Runtime::bech32_encode_address(XRD);
+            let quote = "resource_tdx_2_1tkaegwwrttt6jrzvn2ag6dsvjs64dfwya6sckvlxnf794y462lhtx0";  //Runtime::bech32_encode_address(quote_addr);
             let message = format!(
                 "{base}/{quote}{price}{epoch_at}{timestamp}", base=base, quote=quote,
                 price=xrd_price_in_quote, epoch_at=epoch_at, timestamp=timestamp
             );
             let hash = hash(message.clone());
-            info!("price message: {}, hash:{}", message.clone(), hash);
+            info!("price message: {}, hash:{}, signature:{}", message.clone(), hash, signature.clone());
             if let Ok(sig) = Ed25519Signature::from_str(&signature){
-                if Self::verify_ed25519(hash, self.price_signer, sig){
+                info!("sig.to_string: {}", sig.to_string());
+                if verify_ed25519(hash, self.price_signer, sig){
                     if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
+                        info!("price verify passed. :)");
                         // XRD/USDT --> USDT/XRD
                         return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
                     }
@@ -113,19 +115,6 @@ mod oracle{
             Decimal::ZERO 
         }
 
-        pub fn verify_ed25519(
-            signed_hash: Hash,
-            public_key: Ed25519PublicKey,
-            signature: Ed25519Signature,
-        ) -> bool {
-            if let Ok(sig) = ed25519_dalek::Signature::from_bytes(&signature.0) {
-                if let Ok(pk) = ed25519_dalek::PublicKey::from_bytes(&public_key.0) {
-                    return pk.verify_strict(&signed_hash.0, &sig).is_ok();
-                }
-            }
-        
-            false
-        }
     }
 }
 

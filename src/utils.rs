@@ -1,5 +1,6 @@
 
 use scrypto::prelude::*;
+use crate::signature::Ed25519Signature;
 
 pub const EPOCH_OF_YEAR: u64 = 105120;
 /// Copies a slice to a fixed-sized array.
@@ -39,7 +40,8 @@ pub fn assert_amount(v: Decimal, not_less_than: Decimal){
 }
 
 pub fn calc_linear_interest(amount: Decimal, apy: Decimal, epoch_of_year: Decimal, delta_epoch: u64) -> Decimal{
-    amount.checked_mul(calc_linear_rate(apy, epoch_of_year, delta_epoch)).unwrap()
+    let linear_rate = calc_linear_rate(apy, epoch_of_year, delta_epoch);
+    amount.checked_mul(Decimal::ONE.checked_add(linear_rate).unwrap()).unwrap()
 }
 
 pub fn calc_linear_rate(apy: Decimal, epoch_of_year: Decimal, delta_epoch: u64) -> Decimal{
@@ -64,6 +66,7 @@ pub fn get_weight_rate(amount: Decimal, rate: Decimal, new_amount:Decimal, new_r
         .checked_div(latest_amount).unwrap()
 }
 
+#[warn(dead_code)]
 pub fn calc_principal(amount: Decimal,  apy: Decimal, epoch_of_year: Decimal, delta_epoch: u64) -> Decimal{
     amount.checked_div(
         Decimal::ONE.checked_add(
@@ -75,4 +78,20 @@ pub fn calc_principal(amount: Decimal,  apy: Decimal, epoch_of_year: Decimal, de
 pub fn get_divisibility(res_addr: ResourceAddress) -> Option<u8>{
     let res_mgr = ResourceManager::from(res_addr);
     res_mgr.resource_type().divisibility()
+}
+
+pub fn verify_ed25519(
+    signed_hash: Hash,
+    public_key: Ed25519PublicKey,
+    signature: Ed25519Signature,
+) -> bool {
+    if let Ok(sig) = ed25519_dalek::Signature::from_bytes(&signature.0) {
+        info!("sig.ok");
+        if let Ok(pk) = ed25519_dalek::PublicKey::from_bytes(&public_key.0) {
+            info!("pk.ok");
+            return pk.verify_strict(&signed_hash.0, &sig).is_ok();
+        }
+    }
+
+    false
 }

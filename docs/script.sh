@@ -247,6 +247,7 @@ export op_badge1=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (
 result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_interest.rtm)
 export def_interest_model=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
 
+export price_signer_pk=6d187b0f2e66d74410e92e2dc92a5141a55c241646ce87acbcad4ab413170f9b
 result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_lending_factory.rtm)
 export lending_component=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
 export oracle=$(echo $result | grep "Component: "| awk -F "Component: " '{print $3}' | awk -F " " '{print $1}')
@@ -330,11 +331,14 @@ resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
 resim set-default-account $p1 $p1_priv $p1_badge
 export quote="usdt"
-result=$(curl "https://price.dexian.io/xrd-$quote")
-export price1=$(echo $result | jq ".data.price")
+#result=$(curl "https://price.dexian.io/xrd-$quote")
+#export price1=$(echo $result | jq ".data.price")
 export quote1=$usdt
-export timestamp1=$(echo $result | jq ".data.timestamp")
-export signature1=$(echo $result | jq ".data.signature")
+#export timestamp1=$(echo $result | jq ".data.timestamp")
+#export signature1=$(echo $result | jq ".data.signature")
+export price1="0.056259787085"
+export signature1="2849587ac2f8929bb58a231ee40bc49c179dd2c77249043437b2b374de6765ca36acb3499e3683f7f0eae48a6d9e910a0fbfe2470c0413f2c02d13fa58b5f307"
+export timestamp1=1700658816
 #export quote="usdc"
 #result=$(curl "https://price.dexian.io/xrd-$quote")
 #export price2=$(echo $result | jq ".data.price")
