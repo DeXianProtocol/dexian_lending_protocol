@@ -1,5 +1,5 @@
 use scrypto::prelude::*;
-use crate::signature::Ed25519Signature;
+// use crate::signature::Ed25519Signature;
 use crate::utils::verify_ed25519;
 
 #[derive(ScryptoSbor, Clone, PartialEq, Debug)]
@@ -33,7 +33,8 @@ mod oracle{
 
     struct PriceOracle{
         price_map: HashMap<ResourceAddress, QuotePrice>,
-        price_signer: Ed25519PublicKey,
+        // price_signer: Ed25519PublicKey,
+        pk_str: String
     }
     
     impl PriceOracle{
@@ -46,7 +47,8 @@ mod oracle{
         ) -> Global<PriceOracle> {
             Self{
                 price_map: HashMap::new(),
-                price_signer: Ed25519PublicKey::from_str(&price_signer_pk).unwrap()
+                // price_signer: Ed25519PublicKey::from_str(&price_signer_pk).unwrap()
+                pk_str: price_signer_pk.to_owned()
             }.instantiate().prepare_to_globalize(
                 owner_role
             ).roles(
@@ -69,7 +71,8 @@ mod oracle{
         }
 
         pub fn set_verify_public_key(&mut self, price_signer_pk: String){
-            self.price_signer = Ed25519PublicKey::from_str(&price_signer_pk).unwrap();
+            // self.price_signer = Ed25519PublicKey::from_str(&price_signer_pk).unwrap();
+            self.pk_str = price_signer_pk.to_owned();
             Runtime::emit_event(SetPublicKeyEvent{pub_key:price_signer_pk});
         }
     
@@ -95,22 +98,38 @@ mod oracle{
             );
             let hash = hash(message.clone());
             info!("price message: {}, hash:{}, signature:{}", message.clone(), hash, signature.clone());
-            if let Ok(sig) = Ed25519Signature::from_str(&signature){
-                info!("sig.to_string: {}", sig.to_string());
-                if verify_ed25519(hash, self.price_signer, sig){
-                    if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
-                        info!("price verify passed. :)");
-                        // XRD/USDT --> USDT/XRD
-                        return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
-                    }
-                }
-                else{  //TODO: only for test
-                    if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
-                        // XRD/USDT --> USDT/XRD
-                        return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
-                    }
+            if verify_ed25519(&message, &self.pk_str, &signature){
+                info!("price verify passed. :)");
+                if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
+                    info!("price verify passed. :)");
+                    // XRD/USDT --> USDT/XRD
+                    return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
                 }
             }
+            else{  //TODO: only for test
+                        if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
+                            // XRD/USDT --> USDT/XRD
+                            return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
+                        }
+                    }
+            // let hash = hash(message.clone());
+            // info!("price message: {}, hash:{}, signature:{}", message.clone(), hash, signature.clone());
+            // if let Ok(sig) = Ed25519Signature::from_str(&signature){
+            //     info!("sig.to_string: {}", sig.to_string());
+            //     if verify_ed25519(hash, self.price_signer, sig){
+            //         if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
+            //             info!("price verify passed. :)");
+            //             // XRD/USDT --> USDT/XRD
+            //             return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
+            //         }
+            //     }
+            //     else{  //TODO: only for test
+            //         if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
+            //             // XRD/USDT --> USDT/XRD
+            //             return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
+            //         }
+            //     }
+            // }
 
             Decimal::ZERO 
         }

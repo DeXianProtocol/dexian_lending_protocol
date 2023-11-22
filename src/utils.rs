@@ -1,6 +1,7 @@
 
 use scrypto::prelude::*;
-use crate::signature::Ed25519Signature;
+// use crate::signature::Ed25519Signature;
+use ed25519_dalek::{PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH, VerifyingKey, Verifier, Signature};
 
 pub const EPOCH_OF_YEAR: u64 = 105120;
 /// Copies a slice to a fixed-sized array.
@@ -80,18 +81,30 @@ pub fn get_divisibility(res_addr: ResourceAddress) -> Option<u8>{
     res_mgr.resource_type().divisibility()
 }
 
-pub fn verify_ed25519(
-    signed_hash: Hash,
-    public_key: Ed25519PublicKey,
-    signature: Ed25519Signature,
-) -> bool {
-    if let Ok(sig) = ed25519_dalek::Signature::from_bytes(&signature.0) {
-        info!("sig.ok");
-        if let Ok(pk) = ed25519_dalek::PublicKey::from_bytes(&public_key.0) {
-            info!("pk.ok");
-            return pk.verify_strict(&signed_hash.0, &sig).is_ok();
-        }
-    }
+// pub fn verify_ed25519(
+//     signed_hash: Hash,
+//     public_key: Ed25519PublicKey,
+//     signature: Ed25519Signature,
+// ) -> bool {
+//     if let Ok(sig) = ed25519_dalek::Signature::from_bytes(&signature.0) {
+//         info!("sig.ok");
+//         if let Ok(pk) = ed25519_dalek::PublicKey::from_bytes(&public_key.0) {
+//             info!("pk.ok");
+//             return pk.verify_strict(&signed_hash.0, &sig).is_ok();
+//         }
+//     }
 
-    false
+//     false
+// }
+
+pub fn verify_ed25519(
+    msg: &str,
+    pk: &str,
+    sig: &str
+) -> bool{
+    let sig_bytes =  hex::decode(sig).expect("Failed to decode signature string");
+    let signature = Signature::from_bytes(&copy_u8_array::<SIGNATURE_LENGTH>(&sig_bytes));
+    let pk_bytes = hex::decode(pk).expect("Failed to decode public-key string");
+    let public_key = VerifyingKey::from_bytes(&copy_u8_array::<PUBLIC_KEY_LENGTH>(&pk_bytes)).expect("Failed construct public-key.");
+    public_key.verify_strict(msg.as_bytes(), &signature).is_ok()
 }
