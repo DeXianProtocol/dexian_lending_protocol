@@ -1,14 +1,12 @@
 use scrypto::prelude::*;
-use crate::utils::*;
 use crate::interest::InterestModel;
 use crate::oracle::oracle::PriceOracle;
 use crate::cdp::cdp_mgr::CollateralDebtManager;
-use crate::pools::lending::lend_pool::LendResourcePool;
-use crate::interest::def_interest_model::DefInterestModel;
+
 
 
 #[blueprint]
-#[events(SupplyEvent, WithdrawEvent, CreateCDPEvent, ExtendBorrowEvent, AdditionCollateralEvent, WithdrawCollateralEvent, RepayEvent)]
+#[events(SupplyEvent, WithdrawEvent, CreateCDPEvent, ExtendBorrowEvent, AdditionCollateralEvent, WithdrawCollateralEvent, RepayEvent, LiquidationEvent)]
 mod dexian_lending{
 
     enable_method_auth! {
@@ -28,6 +26,7 @@ mod dexian_lending{
             withdraw_collateral => PUBLIC;
             repay => PUBLIC;
             addition_collateral => PUBLIC;
+            liquidation => PUBLIC;
         }
     }
     
@@ -239,6 +238,41 @@ mod dexian_lending{
             bucket
         }
 
+        pub fn liquidation(&mut self,
+            debt_bucket: Bucket,
+            debt_to_cover: Decimal,
+            id: u64,
+            price1: String,
+            quote1: ResourceAddress,
+            timestamp1: u64,
+            signature1: String,
+            price2: Option<String>,
+            quote2: Option<ResourceAddress>,
+            timestamp2: Option<u64>,
+            signature2: Option<String>
+        ) -> (Bucket, Bucket){
+            let cdp_id = NonFungibleLocalId::integer(id);
+            let cover_amount = debt_bucket.amount();
+            let (borrow_token, collateral_underlying_token) = self.cdp_mgr.get_cdp_resource_address(cdp_id.clone());
+            assert!(borrow_token == debt_bucket.resource_address(), "the borrow token does not matches CDP.");
+            let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.get_price_in_xrd(collateral_underlying_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
+
+            let (underlying_bucket, refund_bucket) = self.cdp_mgr.liquidation(debt_bucket, debt_to_cover, cdp_id.clone(), borrow_price_in_xrd, collateral_underlying_token, collateral_underlying_price_in_xrd);
+            let actual_repayment = cover_amount.checked_sub(refund_bucket.amount()).unwrap();
+            let underlying_amount = underlying_bucket.amount();
+            Runtime::emit_event(LiquidationEvent{
+                cdp_id: cdp_id.clone(),
+                debt_token: borrow_token,
+                debt_price: borrow_price_in_xrd,
+                underlying_token: collateral_underlying_token,
+                underlying_price: collateral_underlying_price_in_xrd,
+                underlying_amount,
+                actual_repayment,
+                debt_to_cover
+            });
+            (underlying_bucket, refund_bucket)
+        }
+
         pub fn withdraw_insurance(&mut self, underlying_token_addr: ResourceAddress, amount: Decimal) -> Bucket{
             self.cdp_mgr.withdraw_insurance(underlying_token_addr, amount)
         }
@@ -348,5 +382,16 @@ pub struct RepayEvent{
     pub repay_token: ResourceAddress,
     pub bucket_amount: Decimal,
     pub actual_payment: Decimal
+}
 
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct LiquidationEvent{
+    pub cdp_id: NonFungibleLocalId,
+    pub debt_token: ResourceAddress,
+    pub debt_price: Decimal,
+    pub debt_to_cover: Decimal,
+    pub actual_repayment: Decimal,
+    pub underlying_token: ResourceAddress,
+    pub underlying_price: Decimal,
+    pub underlying_amount: Decimal
 }

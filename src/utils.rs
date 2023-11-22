@@ -22,6 +22,10 @@ pub fn floor(dec: Decimal, divisibility: u8) -> Decimal{
     dec.checked_round(divisibility, RoundingMode::ToNegativeInfinity).unwrap()
 }
 
+pub fn precent_mul(dec: Decimal, precent: Decimal) -> Decimal{
+    dec.checked_mul(precent).unwrap().checked_div(Decimal::ONE_HUNDRED).unwrap()
+}
+
 pub fn assert_resource(res_addr: &ResourceAddress, expect_res_addr: &ResourceAddress){
     assert!(res_addr == expect_res_addr, "the resource address is not expect!");
 }
