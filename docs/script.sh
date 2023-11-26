@@ -222,7 +222,6 @@ export p3=$(echo $result|grep "Account component address: "|awk -F ": " '{print 
 export p3_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
 export p3_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
 
-
 result=$(resim new-token-fixed --symbol=USDT --name=USDT 1000000)
 # export usdt=$(echo $result | grep "Resource:" | awk -F " " '{print $3}')
 export usdt=$(echo $result | awk -F "Resource: " '{print $2}')
@@ -238,6 +237,7 @@ resim transfer $usdc:200 $p1
 
 result=$(resim publish ".")
 export pkg=$(echo $result | awk -F ": " '{print $2}')
+
 
 result=$(resim call-function $pkg "ValidatorKeeper" "instantiate")
 export keeper=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
@@ -377,7 +377,7 @@ export timestamp2=None
 export signature2=None
 export account=$p1
 export borrow_token=$usdt
-export borrow_amount=20
+export borrow_amount=50
 export cdp_id="#1#"
 resim run < ./docs/replace_holder.sh docs/transactions/extend_borrow.rtm
 
@@ -426,6 +426,13 @@ export account=$p1
 resim run < ./docs/replace_holder.sh docs/transactions/addition_collateral.rtm
 
 
+export repay_token=$usdt
+export amount=70
+export account=$p1
+export cdp_id=1
+resim run < ./docs/replace_holder.sh docs/transactions/repay.rtm
+
+
 resim set-default-account $p3 $p3_priv $p3_badge
 export quote="usdc"
 result=$(curl "https://price.dexian.io/xrd-$quote")
@@ -456,3 +463,23 @@ export amount=3000
 export account=$p3
 export cdp_id=2
 resim run < ./docs/replace_holder.sh docs/transactions/repay.rtm
+
+
+
+# liquidation
+resim set-default-account $p2 $p2_priv $p2_badge
+export quote="usdt"
+export epoch=2
+export price1="0.04285713"
+export quote1=$usdt
+export timestamp1=1700658816
+export signature1=$(python sign-util.py $xrd $usdt $price1 $epoch $timestamp1)
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p2
+export repay_token=$usdt
+export debt_to_cover=70
+export cdp_id=1
+resim run < ./docs/replace_holder.sh docs/transactions/liquidation.rtm

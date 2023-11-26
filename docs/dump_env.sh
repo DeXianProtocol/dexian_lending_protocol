@@ -26,3 +26,4 @@ echo "export dx_xrd="$dx_xrd
 echo "export dx_usdt="$dx_usdt
 echo "export dx_usdc="$dx_usdc
 
+

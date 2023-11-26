@@ -366,14 +366,14 @@ mod cdp_mgr{
 
             let (bucket, payment_amount) = if cdp_data.is_stable {
                 let (bucket, actual_repay_amount, repay_in_borrow, _interest, _current_epoch_at) = borrow_pool.repay_stable(
-                    repay_bucket, cdp_data.borrow_amount, cdp_data.stable_rate, cdp_data.last_update_epoch
+                    repay_bucket, cdp_data.borrow_amount, cdp_data.stable_rate, cdp_data.last_update_epoch, None
                 );
                 self.update_cdp_after_repay(&cdp_id, cdp_data, actual_repay_amount, repay_in_borrow, Decimal::ZERO, Decimal::ZERO);
                 (bucket, actual_repay_amount)
             }
             else{
 
-                let (bucket, actual_repay_amount) = borrow_pool.repay_variable(repay_bucket, cdp_data.normalized_borrow);
+                let (bucket, actual_repay_amount) = borrow_pool.repay_variable(repay_bucket, cdp_data.normalized_borrow, None);
                 self.update_cdp_after_repay(&cdp_id, cdp_data, actual_repay_amount, Decimal::ZERO, actual_repay_amount, Decimal::ZERO);
                 (bucket, actual_repay_amount)
             };
@@ -382,7 +382,7 @@ mod cdp_mgr{
         }
 
         pub fn liquidation(&mut self,
-            mut debt_bucket: Bucket,
+            debt_bucket: Bucket,
             debt_to_cover: Decimal,
             cdp_id: NonFungibleLocalId,
             borrow_price_in_xrd: Decimal, 
@@ -399,32 +399,36 @@ mod cdp_mgr{
                 borrow_token, underlying_token.clone(), cdp_data.borrow_amount, cdp_data.normalized_borrow, cdp_data.collateral_amount, cdp_data.is_stable,
                 cdp_data.stable_rate, cdp_data.last_update_epoch
             );
-            assert!(debt_bucket.amount() >= actual_debt_to_liquidate, "the debt bucket does not cover to debt of the CDP.");
+            info!("actual_debt_to_liquidate:{}, release_collateral_to_liqiudate:{}", actual_debt_to_liquidate, release_collateral_to_liqiudate);
+
+            let repay_amount = debt_bucket.amount();
+            assert!(repay_amount >= actual_debt_to_liquidate, "the debt bucket does not cover to debt of the CDP.");
             let debt_pool = self.pools.get_mut(&borrow_token).unwrap();
-            let repay_bucket = debt_bucket.take(actual_debt_to_liquidate);
-            let bucket = if cdp_data.is_stable{
+            let (bucket, actual_repay_amount) = if cdp_data.is_stable{
                 let (bucket, actual_repay_amount, repay_in_borrow, _interest, _current_epoch_at) = debt_pool.repay_stable(
-                    repay_bucket, cdp_data.borrow_amount, cdp_data.stable_rate, cdp_data.last_update_epoch
+                    debt_bucket, cdp_data.borrow_amount, cdp_data.stable_rate, cdp_data.last_update_epoch, Some(actual_debt_to_liquidate)
                 );
+                info!("stable debt: actual_repay_amount:{}, bucket:{}", actual_repay_amount, bucket.amount());
                 self.update_cdp_after_repay(&cdp_id, cdp_data, actual_repay_amount, repay_in_borrow, Decimal::ZERO, Decimal::ZERO);
-                bucket
+                (bucket, actual_repay_amount)
             }
             else{
-                let (bucket, actual_repay_amount) = debt_pool.repay_variable(repay_bucket, cdp_data.normalized_borrow);
-                self.update_cdp_after_repay(&cdp_id, cdp_data, actual_repay_amount, Decimal::ZERO, actual_repay_amount, Decimal::ZERO);
-                bucket
+                let (bucket, repay_normalized_amount) = debt_pool.repay_variable(debt_bucket, cdp_data.normalized_borrow, Some(actual_debt_to_liquidate));
+                info!("variable debt: repay_normalized_amount:{}, bucket:{}", repay_normalized_amount, bucket.amount());
+                self.update_cdp_after_repay(&cdp_id, cdp_data, actual_debt_to_liquidate, Decimal::ZERO, repay_normalized_amount, Decimal::ZERO);
+                (bucket, actual_debt_to_liquidate)
             };
+            assert!(actual_repay_amount == actual_debt_to_liquidate, "The actual repay amount dose not matches debt to liquidate.");
 
-            if !bucket.is_empty() {
-                debt_bucket.put(bucket);
-            }
-
+            info!("debt_bucket:{}", bucket.amount());
             let underlying_pool = self.pools.get_mut(&underlying_token).unwrap();
             let vault = self.collateral_vaults.get_mut(&dx_token).unwrap();
+            info!("underlying:{}, dx:{}, dx_vault:{}", Runtime::bech32_encode_address(underlying_token), Runtime::bech32_encode_address(dx_token),vault.amount());
             let release_underlying_bucket = underlying_pool.remove_liquity(vault.take(release_collateral_to_liqiudate));
+            info!("underlying(collateral) amount:{}", release_underlying_bucket.amount());
             self.cdp_res_mgr.update_non_fungible_data(&cdp_id, "collateral_amount", dx_amount.checked_sub(release_collateral_to_liqiudate).unwrap());
-
-            (release_underlying_bucket, debt_bucket)
+            info!("--------");
+            (release_underlying_bucket, bucket)
 
         }
 
@@ -480,17 +484,20 @@ mod cdp_mgr{
 
             let collateral_to_underlying_index = underlying_amount.checked_div(collateral_amount).unwrap();
             let max_to_liquidate = precent_mul(debt_amount, self.close_factor_percent);
+            info!("debt_amount: {}, max_to_liquidate:{}",debt_amount, max_to_liquidate);
             let mut actual_to_liquidate = if debt_to_cover.is_positive() && max_to_liquidate > debt_to_cover {debt_to_cover} else{max_to_liquidate};
             // debt.amount * debt.price * (1+liquidation_bonus) / underlying.price
             let mut underlying_to_liquidate = actual_to_liquidate.checked_mul(debt_price).unwrap().checked_mul(
                 Decimal::ONE.checked_add(liquidation_bonus).unwrap()
             ).unwrap().checked_div(collateral_underlying_price).unwrap();
+            info!("underlying_to_liquidate:{}, actual_to_liquidate:{} price:{}, bonus:{}, index:{}", underlying_to_liquidate, actual_to_liquidate, debt_price, liquidation_bonus, collateral_to_underlying_index);
 
             if underlying_to_liquidate > underlying_amount {
                 underlying_to_liquidate = underlying_amount;
                 actual_to_liquidate = underlying_value.checked_div(
                     debt_price.checked_mul(Decimal::ONE.checked_add(liquidation_bonus).unwrap()).unwrap()
                 ).unwrap();
+                info!("underlying_to_liquidate:{}, underlying_amount:{} actual_to_liquidate:{}", underlying_to_liquidate, underlying_amount, actual_to_liquidate);
             };
 
             (

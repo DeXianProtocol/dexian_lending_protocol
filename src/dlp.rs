@@ -257,16 +257,17 @@ mod dexian_lending{
             timestamp2: Option<u64>,
             signature2: Option<String>
         ) -> (Bucket, Bucket){
+            let bucket_amount = debt_bucket.amount();
             let cdp_id = NonFungibleLocalId::integer(id);
-            let cover_amount = debt_bucket.amount();
             let (borrow_token, collateral_underlying_token) = self.cdp_mgr.get_cdp_resource_address(cdp_id.clone());
             assert!(borrow_token == debt_bucket.resource_address(), "the borrow token does not matches CDP.");
             let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.get_price_in_xrd(collateral_underlying_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
             assert!(borrow_price_in_xrd.is_positive() || collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
 
             let (underlying_bucket, refund_bucket) = self.cdp_mgr.liquidation(debt_bucket, debt_to_cover, cdp_id.clone(), borrow_price_in_xrd, collateral_underlying_token, collateral_underlying_price_in_xrd);
-            let actual_repayment = cover_amount.checked_sub(refund_bucket.amount()).unwrap();
             let underlying_amount = underlying_bucket.amount();
+            let actual_repayment = bucket_amount.checked_sub(refund_bucket.amount()).unwrap();
+            info!("underlying:{}, actual_repayment:{}", underlying_amount, actual_repayment);
             Runtime::emit_event(LiquidationEvent{
                 cdp_id: cdp_id.clone(),
                 debt_token: borrow_token,
@@ -277,7 +278,7 @@ mod dexian_lending{
                 actual_repayment,
                 debt_to_cover
             });
-            (underlying_bucket, refund_bucket)
+            (underlying_bucket,refund_bucket)
         }
 
         pub fn withdraw_insurance(&mut self, underlying_token_addr: ResourceAddress, amount: Decimal) -> Bucket{

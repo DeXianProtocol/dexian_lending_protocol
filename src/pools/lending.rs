@@ -207,14 +207,17 @@ mod lend_pool {
         }
 
 
-        pub fn repay_variable(&mut self, mut repay_bucket: Bucket, loan_amount: Decimal) -> (Bucket, Decimal){
+        pub fn repay_variable(&mut self, mut repay_bucket: Bucket, loan_amount: Decimal, repay_opt: Option<Decimal>) -> (Bucket, Decimal){
             assert_resource(&repay_bucket.resource_address(), &self.underlying_token);
             
             self.update_index();
 
             let divisibility = get_divisibility(self.underlying_token).unwrap();
             let debt_amount = loan_amount.checked_mul(self.loan_index).unwrap();
-            let amount = if repay_bucket.amount() > debt_amount {debt_amount} else{repay_bucket.amount()};
+            let mut amount = if repay_bucket.amount() > debt_amount {debt_amount} else{repay_bucket.amount()};
+            if repay_opt.is_some_and(|uplimit| uplimit < amount){
+                amount = repay_opt.unwrap();
+            }
             let loan_share = floor(amount.checked_div(self.loan_index).unwrap(), divisibility);
 
             self.variable_loan_share_quantity = self.variable_loan_share_quantity.checked_sub(loan_share).unwrap();
@@ -230,7 +233,8 @@ mod lend_pool {
             mut repay_bucket: Bucket, 
             loan_amount: Decimal,
             rate: Decimal,
-            last_epoch_at: u64
+            last_epoch_at: u64,
+            repay_opt: Option<Decimal>
         ) -> (Bucket, Decimal, Decimal, Decimal, u64){
             let current_epoch_at = Runtime::current_epoch().number();
             let epoch_of_year = Decimal::from(EPOCH_OF_YEAR);
@@ -239,7 +243,7 @@ mod lend_pool {
             
             let previous_debt = self.stable_loan_amount.checked_mul(self.stable_loan_interest_rate).unwrap();
 
-            let mut repay_amount = repay_bucket.amount();
+            let mut repay_amount = if repay_opt.is_some_and(|uplimit|uplimit<repay_bucket.amount()){ repay_opt.unwrap() } else { repay_bucket.amount() };
             let repay_in_borrow: Decimal;
             if repay_amount < interest {
                 let outstanding_interest = interest.checked_sub(repay_amount).unwrap();
