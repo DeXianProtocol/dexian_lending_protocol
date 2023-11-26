@@ -109,9 +109,7 @@ mod validator_keeper{
         }
 
         pub fn fill_validator_staking(&mut self, validator_addr: ComponentAddress, stake_data_vec: Vec<StakeData>){
-            
-            //TODO:
-            
+            self.validator_map.entry(validator_addr).or_insert(stake_data_vec);
         }
 
 

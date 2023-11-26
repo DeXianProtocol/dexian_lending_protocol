@@ -366,6 +366,7 @@ mod cdp_mgr{
             let cdp_data = self.cdp_res_mgr.get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
             let borrow_token = cdp_data.borrow_token;
             assert_resource(&borrow_token, &repay_bucket.resource_address());
+            let amount = repay_bucket.amount();
 
             
             let borrow_pool = self.pools.get_mut(&borrow_token).unwrap();
@@ -379,8 +380,9 @@ mod cdp_mgr{
             }
             else{
 
-                let (bucket, actual_repay_amount) = borrow_pool.repay_variable(repay_bucket, cdp_data.normalized_borrow, None);
-                self.update_cdp_after_repay(&cdp_id, cdp_data, actual_repay_amount, Decimal::ZERO, actual_repay_amount, Decimal::ZERO);
+                let (bucket, repay_normalized_amount) = borrow_pool.repay_variable(repay_bucket, cdp_data.normalized_borrow, None);
+                let actual_repay_amount = amount.checked_sub(bucket.amount()).unwrap();
+                self.update_cdp_after_repay(&cdp_id, cdp_data, actual_repay_amount, Decimal::ZERO, repay_normalized_amount, Decimal::ZERO);
                 (bucket, actual_repay_amount)
             };
 

@@ -1,0 +1,20 @@
+CALL_METHOD
+    Address("${admin_account}")
+    "lock_fee"
+    Decimal("10")
+;
+CALL_METHOD
+    Address("${admin_account}")
+    "create_proof_of_amount"
+    Address("${admin_badge1}")
+    Decimal("1")
+;
+CALL_METHOD
+    Address("${keeper}")
+    "fill_validator_staking"
+    Address("${validator}")
+    Array<Tuple(u64,Decimal,Decimal)>(
+        Tuple(2018u64,Decimal("30717182.3492063"),Decimal("30395422.5991853")),
+        Tuple(2u64,Decimal("30717182.3492063"),Decimal("30395422.5991853"))
+    )
+;
