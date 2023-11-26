@@ -8,6 +8,7 @@ CALL_FUNCTION
     "LendingProtocol"
     "instantiate"
     "${price_signer_pk}"
+    30000u64
 ;
 CALL_METHOD
     Address("${admin_account}")

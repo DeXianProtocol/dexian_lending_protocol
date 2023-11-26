@@ -6,20 +6,20 @@ CALL_METHOD
 CALL_METHOD
   Address("${account}")
   "withdraw"
-  Address("${dx_token}")
-  Decimal("${amount}")
+  Address("${repay_token}")
+  Decimal("${debt_to_cover}")
 ;
 TAKE_FROM_WORKTOP
-  Address("${dx_token}")
-  Decimal("${amount}")
+  Address("${repay_token}")
+  Decimal("${debt_to_cover}")
   Bucket("bucket1")
 ;
 CALL_METHOD
     Address("${lending_component}")
-    "borrow_variable"
+    "liquidation"
     Bucket("bucket1")
-    Address("${borrow_token}")
-    Decimal("${borrow_amount}")
+    Decimal("${debt_to_cover}")
+    ${cdp_id}u64
     "${price1}"
     Address("${quote1}")
     ${timestamp1}u64

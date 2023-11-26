@@ -1,27 +1,23 @@
 CALL_METHOD
     Address("${account}")
     "lock_fee"
-    Decimal("10")
+    Decimal("1000")
 ;
 CALL_METHOD
   Address("${account}")
   "withdraw"
-  Address("${repay_token}")
-  Decimal("${amount}")
-;
+  Address("${addition_token}")
+  Decimal("${amount}");
+
 TAKE_FROM_WORKTOP
-  Address("${repay_token}")
+  Address("${addition_token}")
   Decimal("${amount}")
   Bucket("bucket1")
 ;
+
 CALL_METHOD
     Address("${lending_component}")
-    "repay"
-    Bucket("bucket1")
+    "addition_collateral"
     ${cdp_id}u64
-;
-CALL_METHOD
-    Address("${account}")
-    "deposit_batch"
-    Expression("ENTIRE_WORKTOP")
+    Bucket("bucket1")
 ;

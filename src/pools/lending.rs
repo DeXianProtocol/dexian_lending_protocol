@@ -11,12 +11,16 @@ mod lend_pool {
             operator => updatable_by: [];
         },
         methods {
+            //operator
             withdraw_insurance => restrict_to: [operator];
-
             borrow_variable => restrict_to: [operator];
             borrow_stable => restrict_to: [operator];
             repay_stable => restrict_to: [operator];
             repay_variable => restrict_to: [operator];
+            
+            //business method
+            add_liquity => PUBLIC;
+            remove_liquity => PUBLIC;
 
             // readonly
             get_current_index => PUBLIC;
@@ -24,14 +28,11 @@ mod lend_pool {
             get_variable_share_quantity => PUBLIC;
             get_deposit_share_quantity => PUBLIC;
             get_stable_interest => PUBLIC;
+            get_variable_interest => PUBLIC;
             get_available => PUBLIC;
             get_last_update => PUBLIC;
             get_redemption_value => PUBLIC;
             get_underlying_value => PUBLIC;
-
-            //business method
-            add_liquity => PUBLIC;
-            remove_liquity => PUBLIC;
         }
     }
     
@@ -206,14 +207,17 @@ mod lend_pool {
         }
 
 
-        pub fn repay_variable(&mut self, mut repay_bucket: Bucket, loan_amount: Decimal) -> (Bucket, Decimal){
+        pub fn repay_variable(&mut self, mut repay_bucket: Bucket, loan_amount: Decimal, repay_opt: Option<Decimal>) -> (Bucket, Decimal){
             assert_resource(&repay_bucket.resource_address(), &self.underlying_token);
             
             self.update_index();
 
             let divisibility = get_divisibility(self.underlying_token).unwrap();
             let debt_amount = loan_amount.checked_mul(self.loan_index).unwrap();
-            let amount = if repay_bucket.amount() > debt_amount {debt_amount} else{repay_bucket.amount()};
+            let mut amount = if repay_bucket.amount() > debt_amount {debt_amount} else{repay_bucket.amount()};
+            if repay_opt.is_some_and(|uplimit| uplimit < amount){
+                amount = repay_opt.unwrap();
+            }
             let loan_share = floor(amount.checked_div(self.loan_index).unwrap(), divisibility);
 
             self.variable_loan_share_quantity = self.variable_loan_share_quantity.checked_sub(loan_share).unwrap();
@@ -229,7 +233,8 @@ mod lend_pool {
             mut repay_bucket: Bucket, 
             loan_amount: Decimal,
             rate: Decimal,
-            last_epoch_at: u64
+            last_epoch_at: u64,
+            repay_opt: Option<Decimal>
         ) -> (Bucket, Decimal, Decimal, Decimal, u64){
             let current_epoch_at = Runtime::current_epoch().number();
             let epoch_of_year = Decimal::from(EPOCH_OF_YEAR);
@@ -238,8 +243,8 @@ mod lend_pool {
             
             let previous_debt = self.stable_loan_amount.checked_mul(self.stable_loan_interest_rate).unwrap();
 
-            let mut repay_amount = repay_bucket.amount();
-            let mut repay_in_borrow = Decimal::ZERO;
+            let mut repay_amount = if repay_opt.is_some_and(|uplimit|uplimit<repay_bucket.amount()){ repay_opt.unwrap() } else { repay_bucket.amount() };
+            let repay_in_borrow: Decimal;
             if repay_amount < interest {
                 let outstanding_interest = interest.checked_sub(repay_amount).unwrap();
                 repay_in_borrow = outstanding_interest.checked_mul(Decimal::from(-1)).unwrap();
@@ -284,10 +289,10 @@ mod lend_pool {
             }
             
             let epoch_of_year = Decimal::from(EPOCH_OF_YEAR);
-            let delta_supply_interest_rate = calc_linear_rate(self.deposit_interest_rate, epoch_of_year, delta_epoch);
+            // let delta_supply_interest_rate = calc_linear_rate(self.deposit_interest_rate, epoch_of_year, delta_epoch);
             // info!("epoch:{}-{}, delta_epoch:{}, supply:{}==>{}, borrow:{}==>{}", current_epoch, self.last_update, delta_epoch, self.deposit_interest_rate,delta_supply_interest_rate, self.variable_loan_interest_rate, delta_borrow_interest_rate);
             (
-                self.deposit_index.checked_mul(Decimal::ONE.checked_add(delta_supply_interest_rate).unwrap()).unwrap(),
+                calc_linear_interest(self.deposit_index, self.deposit_interest_rate, epoch_of_year, delta_epoch),
                 calc_compound_interest(self.loan_index, self.variable_loan_interest_rate, epoch_of_year, delta_epoch)
             )
         }
@@ -360,7 +365,7 @@ mod lend_pool {
             let variable_borrow = self.get_variable_share_quantity().checked_mul(variable_borrow_index).unwrap();
             let stable_borrow = self.get_stable_loan_value();
 
-            let (deposite_rate, variable_rate, _) = self.calc_interest_rate(supply, variable_borrow, stable_borrow);
+            let (variable_rate, _, deposite_rate) = self.calc_interest_rate(supply, variable_borrow, stable_borrow);
             self.deposit_interest_rate = deposite_rate;
             self.variable_loan_interest_rate = variable_rate;
         }
@@ -396,6 +401,11 @@ mod lend_pool {
         pub fn get_stable_interest(&self, borrow_amount: Decimal, last_epoch: u64, stable_rate: Decimal) -> Decimal{
             let delta_epoch = Runtime::current_epoch().number() - last_epoch;
             calc_compound_interest(borrow_amount, stable_rate, Decimal::from(EPOCH_OF_YEAR), delta_epoch).checked_sub(borrow_amount).unwrap()
+        }
+
+        pub fn get_variable_interest(&self, borrow_amount: Decimal) -> Decimal{
+            let (_, borrow_index) = self.get_current_index();
+            borrow_amount.checked_mul(borrow_index).unwrap()
         }
 
         pub fn get_variable_share_quantity(&self) -> Decimal{

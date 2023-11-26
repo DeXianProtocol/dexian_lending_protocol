@@ -222,7 +222,6 @@ export p3=$(echo $result|grep "Account component address: "|awk -F ": " '{print 
 export p3_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
 export p3_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
 
-
 result=$(resim new-token-fixed --symbol=USDT --name=USDT 1000000)
 # export usdt=$(echo $result | grep "Resource:" | awk -F " " '{print $3}')
 export usdt=$(echo $result | awk -F "Resource: " '{print $2}')
@@ -239,6 +238,7 @@ resim transfer $usdc:200 $p1
 result=$(resim publish ".")
 export pkg=$(echo $result | awk -F ": " '{print $2}')
 
+
 result=$(resim call-function $pkg "ValidatorKeeper" "instantiate")
 export keeper=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
 export admin_badge1=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
@@ -247,7 +247,7 @@ export op_badge1=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (
 result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_interest.rtm)
 export def_interest_model=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
 
-export price_signer_pk=4cb5abf6ad79fbf5abbccafcc269d85cd2651ed4b885b5869f241aedf0a5ba29
+export price_signer_pk=6d187b0f2e66d74410e92e2dc92a5141a55c241646ce87acbcad4ab413170f9b
 result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_lending_factory.rtm)
 export lending_component=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
 export oracle=$(echo $result | grep "Component: "| awk -F "Component: " '{print $3}' | awk -F " " '{print $1}')
@@ -306,11 +306,139 @@ resim show $usdc_pool
 
 
 # borrow
+# resim set-default-account $p1 $p1_priv $p1_badge
+# export quote="usdt"
+# result=$(curl "https://price.dexian.io/xrd-$quote")
+# export price1=$(echo $result | jq ".data.price")
+# export quote1=$usdt
+# export timestamp1=$(echo $result | jq ".data.timestamp")
+# export signature1=$(echo $result | jq ".data.signature")
+# #export quote="usdc"
+# #result=$(curl "https://price.dexian.io/xrd-$quote")
+# #export price2=$(echo $result | jq ".data.price")
+# #export quote2=$(echo "Address(\"${usdc}\")")
+# #export timestamp2="$(echo $result | jq ".data.timestamp")u64"
+# #export signature2=$(echo $result | jq ".data.signature")
+# export price2=None
+# export quote2=None
+# export timestamp2=None
+# export signature2=None
+# export account=$p1
+# export dx_token=$dx_xrd
+# export amount=2000
+# export borrow_token=$usdt
+# export borrow_amount=10
+# resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+
+
 resim set-default-account $p1 $p1_priv $p1_badge
 export quote="usdt"
+export epoch=2
+export price1="0.056259787085"
+export quote1=$usdt
+export timestamp1=1700658816
+export signature1=$(python sign-util.py $xrd $usdt $price1 $epoch $timestamp1)
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p1
+export dx_token=$dx_xrd
+export amount=2000
+export borrow_token=$usdt
+export borrow_amount=10
+resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+
+resim set-default-account $p1 $p1_priv $p1_badge
+# export quote="usdt"
+# result=$(curl "https://price.dexian.io/xrd-$quote")
+# export price1=$(echo $result | jq ".data.price")
+# export quote1=$usdt
+# export timestamp1=$(echo $result | jq ".data.timestamp")
+# export signature1=$(echo $result | jq ".data.signature")
+# export price2=None
+# export quote2=None
+# export timestamp2=None
+# export signature2=None
+# export account=$p1
+# export borrow_token=$usdt
+# export borrow_amount=20
+# export cdp_id="#1#"
+# resim run < ./docs/replace_holder.sh docs/transactions/extend_borrow.rtm
+
+export quote="usdt"
+export epoch=2
+export price1="0.056259787085"
+export quote1=$usdt
+export timestamp1=1700658816
+export signature1=$(python sign-util.py $xrd $usdt $price1 $epoch $timestamp1)
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p1
+export borrow_token=$usdt
+export borrow_amount=50
+export cdp_id="#1#"
+resim run < ./docs/replace_holder.sh docs/transactions/extend_borrow.rtm
+
+
+# export quote="usdt"
+# result=$(curl "https://price.dexian.io/xrd-$quote")
+# export price1=$(echo $result | jq ".data.price")
+# export quote1=$usdt
+# export timestamp1=$(echo $result | jq ".data.timestamp")
+# export signature1=$(echo $result | jq ".data.signature")
+# #export quote="usdc"
+# #result=$(curl "https://price.dexian.io/xrd-$quote")
+# #export price2=$(echo $result | jq ".data.price")
+# #export quote2=$(echo "Address(\"${usdc}\")")
+# #export timestamp2="Some($(echo $result | jq ".data.timestamp")u64)"
+# #export signature2=$(echo $result | jq ".data.signature")
+# export price2=None
+# export quote2=None
+# export timestamp2=None
+# export signature2=None
+# export account=$p1
+# export amount=5
+# export cdp_id="#1#"
+# resim run < ./docs/replace_holder.sh docs/transactions/withdraw_collateral.rtm
+
+export quote="usdt"
+export epoch=2
+export price1="0.056259787085"
+export quote1=$usdt
+export timestamp1=1700629817
+export signature1=$(python sign-util.py $xrd $usdt $price1 $epoch $timestamp1)
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p1
+export amount=5
+export cdp_id="#1#"
+resim run < ./docs/replace_holder.sh docs/transactions/withdraw_collateral.rtm
+
+## support xrd and dx_xrd both
+export addition_token=$xrd
+export cdp_id="1"
+export amount=1000
+export account=$p1
+resim run < ./docs/replace_holder.sh docs/transactions/addition_collateral.rtm
+
+
+export repay_token=$usdt
+export amount=70
+export account=$p1
+export cdp_id=1
+resim run < ./docs/replace_holder.sh docs/transactions/repay.rtm
+
+
+resim set-default-account $p3 $p3_priv $p3_badge
+export quote="usdc"
 result=$(curl "https://price.dexian.io/xrd-$quote")
 export price1=$(echo $result | jq ".data.price")
-export quote1=$usdt
+export quote1=$usdc
 export timestamp1=$(echo $result | jq ".data.timestamp")
 export signature1=$(echo $result | jq ".data.signature")
 #export quote="usdc"
@@ -323,32 +451,36 @@ export price2=None
 export quote2=None
 export timestamp2=None
 export signature2=None
-export account=$p1
-export dx_token=$dx_xrd
-export amount=2000
-export borrow_token=$usdt
-export borrow_amount=10
+export account=$p3
+export dx_token=$dx_usdc
+export amount=200
+export borrow_token=$xrd
+export borrow_amount=2000
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
 
+export repay_token=$xrd
+export amount=3000
+export account=$p3
+export cdp_id=2
+resim run < ./docs/replace_holder.sh docs/transactions/repay.rtm
+
+
+
+# liquidation
+resim set-default-account $p2 $p2_priv $p2_badge
 export quote="usdt"
-result=$(curl "https://price.dexian.io/xrd-$quote")
-export price1=$(echo $result | jq ".data.price")
+export epoch=2
+export price1="0.04285713"
 export quote1=$usdt
-export timestamp1=$(echo $result | jq ".data.timestamp")
-export signature1=$(echo $result | jq ".data.signature")
-#export quote="usdc"
-#result=$(curl "https://price.dexian.io/xrd-$quote")
-#export price2=$(echo $result | jq ".data.price")
-#export quote2=$(echo "Address(\"${usdc}\")")
-#export timestamp2="Some($(echo $result | jq ".data.timestamp")u64)"
-#export signature2=$(echo $result | jq ".data.signature")
+export timestamp1=1700658816
+export signature1=$(python sign-util.py $xrd $usdt $price1 $epoch $timestamp1)
 export price2=None
 export quote2=None
 export timestamp2=None
 export signature2=None
-export account=$p1
-export borrow_token=$usdt
-export borrow_amount=20
-export cdp_id="#1#"
-resim run < ./docs/replace_holder.sh docs/transactions/extend_borrow.rtm
+export account=$p2
+export repay_token=$usdt
+export debt_to_cover=70
+export cdp_id=1
+resim run < ./docs/replace_holder.sh docs/transactions/liquidation.rtm
