@@ -8,7 +8,7 @@ pub struct QuotePrice {
 }
 
 #[blueprint]
-#[events(SetPriceEvent, SetPublicKeyEvent)]
+#[events(SetPriceEvent, SetPublicKeyEvent, SetValidityPeriodEvent)]
 mod oracle{
 
     enable_method_auth!{
@@ -21,7 +21,8 @@ mod oracle{
             set_verify_public_key => restrict_to: [admin, OWNER];
     
             //op
-            set_price_quote_in_xrd => restrict_to: [operator, admin];    
+            set_price_quote_in_xrd => restrict_to: [operator, admin];
+            set_validity_period => restrict_to: [operator, admin]; 
     
             //public
             get_price_quote_in_xrd => PUBLIC;
@@ -32,8 +33,10 @@ mod oracle{
 
     struct PriceOracle{
         price_map: HashMap<ResourceAddress, QuotePrice>,
-        // price_signer: Ed25519PublicKey,
-        pk_str: String
+        pk_str: String,
+        last_validation_epoch: u64,
+        last_validation_timestamp: u64,
+        max_diff: u64,
     }
     
     impl PriceOracle{
@@ -42,12 +45,15 @@ mod oracle{
             owner_role: OwnerRole,
             op_rule: AccessRule,
             admin_rule: AccessRule,
-            price_signer_pk: String
+            price_signer_pk: String,
+            max_diff: u64
         ) -> Global<PriceOracle> {
             Self{
                 price_map: HashMap::new(),
-                // price_signer: Ed25519PublicKey::from_str(&price_signer_pk).unwrap()
-                pk_str: price_signer_pk.to_owned()
+                pk_str: price_signer_pk.to_owned(),
+                last_validation_epoch: 0u64,
+                last_validation_timestamp: 0u64,
+                max_diff
             }.instantiate().prepare_to_globalize(
                 owner_role
             ).roles(
@@ -69,6 +75,13 @@ mod oracle{
             Runtime::emit_event(SetPriceEvent{price:price_in_xrd, res_addr});
         }
 
+        pub fn set_validity_period(&mut self, validity_period_ms: u64){
+            let previous = self.max_diff;
+            self.max_diff = validity_period_ms;
+
+            Runtime::emit_event(SetValidityPeriodEvent{new_value:validity_period_ms, previous});
+        }
+
         pub fn set_verify_public_key(&mut self, price_signer_pk: String){
             // self.price_signer = Ed25519PublicKey::from_str(&price_signer_pk).unwrap();
             self.pk_str = price_signer_pk.to_owned();
@@ -86,7 +99,7 @@ mod oracle{
             Decimal::ZERO
         }
     
-        pub fn get_valid_price_in_xrd(&self, quote_addr: ResourceAddress, xrd_price_in_quote: String, timestamp: u64, signature: String) -> Decimal{
+        pub fn get_valid_price_in_xrd(&mut self, quote_addr: ResourceAddress, xrd_price_in_quote: String, timestamp: u64, signature: String) -> Decimal{
             assert!(self.price_map.contains_key(&quote_addr), "unknow resource address");
             // let epoch_at = 48538u64;  //Runtime::current_epoch().number();
             // let base = "resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc";  //Runtime::bech32_encode_address(XRD);
@@ -98,18 +111,24 @@ mod oracle{
                 "{base}/{quote}{price}{epoch_at}{timestamp}", base=base, quote=quote,
                 price=xrd_price_in_quote, epoch_at=epoch_at, timestamp=timestamp
             );
-            let _hash = hash(message.clone());
-            info!("price message: {}, hash:{}, signature:{}", message.clone(), _hash, signature.clone());
+            
+            info!("price message: {}, signature:{}", message.clone(), signature.clone());
             if verify_ed25519(&message, &self.pk_str, &signature){
-                info!("price verify passed. :)");
+                if self.last_validation_epoch == epoch_at{
+                    assert!((self.last_validation_timestamp as i128 - timestamp as i128) < self.max_diff as i128, "Price information has become too stale.");
+                    if self.last_validation_timestamp < timestamp{
+                        // keep latest timestamp
+                        self.last_validation_timestamp = timestamp;
+                    }
+                }
+                if self.last_validation_epoch < epoch_at {
+                    //keep latest epoch
+                    self.last_validation_epoch = epoch_at;
+                    self.last_validation_timestamp = timestamp;
+                }
+                
                 if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
                     info!("price verify passed. :)");
-                    // XRD/USDT --> USDT/XRD
-                    return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
-                }
-            }
-            else{  //TODO: only for test
-                if let Ok(xrd_price_in_res) = Decimal::from_str(&xrd_price_in_quote){
                     // XRD/USDT --> USDT/XRD
                     return Decimal::ONE.checked_div(xrd_price_in_res).unwrap();
                 }
@@ -131,5 +150,11 @@ pub struct SetPriceEvent {
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct SetPublicKeyEvent{
     pub pub_key: String
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct SetValidityPeriodEvent{
+    pub previous: u64,
+    pub new_value: u64
 }
 

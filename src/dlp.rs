@@ -40,7 +40,7 @@ mod dexian_lending{
 
     impl LendingProtocol{
 
-        pub fn instantiate(price_signer_pk: String) -> (Global<LendingProtocol>, Global<PriceOracle>, Bucket, Bucket, ResourceAddress){
+        pub fn instantiate(price_signer_pk: String, price_validity_ms: u64) -> (Global<LendingProtocol>, Global<PriceOracle>, Bucket, Bucket, ResourceAddress){
             
             let admin_badge = ResourceBuilder::new_fungible(OwnerRole::None)
                 .divisibility(DIVISIBILITY_NONE)
@@ -74,7 +74,8 @@ mod dexian_lending{
                 OwnerRole::Fixed(rule!(require(admin_badge_addr))),
                 rule!(require(op_badge_addr)),
                 rule!(require(admin_badge_addr)),
-                price_signer_pk
+                price_signer_pk,
+                price_validity_ms
             );
             let (cdp_mgr, cdp_res_addr) = CollateralDebtManager::instantiate(
                 rule!(require(admin_badge_addr)),
@@ -152,7 +153,8 @@ mod dexian_lending{
             let dx_token = dx_bucket.resource_address();
             let dx_amount = dx_bucket.amount();
             let (collateral_underlying_token,borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.extra_params(dx_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
-            assert!(borrow_price_in_xrd.is_positive() || collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
+            info!("borrow_price_in_xrd:{}, collateral_underlying_price_in_xrd:{}",borrow_price_in_xrd, collateral_underlying_price_in_xrd);
+            assert!(borrow_price_in_xrd.is_positive() && collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
             info!("collateral {}, amount:{}; {} price:{}/{}", Runtime::bech32_encode_address(dx_token), dx_amount, Runtime::bech32_encode_address(collateral_underlying_token), borrow_price_in_xrd, collateral_underlying_price_in_xrd);
             let (borrow_bucket, cdp_bucket) = self.cdp_mgr.borrow_variable(dx_bucket, collateral_underlying_token, borrow_token, borrow_amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
             Runtime::emit_event(CreateCDPEvent{dx_token, dx_amount, borrow_token, borrow_amount, cdp_id:cdp_bucket.as_non_fungible().non_fungible_local_id(), is_stable:false});
@@ -175,7 +177,7 @@ mod dexian_lending{
             let dx_token = dx_bucket.resource_address();
             let dx_amount = dx_bucket.amount();
             let (collateral_underlying_token,borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.extra_params(dx_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
-            assert!(borrow_price_in_xrd.is_positive() || collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
+            assert!(borrow_price_in_xrd.is_positive() && collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
             let (borrow_bucket, cdp_bucket) = self.cdp_mgr.borrow_stable(dx_bucket, collateral_underlying_token, borrow_token, borrow_amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
             Runtime::emit_event(CreateCDPEvent{dx_token, dx_amount, borrow_token, borrow_amount, cdp_id:cdp_bucket.as_non_fungible().non_fungible_local_id(), is_stable:true});
             (borrow_bucket, cdp_bucket)
@@ -196,7 +198,7 @@ mod dexian_lending{
             let cdp_id: NonFungibleLocalId = cdp.as_non_fungible().non_fungible_local_id();
             let (borrow_token, collateral_underlying_token) = self.cdp_mgr.get_cdp_resource_address(cdp_id.clone());
             let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.get_price_in_xrd(collateral_underlying_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
-            assert!(borrow_price_in_xrd.is_positive() || collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
+            assert!(borrow_price_in_xrd.is_positive() && collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
             info!("collateral {}|{}, {}|{} price:{}/{}", Runtime::bech32_encode_address(collateral_underlying_token), collateral_underlying_token.to_hex(), Runtime::bech32_encode_address(collateral_underlying_token),collateral_underlying_token.to_hex() , borrow_price_in_xrd, collateral_underlying_price_in_xrd);
             let (borrow_bucket, cdp_bucket) = self.cdp_mgr.extend_borrow(cdp, amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
             Runtime::emit_event(ExtendBorrowEvent{borrow_token, amount, cdp_id:cdp_id.clone()});

@@ -305,19 +305,38 @@ resim show $usdc_pool
 
 
 # borrow
+# resim set-default-account $p1 $p1_priv $p1_badge
+# export quote="usdt"
+# result=$(curl "https://price.dexian.io/xrd-$quote")
+# export price1=$(echo $result | jq ".data.price")
+# export quote1=$usdt
+# export timestamp1=$(echo $result | jq ".data.timestamp")
+# export signature1=$(echo $result | jq ".data.signature")
+# #export quote="usdc"
+# #result=$(curl "https://price.dexian.io/xrd-$quote")
+# #export price2=$(echo $result | jq ".data.price")
+# #export quote2=$(echo "Address(\"${usdc}\")")
+# #export timestamp2="$(echo $result | jq ".data.timestamp")u64"
+# #export signature2=$(echo $result | jq ".data.signature")
+# export price2=None
+# export quote2=None
+# export timestamp2=None
+# export signature2=None
+# export account=$p1
+# export dx_token=$dx_xrd
+# export amount=2000
+# export borrow_token=$usdt
+# export borrow_amount=10
+# resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+
+
 resim set-default-account $p1 $p1_priv $p1_badge
 export quote="usdt"
-result=$(curl "https://price.dexian.io/xrd-$quote")
-export price1=$(echo $result | jq ".data.price")
+export epoch=2
+export price1="0.056259787085"
 export quote1=$usdt
-export timestamp1=$(echo $result | jq ".data.timestamp")
-export signature1=$(echo $result | jq ".data.signature")
-#export quote="usdc"
-#result=$(curl "https://price.dexian.io/xrd-$quote")
-#export price2=$(echo $result | jq ".data.price")
-#export quote2=$(echo "Address(\"${usdc}\")")
-#export timestamp2="$(echo $result | jq ".data.timestamp")u64"
-#export signature2=$(echo $result | jq ".data.signature")
+export timestamp1=1700658816
+export signature1=$(python sign-util.py $xrd $usdt $price1 $epoch $timestamp1)
 export price2=None
 export quote2=None
 export timestamp2=None
@@ -330,21 +349,28 @@ export borrow_amount=10
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
 resim set-default-account $p1 $p1_priv $p1_badge
+# export quote="usdt"
+# result=$(curl "https://price.dexian.io/xrd-$quote")
+# export price1=$(echo $result | jq ".data.price")
+# export quote1=$usdt
+# export timestamp1=$(echo $result | jq ".data.timestamp")
+# export signature1=$(echo $result | jq ".data.signature")
+# export price2=None
+# export quote2=None
+# export timestamp2=None
+# export signature2=None
+# export account=$p1
+# export borrow_token=$usdt
+# export borrow_amount=20
+# export cdp_id="#1#"
+# resim run < ./docs/replace_holder.sh docs/transactions/extend_borrow.rtm
+
 export quote="usdt"
-#result=$(curl "https://price.dexian.io/xrd-$quote")
-#export price1=$(echo $result | jq ".data.price")
-export quote1=$usdt
-#export timestamp1=$(echo $result | jq ".data.timestamp")
-#export signature1=$(echo $result | jq ".data.signature")
+export epoch=2
 export price1="0.056259787085"
-export signature1="2849587ac2f8929bb58a231ee40bc49c179dd2c77249043437b2b374de6765ca36acb3499e3683f7f0eae48a6d9e910a0fbfe2470c0413f2c02d13fa58b5f307"
+export quote1=$usdt
 export timestamp1=1700658816
-#export quote="usdc"
-#result=$(curl "https://price.dexian.io/xrd-$quote")
-#export price2=$(echo $result | jq ".data.price")
-#export quote2=$(echo "Address(\"${usdc}\")")
-#export timestamp2="Some($(echo $result | jq ".data.timestamp")u64)"
-#export signature2=$(echo $result | jq ".data.signature")
+export signature1=$(python sign-util.py $xrd $usdt $price1 $epoch $timestamp1)
 export price2=None
 export quote2=None
 export timestamp2=None
@@ -356,18 +382,33 @@ export cdp_id="#1#"
 resim run < ./docs/replace_holder.sh docs/transactions/extend_borrow.rtm
 
 
+# export quote="usdt"
+# result=$(curl "https://price.dexian.io/xrd-$quote")
+# export price1=$(echo $result | jq ".data.price")
+# export quote1=$usdt
+# export timestamp1=$(echo $result | jq ".data.timestamp")
+# export signature1=$(echo $result | jq ".data.signature")
+# #export quote="usdc"
+# #result=$(curl "https://price.dexian.io/xrd-$quote")
+# #export price2=$(echo $result | jq ".data.price")
+# #export quote2=$(echo "Address(\"${usdc}\")")
+# #export timestamp2="Some($(echo $result | jq ".data.timestamp")u64)"
+# #export signature2=$(echo $result | jq ".data.signature")
+# export price2=None
+# export quote2=None
+# export timestamp2=None
+# export signature2=None
+# export account=$p1
+# export amount=5
+# export cdp_id="#1#"
+# resim run < ./docs/replace_holder.sh docs/transactions/withdraw_collateral.rtm
+
 export quote="usdt"
-result=$(curl "https://price.dexian.io/xrd-$quote")
-export price1=$(echo $result | jq ".data.price")
+export epoch=2
+export price1="0.056259787085"
 export quote1=$usdt
-export timestamp1=$(echo $result | jq ".data.timestamp")
-export signature1=$(echo $result | jq ".data.signature")
-#export quote="usdc"
-#result=$(curl "https://price.dexian.io/xrd-$quote")
-#export price2=$(echo $result | jq ".data.price")
-#export quote2=$(echo "Address(\"${usdc}\")")
-#export timestamp2="Some($(echo $result | jq ".data.timestamp")u64)"
-#export signature2=$(echo $result | jq ".data.signature")
+export timestamp1=1700629817
+export signature1=$(python sign-util.py $xrd $usdt $price1 $epoch $timestamp1)
 export price2=None
 export quote2=None
 export timestamp2=None

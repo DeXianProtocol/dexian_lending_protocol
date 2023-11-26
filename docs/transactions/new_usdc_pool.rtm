@@ -15,8 +15,8 @@ CALL_METHOD
     Address("${usdc}")
     Enum<1u8>()
     Address("${def_interest_model}")
-    Decimal("0.6")
-    Decimal("0.7")
-    Decimal("0.07")
-    Decimal("0.25")
+    Decimal("0.85")
+    Decimal("0.87")
+    Decimal("0.02")
+    Decimal("0.10")
 ;

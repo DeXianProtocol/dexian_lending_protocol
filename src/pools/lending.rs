@@ -361,7 +361,7 @@ mod lend_pool {
             let variable_borrow = self.get_variable_share_quantity().checked_mul(variable_borrow_index).unwrap();
             let stable_borrow = self.get_stable_loan_value();
 
-            let (deposite_rate, variable_rate, _) = self.calc_interest_rate(supply, variable_borrow, stable_borrow);
+            let (variable_rate, _, deposite_rate) = self.calc_interest_rate(supply, variable_borrow, stable_borrow);
             self.deposit_interest_rate = deposite_rate;
             self.variable_loan_interest_rate = variable_rate;
         }
