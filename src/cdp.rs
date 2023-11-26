@@ -55,6 +55,7 @@ mod cdp_mgr{
         methods{
             new_pool => restrict_to:[operator, OWNER];
             withdraw_insurance => restrict_to: [operator, OWNER];
+            set_close_factor =>restrict_to: [operator, OWNER];
 
             supply => PUBLIC;
             withdraw => PUBLIC;
@@ -85,6 +86,7 @@ mod cdp_mgr{
         // CDP id counter
         cdp_id_counter: u64,
         self_cmp_addr: ComponentAddress,
+        // close factor for liquidation
         close_factor_percent: Decimal
     }
 
@@ -164,6 +166,10 @@ mod cdp_mgr{
             self.collateral_vaults.entry(dx_token_addr).or_insert(Vault::new(dx_token_addr));
             self.deposit_asset_map.entry(dx_token_addr).or_insert(underlying_token_addr);
             dx_token_addr
+        }
+
+        pub fn set_close_factor(&mut self, new_close_factor: Decimal){
+            self.close_factor_percent = new_close_factor;
         }
 
         pub fn supply(&mut self, bucket: Bucket) -> Bucket{
