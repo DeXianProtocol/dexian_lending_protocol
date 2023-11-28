@@ -2,20 +2,23 @@ stokenet:
 
 
 token:
-package_tdx_2_1pkapsk3evvvxqx5uw8pqw84ffkrs7uet9les294kltp2m4aunpgdrv
+package_tdx_2_1phhxm88u8crd7npcug44t0r8gpfrr8p5lus2hrdumkey0h87cqdce0
 
 usdt:
 resource_tdx_2_1thnzj7nfawdec4tztfr9fmsh33kmwlstz2fs9t99yzj0awg43xxkpk
 CALL_FUNCTION
-    Address("package_tdx_2_1pkapsk3evvvxqx5uw8pqw84ffkrs7uet9les294kltp2m4aunpgdrv")
+    Address("package_tdx_2_1phhxm88u8crd7npcug44t0r8gpfrr8p5lus2hrdumkey0h87cqdce0")
     "Hello"
     "instantiate_hello"
-    "USDT"
-    "USDT";
-component_tdx_2_1czgjkdc8r0ufu8ux00dypzrznh7hs323t3neca4px0u3xlxcav6cgv
-resource_tdx_2_1thnzj7nfawdec4tztfr9fmsh33kmwlstz2fs9t99yzj0awg43xxkpk
+    "xUSDT"
+    "xUSDT"
+    "https://assets.instabridge.io/tokens/icons/xUSDT.png"
+    6u8
+;
+component_tdx_2_1cq78nnnn9a60azdezxhyvcuy58qnus8y8prwnzmdl9f6uhehw9d5ga
+resource_tdx_2_1t42p2eyad03gly8txm28x4arzkx27wtjqtznz33smqt6ea2d7jlx2s
 CALL_METHOD
-    Address("component_tdx_2_1czgjkdc8r0ufu8ux00dypzrznh7hs323t3neca4px0u3xlxcav6cgv")
+    Address("component_tdx_2_1cq78nnnn9a60azdezxhyvcuy58qnus8y8prwnzmdl9f6uhehw9d5ga")
     "free_token"
     255u8
 ;
@@ -28,13 +31,17 @@ CALL_METHOD
 
 usdc:
 CALL_FUNCTION
-    Address("package_tdx_2_1pkapsk3evvvxqx5uw8pqw84ffkrs7uet9les294kltp2m4aunpgdrv")
+    Address("package_tdx_2_1phhxm88u8crd7npcug44t0r8gpfrr8p5lus2hrdumkey0h87cqdce0")
     "Hello"
     "instantiate_hello"
-    "USDC"
-    "USDC";
-component_tdx_2_1crhu05ah8yek50snjz5mqux82h9w0u7h2dytuggq977nhtt0n36hsn
-resource_tdx_2_1tkaegwwrttt6jrzvn2ag6dsvjs64dfwya6sckvlxnf794y462lhtx0
+    "xUSDC"
+    "xUSDC"
+    "https://assets.instabridge.io/tokens/icons/xUSDC.png"
+    6u8
+;
+component_tdx_2_1cpl96cytlsrdyc555dhmlt3j9w4d2uz4tcejx7phun7ddzzhtvcclj
+resource_tdx_2_1t5gfw86e6flve6w558q45gw5h99zu32ua4jshpmjsln4zyvztjk2zk
+
 CALL_METHOD
     Address("component_tdx_2_1crhu05ah8yek50snjz5mqux82h9w0u7h2dytuggq977nhtt0n36hsn")
     "free_token"
@@ -56,29 +63,29 @@ export p3=account_tdx_2_129v2sa7652vlmwr5z4fyushc3kpvygzvu6glyvwvvmd349rg9xsz5p
 -----
 # faucet
 ## usdt
-export usdt_component=component_tdx_2_1czgjkdc8r0ufu8ux00dypzrznh7hs323t3neca4px0u3xlxcav6cgv
+export usdt_component=component_tdx_2_1cq78nnnn9a60azdezxhyvcuy58qnus8y8prwnzmdl9f6uhehw9d5ga
 export account=$p2
 ./docs/replace_holder.sh ./docs/transactions/faucet_usdt.rtm
 
 ## usdc
-export usdc_component=component_tdx_2_1crhu05ah8yek50snjz5mqux82h9w0u7h2dytuggq977nhtt0n36hsn
+export usdc_component=component_tdx_2_1cpl96cytlsrdyc555dhmlt3j9w4d2uz4tcejx7phun7ddzzhtvcclj
 export account=$p3
 ./docs/replace_holder.sh ./docs/transactions/faucet_usdc.rtm
 
 
 ----
-export pkg=package_tdx_2_1p5uuesvmw7l4mg80v786veuclh2jk9ldtvy4xua7afxvdcm57uj0dt
+export pkg=package_tdx_2_1pky5qfkdvmzvg6ex8xqrmd54ucyugfn9hsfl4vvsavg7ygh4xd0rqr
 export account=$admin_account
-export usdt=resource_tdx_2_1thnzj7nfawdec4tztfr9fmsh33kmwlstz2fs9t99yzj0awg43xxkpk
-export usdc=resource_tdx_2_1tkaegwwrttt6jrzvn2ag6dsvjs64dfwya6sckvlxnf794y462lhtx0
+export usdt=resource_tdx_2_1t42p2eyad03gly8txm28x4arzkx27wtjqtznz33smqt6ea2d7jlx2s
+export usdc=resource_tdx_2_1t5gfw86e6flve6w558q45gw5h99zu32ua4jshpmjsln4zyvztjk2zk
 
 ./docs/replace_holder.sh ./docs/transactions/new_keeper.rtm
-export keeper=component_tdx_2_1crqq42wrut8qnk2n0d0jdz9hy0k6vzsx4yavp2l2fcja977k039wfp
-export keeper_admin_badge=resource_tdx_2_1t4mfzzg4g9n4ps86emaww7ysdp0lvcsnxnz4t67ucj94twcjrx6456
-export keeper_op_badge=resource_tdx_2_1thdfvsq5e8pemajnv529a0khfhvtvx37370c8gpqx57lm5x6ajpky6
+export keeper=component_tdx_2_1cqj9vv4j46dh326u3w44wfm4l9rhka5h5n45tgxakr2gckeualqfd6
+export keeper_admin_badge=resource_tdx_2_1thfv7m8jkx6jjswvnhk3d2t6g5uk2ep47wu083rc4tjmk0p34hljf5
+export keeper_op_badge=resource_tdx_2_1t4pdxvru57c0s59xn03u8r2vkahv862lza58304c9lykfp6f9d7qve
 
 ./docs/replace_holder.sh ./docs/transactions/new_interest.rtm
-export def_interest_model=component_tdx_2_1cq625sq82gnkfvwx2l4zle5vl8n52uawc9r2lel9snyzu82suugdgs
+export def_interest_model=component_tdx_2_1cq2e6jga0awanwea8m8xg5vy7cpq3kdu6xg2tnrdvgkt9snfc2t9c7
 
 account_sim1c956qr3kxlgypxwst89j9yf24tjc7zxd4up38x37zr6q4jxdx9rhma
 priv:0000000000000000000000000000000000000000000000000000000000000001
@@ -91,28 +98,28 @@ export price_signer_pk=6d187b0f2e66d74410e92e2dc92a5141a55c241646ce87acbcad4ab41
 
 
 ./docs/replace_holder.sh ./docs/transactions/new_lending_factory.rtm
-export lending_component=component_tdx_2_1cq4d3y66rl62g406crazjja3mv9fam5ejm5mlcz8u8zkgx3g0lcl2t
-export oracle=component_tdx_2_1crcu4uzdsju0rhxc8r9caza7qm7kpqemyrs8ffcjcmfasyt363x53y
-export cdp_mgr=component_tdx_2_1cpk6u0xqdr5n3w98zdazk8m99dgzzslhz6t80dwqklfzncrft0xkxf
-export admin_badge=resource_tdx_2_1t52wg7tjxq7jxl8lds0u7xf24g9n5kvzcc6s2kk7ecvx2c7f8ug9um
-export op_badge=resource_tdx_2_1t4msslg00xnc8wn8n43jtu9ar50zmft3p22wpw5qpat8jeqlhakds3
-export cdp=resource_tdx_2_1ntk0z5443n27l0aggvrmn725rp528xq97g054pwsuucyrqlpxgt634
+export lending_component=component_tdx_2_1cquet8049sedt82n0z4heeng9h90g56e0c9q64gfju3kkujt4sw4ru
+export oracle=component_tdx_2_1crxmctul9wnujtgxqx53fhnqj7cztyh44zlmha905nf45vf05w76y3
+export cdp_mgr=component_tdx_2_1cr34ujqqcm32vhfw8uksv7vknzds8x4xw4wgdjyq2wk8lqeengdmvm
+export admin_badge=resource_tdx_2_1t44pldtn3sc6083ykngfjwpmqe374q6k2ktz28zu9ph5l37asl9q9g
+export op_badge=resource_tdx_2_1t586e877j6e35srwyvh2ued0vd7yzsv9yjt9nr7zt5g34v8t88acz9
+export cdp=resource_tdx_2_1n206x8883nqaga8z4pazy4l84yy95xeqnhxr5qvtprnn7hrquk2v90
 
 # xrd pool
 export xrd=resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc
 ./docs/replace_holder.sh ./docs/transactions/new_xrd_pool.rtm
-export xrd_pool=component_tdx_2_1cpkxm0mu2fp3g9lp4t7mz44h6qrmjfhr4vytq9u3yryrvyzdq4zvkh
-export dx_xrd=resource_tdx_2_1th0tu8e8uxnedk3kv5n2j6hj09se05k5n3dpngj77gkuzq0eaaw6mw
+export xrd_pool=component_tdx_2_1cpqh2hsa22ra8l60uepdx66852fl2z04atk583evqpe4efyv0hhfj3
+export dx_xrd=resource_tdx_2_1tkpp7wqdj3wllnwr60lsxpuqlmtpra69sfpy9wunnctrs3ng5sc2ny
 
 #usdt pool
 ./docs/replace_holder.sh ./docs/transactions/new_usdt_pool.rtm
-export usdt_pool=component_tdx_2_1cqxl9mfmp3yt7rha6zl5t2h34w87s3tq5m6rkcwrqfqktl4mulsnzw
-export dx_usdt=resource_tdx_2_1t5g273vx2fschd3rmqw5npguevfkplnffus36djafphlxdthp3q7pa
+export usdt_pool=component_tdx_2_1cp7kcq4skzss4l68zaevuqu74jamux4jqvqh9r35pjr85tx3dm0zvu
+export dx_usdt=resource_tdx_2_1t5lxkppeta7hgp2ya54unldsf7n3zm3lkxduvvddewdqssz48vyqt0
 
 #usdc pool
 ./docs/replace_holder.sh ./docs/transactions/new_usdc_pool.rtm
-export usdc_pool=component_tdx_2_1cqwtt0zm884krtfd6448mfu750sj66gjzfj9lcrzkst3m7waty0gms
-export dx_usdc=resource_tdx_2_1t4skgermlgcml5kmx5tznl0fzlq2kk30uzfp2cpruw02xw7zxejmdz
+export usdc_pool=component_tdx_2_1cz3h4h4ukvxncgjeurfdu70lra7aw7raswmw3sdqydqpznjzqhfxje
+export dx_usdc=resource_tdx_2_1tkf0ugjw22hz7g6ed6mgty4c7awln6avwlsggjylnn38gfzxuuzrrv
 
 ./docs/replace_holder.sh docs/transactions/set_price.rtm
 
@@ -144,11 +151,17 @@ export amount=200
 # borrow
 export borrow_token=$usdt
 export quote="usdt"
-result=$(curl "https://price.dexian.io/xrd-$quote")
-export price1=$(echo $result | jq ".data.price")
+#result=$(curl --request POST "https://stokenet.radixdlt.com/status/gateway-status")
+#export epoch=$(echo $result | jq ".ledger_state.epoch")
+result=$(curl "https://price.dexian.io/stokenet/xrd-$quote")
+export price1=$(echo $result | jq -r ".data.price")
 export quote1=$usdt
 export timestamp1=$(echo $result | jq ".data.timestamp")
-export signature1=$(echo $result | jq ".data.signature")
+export signature1=$(echo $result | jq -r ".data.signature")
+export epoch=$(echo $result | jq ".data.epoch_at")
+#export sig=$(python sign-util.py $xrd $quote1 $price1 $epoch $timestamp1)
+#echo "$xrd/$usdt$price1$epoch$timestamp1"
+#echo "$signature1 / $sig  $epoch"
 #export quote="usdc"
 #result=$(curl "https://price.dexian.io/xrd-$quote")
 #export price2=$(echo $result | jq ".data.price")
@@ -169,17 +182,19 @@ export borrow_amount=10
 
 
 export quote="usdc"
-result=$(curl "https://price.dexian.io/xrd-$quote")
-export price1=$(echo $result | jq ".data.price")
+result=$(curl --request POST "https://stokenet.radixdlt.com/status/gateway-status")
+export epoch=$(echo $result | jq ".ledger_state.epoch")
+result=$(curl "https://price.dexian.io/xrd-$quote?epoch=$epoch")
+export price1=$(echo $result | jq -r ".data.price")
 export quote1=$usdc
 export timestamp1=$(echo $result | jq ".data.timestamp")
-export signature1=$(echo $result | jq ".data.signature")
+export signature1=$(echo $result | jq -r ".data.signature")
 #export quote="usdc"
 #result=$(curl "https://price.dexian.io/xrd-$quote")
-#export price2=$(echo $result | jq ".data.price")
+#export price2=$(echo $result | jq -r ".data.price")
 #export quote2=$usdc
 #export timestamp2=$(echo $result | jq ".data.timestamp")
-#export signature2=$(echo $result | jq ".data.signature")
+#export signature2=$(echo $result | jq -r ".data.signature")
 export price2=None
 export quote2=None
 export timestamp2=None
@@ -193,17 +208,19 @@ export borrow_amount=10
 
 
 export quote="usdc"
-result=$(curl "https://price.dexian.io/xrd-$quote")
-export price1=$(echo $result | jq ".data.price")
+result=$(curl --request POST "https://stokenet.radixdlt.com/status/gateway-status")
+export epoch=$(echo $result | jq ".ledger_state.epoch")
+result=$(curl "https://price.dexian.io/xrd-$quote?epoch=$epoch")
+export price1=$(echo $result | jq -r ".data.price")
 export quote1=$usdc
 export timestamp1=$(echo $result | jq ".data.timestamp")
-export signature1=$(echo $result | jq ".data.signature")
+export signature1=$(echo $result | jq -r ".data.signature")
 #export quote="usdc"
 #result=$(curl "https://price.dexian.io/xrd-$quote")
-#export price2=$(echo $result | jq ".data.price")
+#export price2=$(echo $result | jq -r ".data.price")
 #export quote2=$usdc
 #export timestamp2=$(echo $result | jq ".data.timestamp")
-#export signature2=$(echo $result | jq ".data.signature")
+#export signature2=$(echo $result | jq -r ".data.signature")
 export price2=None
 export quote2=None
 export timestamp2=None
