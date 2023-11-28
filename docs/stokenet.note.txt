@@ -180,6 +180,31 @@ export borrow_amount=10
 ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
 
+export quote="usdt"
+# result=$(curl --request POST "https://stokenet.radixdlt.com/status/gateway-status")
+# export epoch=$(echo $result | jq ".ledger_state.epoch")
+result=$(curl "https://price.dexian.io/xrd-$quote?epoch=$epoch")
+export price1=$(echo $result | jq -r ".data.price")
+export quote1=$usdc
+export timestamp1=$(echo $result | jq ".data.timestamp")
+export signature1=$(echo $result | jq -r ".data.signature")
+#export quote="usdc"
+#result=$(curl "https://price.dexian.io/xrd-$quote")
+#export price2=$(echo $result | jq -r ".data.price")
+#export quote2=$usdc
+#export timestamp2=$(echo $result | jq ".data.timestamp")
+#export signature2=$(echo $result | jq -r ".data.signature")
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p2
+export dx_token=$dx_xrd
+export amount=2000
+export borrow_token=$usdc
+export borrow_amount=10
+./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+
 
 export quote="usdc"
 result=$(curl --request POST "https://stokenet.radixdlt.com/status/gateway-status")
@@ -208,27 +233,31 @@ export borrow_amount=10
 
 
 export quote="usdc"
-result=$(curl --request POST "https://stokenet.radixdlt.com/status/gateway-status")
-export epoch=$(echo $result | jq ".ledger_state.epoch")
-result=$(curl "https://price.dexian.io/xrd-$quote?epoch=$epoch")
+#result=$(curl --request POST "https://stokenet.radixdlt.com/status/gateway-status")
+#export epoch=$(echo $result | jq ".ledger_state.epoch")
+result=$(curl "https://price.dexian.io/stokenet/xrd-$quote")
 export price1=$(echo $result | jq -r ".data.price")
 export quote1=$usdc
 export timestamp1=$(echo $result | jq ".data.timestamp")
 export signature1=$(echo $result | jq -r ".data.signature")
+export epoch=$(echo $result | jq ".data.epoch_at")
+export sig=$(python sign-util.py $xrd $quote1 $price1 $epoch $timestamp1)
+echo "$xrd/$usdt$price1$epoch$timestamp1"
+echo "$signature1 / $sig  $epoch"
 #export quote="usdc"
 #result=$(curl "https://price.dexian.io/xrd-$quote")
-#export price2=$(echo $result | jq -r ".data.price")
+#export price2=$(echo $result | jq ".data.price")
 #export quote2=$usdc
 #export timestamp2=$(echo $result | jq ".data.timestamp")
-#export signature2=$(echo $result | jq -r ".data.signature")
+#export signature2=$(echo $result | jq ".data.signature")
 export price2=None
 export quote2=None
 export timestamp2=None
 export signature2=None
 export account=$p3
-export dx_token=$dx_usdc
-export amount=200
-export borrow_token=$xrd
-export borrow_amount=800
+export dx_token=$dx_xrd
+export amount=4000
+export borrow_token=$usdc
+export borrow_amount=100
 ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 

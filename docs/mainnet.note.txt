@@ -136,4 +136,82 @@ export borrow_amount=10
 ./docs/replace_holder.sh docs/transactions/borrow_stable.rtm
 
 
+## mainnet 11.28
+# init
+export admin_account=account_rdx12xfv4auqudtejxh48aayzwdjruhush5esdc44e5dezjps5xaj3x8zx
+export pkg=package_rdx1phjah8t0xs5tnd947fsr3ff77pxzhp2ms4x8tw8m9kaum9w7lw34q4
+export account=$admin_account
+export usdt=resource_rdx1thrvr3xfs2tarm2dl9emvs26vjqxu6mqvfgvqjne940jv0lnrrg7rw
+export usdc=resource_rdx1t4upr78guuapv5ept7d7ptekk9mqhy605zgms33mcszen8l9fac8vf
 
+./docs/replace_holder.sh ./docs/transactions/new_keeper.rtm
+export keeper=component_rdx1cpn9n6d0elx628stfkm6ch43d0d59lqlvtxp7w7345mdr625cp7dtn
+export keeper_admin_badge=resource_rdx1thd2vly04rmln9vseedjlzt84c34tvq8azdu6c39ts8aaddt8v0pje
+export keeper_op_badge=resource_rdx1th83rtgcglkms5a9mu0n8wmyy0nuq6me2x42mlm6g0t58egcfxc6dg
+
+./docs/replace_holder.sh ./docs/transactions/new_interest.rtm
+export def_interest_model=component_rdx1cq795xcrxpg9exusj4rec0hsaw8dkpc6n8q7d07kgegtx9w2v3ptmd
+
+export price_signer_pk=6f41c4002e6e8c64dcbe1d2e1809ebadce67d23cde0d01ea88abb19995839bad
+./docs/replace_holder.sh ./docs/transactions/new_lending_factory.rtm
+export lending_component=component_rdx1cpm06xf70z0vdvy7zh76gsuslwxdw46czp32hp6zrhu4eyaypgl3yl
+export oracle=component_rdx1cpnfe3vw2r4x02rz6zpkt68t99lclgjv2xq8wfmay7x68s8p36qwpe
+export cdp_mgr=component_rdx1cqfchcz0tjkr68sfj4puj85e5um0f0vnzx2f2vkc33l04g2gc624fn
+export admin_badge=resource_rdx1th3nur4yezazf2lds5t9lg3pzl39fefp9yu2zeksgmedgrnu5aqyzv
+export op_badge=resource_rdx1tkz0wjlx4qzhdtumh97eq7qn9a0dc84ckl0u88ynz9y5qemw26tdaj
+export cdp=resource_rdx1nfw5dmhftwpjgp53ja39ynxdwjnjrrvsdpx7sq4twvy9622rn4gacz
+
+export xrd=resource_rdx1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxradxrd
+./docs/replace_holder.sh ./docs/transactions/new_xrd_pool.rtm
+export xrd_pool=component_rdx1cpw5cashdh7cmcawu25agyx0vmdfv44w639wskuy5jt80cj7prw5l5
+export dx_xrd=resource_rdx1t5z8zlw5e7th3026pfx9lery7803jxua09vesu3reev09t2qmhf9wx
+
+./docs/replace_holder.sh ./docs/transactions/new_usdt_pool.rtm
+export usdt_pool=component_rdx1cqe9cn25wsakquhlfs8qthy40vulmasf6tknj8sze8y5fnu3ya5qhh
+export dx_usdt=resource_rdx1tk5dypgl78wnznvy76pf7jznrpufpwxuwzyccrl66v2wtww6jyfqf3
+
+./docs/replace_holder.sh ./docs/transactions/new_usdc_pool.rtm
+export usdc_pool=component_rdx1czt04d52xr3hhyzrte4yd57cpjxf9wqqgeqqpr9tn99gkqkryr9unv
+export dx_usdc=resource_rdx1t5l94plsfw6j456gj0syqsnn32jjt709l4hc5722e6ww5lvl7wp6vr
+
+exort p1=account_rdx12949wyu95s3nc0cprsfeaw8tgjuvhe8dw8gyclvtlklv6zrwhuk576
+export account=$p1
+export supply_token=$xrd
+export amount=400
+./docs/replace_holder.sh docs/transactions/supply.rtm
+
+export account=$p1
+export supply_token=$usdt
+export amount=1
+./docs/replace_holder.sh docs/transactions/supply.rtm
+
+
+export borrow_token=$usdt
+export quote="usdt"
+#result=$(curl --request POST "https://mainnet.radixdlt.com/status/gateway-status")
+#export epoch=$(echo $result | jq ".ledger_state.epoch")
+result=$(curl "https://price.dexian.io/mainnet/xrd-$quote")
+export price1=$(echo $result | jq -r ".data.price")
+export quote1=$usdt
+export timestamp1=$(echo $result | jq ".data.timestamp")
+export signature1=$(echo $result | jq -r ".data.signature")
+export epoch=$(echo $result | jq ".data.epoch_at")
+export sig=$(python sign-util.py $xrd $quote1 $price1 $epoch $timestamp1)
+echo "$xrd/$usdt$price1$epoch$timestamp1"
+echo "$signature1 / $sig  $epoch"
+#export quote="usdc"
+#result=$(curl "https://price.dexian.io/xrd-$quote")
+#export price2=$(echo $result | jq ".data.price")
+#export quote2=$usdc
+#export timestamp2=$(echo $result | jq ".data.timestamp")
+#export signature2=$(echo $result | jq ".data.signature")
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p1
+export dx_token=$dx_xrd
+export amount=200
+export borrow_token=$usdt
+export borrow_amount=0.5
+./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
