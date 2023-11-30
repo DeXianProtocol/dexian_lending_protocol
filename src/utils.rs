@@ -80,6 +80,17 @@ pub fn get_divisibility(res_addr: ResourceAddress) -> Option<u8>{
     res_mgr.resource_type().divisibility()
 }
 
+pub fn ceil_by_resource(res_addr: ResourceAddress, amount: Decimal) -> Decimal{
+    let divisibility = get_divisibility(res_addr).unwrap();
+    ceil(amount, divisibility)
+}
+
+pub fn floor_by_resource(res_addr: ResourceAddress, amount: Decimal) -> Decimal{
+    let divisibility = get_divisibility(res_addr).unwrap();    
+    floor(amount, divisibility)
+}
+
+
 pub fn verify_ed25519(
     msg: &str,
     pk: &str,

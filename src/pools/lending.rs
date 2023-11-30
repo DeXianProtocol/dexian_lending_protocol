@@ -144,13 +144,13 @@ mod lend_pool {
         pub fn add_liquity(&mut self, bucket: Bucket) -> Bucket{
             assert_resource(&bucket.resource_address(), &self.underlying_token);
             let deposit_amount = bucket.amount();
-            let divisibility = get_divisibility(self.deposit_share_token).unwrap();
 
             self.update_index();
             
             self.vault.put(bucket);
-            let mint_amount = floor(deposit_amount.checked_div(self.deposit_index).unwrap(), divisibility);
             let deposit_share_res_mgr = ResourceManager::from_address(self.deposit_share_token);
+            let divisibility = deposit_share_res_mgr.resource_type().divisibility().unwrap();
+            let mint_amount = floor(deposit_amount.checked_div(self.deposit_index).unwrap(), divisibility);
             let dx_bucket = deposit_share_res_mgr.mint(mint_amount);
             
             info!("after interest rate:{}, {}, index:{}, {}", self.variable_loan_interest_rate, self.stable_loan_interest_rate, self.deposit_index, self.loan_index);
@@ -212,13 +212,12 @@ mod lend_pool {
             
             self.update_index();
 
-            let divisibility = get_divisibility(self.underlying_token).unwrap();
-            let debt_amount = loan_amount.checked_mul(self.loan_index).unwrap();
+            let debt_amount = ceil_by_resource(self.underlying_token, loan_amount.checked_mul(self.loan_index).unwrap());
             let mut amount = if repay_bucket.amount() > debt_amount {debt_amount} else{repay_bucket.amount()};
             if repay_opt.is_some_and(|uplimit| uplimit < amount){
                 amount = repay_opt.unwrap();
             }
-            let loan_share = floor(amount.checked_div(self.loan_index).unwrap(), divisibility);
+            let loan_share = floor_by_resource(self.deposit_share_token, amount.checked_div(self.loan_index).unwrap());
 
             self.variable_loan_share_quantity = self.variable_loan_share_quantity.checked_sub(loan_share).unwrap();
             self.vault.put(repay_bucket.take(amount));
@@ -237,9 +236,20 @@ mod lend_pool {
             repay_opt: Option<Decimal>
         ) -> (Bucket, Decimal, Decimal, Decimal, u64){
             let current_epoch_at = Runtime::current_epoch().number();
-            let epoch_of_year = Decimal::from(EPOCH_OF_YEAR);
             let delta_epoch = current_epoch_at - last_epoch_at;
-            let interest = if delta_epoch <= 0u64 {Decimal::ZERO} else { calc_compound_interest(loan_amount, rate, epoch_of_year, delta_epoch).checked_sub(loan_amount).unwrap() };
+            let interest = if delta_epoch <= 0u64 {
+                Decimal::ZERO
+            } else { 
+                ceil_by_resource(
+                    self.underlying_token, 
+                    calc_compound_interest(
+                        loan_amount,
+                        rate,
+                        Decimal::from(EPOCH_OF_YEAR),
+                        delta_epoch
+                    ).checked_sub(loan_amount).unwrap()
+                )
+            };
             
             let previous_debt = self.stable_loan_amount.checked_mul(self.stable_loan_interest_rate).unwrap();
 
@@ -249,7 +259,11 @@ mod lend_pool {
                 let outstanding_interest = interest.checked_sub(repay_amount).unwrap();
                 repay_in_borrow = outstanding_interest.checked_mul(Decimal::from(-1)).unwrap();
                 self.stable_loan_amount = self.stable_loan_amount.checked_add(outstanding_interest).unwrap();
-                self.stable_loan_interest_rate = previous_debt.checked_add(outstanding_interest.checked_mul(rate).unwrap()).unwrap().checked_div(self.stable_loan_amount).unwrap();
+                self.stable_loan_interest_rate = previous_debt.checked_add(
+                    outstanding_interest.checked_mul(rate).unwrap()
+                ).unwrap().checked_div(
+                    self.stable_loan_amount
+                ).unwrap();
             }
             else{
                 let should_paid = loan_amount.checked_add(interest).unwrap();
@@ -269,7 +283,11 @@ mod lend_pool {
                 }
                 else{
                     self.stable_loan_amount = self.stable_loan_amount.checked_sub(repay_in_borrow).unwrap();
-                    self.stable_loan_interest_rate = previous_debt.checked_sub(repay_in_borrow.checked_mul(rate).unwrap()).unwrap().checked_div(self.stable_loan_amount).unwrap();
+                    self.stable_loan_interest_rate = previous_debt.checked_sub(
+                        repay_in_borrow.checked_mul(rate).unwrap()
+                    ).unwrap().checked_div(
+                        self.stable_loan_amount
+                    ).unwrap();
                 }
             }
             
