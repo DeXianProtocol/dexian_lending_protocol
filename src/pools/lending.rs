@@ -83,7 +83,7 @@ mod lend_pool {
             let dx_rule = rule!(require(global_caller(address)));
             let deposit_share_res_mgr = ResourceBuilder::new_fungible(OwnerRole::None)
                 .metadata(metadata!(init{
-                    "pool" => address, locked;
+                    //pool ==> , pool_unit==>
                     "symbol" => format!("dx{}", origin_symbol), locked;
                     "name" => format!("DeXian Lending LP token({}) ", origin_symbol), locked;
                 }))
@@ -175,7 +175,7 @@ mod lend_pool {
             self.update_interest_rate();
             info!("after interest rate:{}, {}, index:{}, {}", self.variable_loan_interest_rate, self.stable_loan_interest_rate, self.deposit_index, self.loan_index);
 
-            self.vault.take(withdraw_amount)
+            self.vault.take_advanced(withdraw_amount, WithdrawStrategy::Rounded(RoundingMode::ToZero))
 
         }
 
@@ -189,7 +189,7 @@ mod lend_pool {
             
             self.update_interest_rate();
             
-            (self.vault.take(borrow_amount), variable_share)
+            (self.vault.take_advanced(borrow_amount, WithdrawStrategy::Rounded(RoundingMode::ToZero)), variable_share)
         }
 
         pub fn borrow_stable(&mut self, borrow_amount: Decimal, stable_rate: Decimal) -> Bucket{
@@ -202,7 +202,7 @@ mod lend_pool {
 
             self.update_interest_rate();
 
-            self.vault.take(borrow_amount)
+            self.vault.take_advanced(borrow_amount, WithdrawStrategy::Rounded(RoundingMode::ToZero))
 
         }
 

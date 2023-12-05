@@ -55,42 +55,47 @@ mod validator_keeper{
 
     impl ValidatorKeeper {
         pub fn instantiate(
-        ) -> (Global<ValidatorKeeper>, Bucket, Bucket){
-            let admin_badge = ResourceBuilder::new_fungible(OwnerRole::None)
-                .divisibility(DIVISIBILITY_NONE)
-                .metadata(metadata!(
-                    init {
-                        "name" => "Keeper Admin Badge".to_owned(), locked;
-                        "description" => 
-                        "This is a DeXian Lending Protocol admin badge used to authenticate the admin.".to_owned(), locked;
-                    }
-                ))
-                .mint_initial_supply(1);
-            let op_badge = ResourceBuilder::new_fungible(OwnerRole::None)
-                .divisibility(DIVISIBILITY_NONE)
-                .metadata(metadata!(
-                    init {
-                        "name" => "Keeper Operator Badge".to_owned(), locked;
-                        "description" => 
-                        "This is a DeXian Lending Protocol operator badge used to authenticate the operator.".to_owned(), locked;
-                    }
-                ))
-                .mint_initial_supply(1);
-            let admin_rule = rule!(require(admin_badge.resource_address()));
-            let op_rule = rule!(require(op_badge.resource_address()));
+            owner_rule: AccessRule,
+            admin_rule: AccessRule,
+            op_rule: AccessRule
+        ) -> Global<ValidatorKeeper>{
+            // let admin_badge = ResourceBuilder::new_fungible(OwnerRole::None)
+            //     .divisibility(DIVISIBILITY_NONE)
+            //     .metadata(metadata!(
+            //         init {
+            //             "name" => "Keeper Admin Badge".to_owned(), locked;
+            //             "description" => 
+            //             "This is a DeXian Lending Protocol admin badge used to authenticate the admin.".to_owned(), locked;
+            //         }
+            //     ))
+            //     .mint_initial_supply(1);
+            // let op_badge = ResourceBuilder::new_fungible(OwnerRole::None)
+            //     .divisibility(DIVISIBILITY_NONE)
+            //     .metadata(metadata!(
+            //         init {
+            //             "name" => "Keeper Operator Badge".to_owned(), locked;
+            //             "description" => 
+            //             "This is a DeXian Lending Protocol operator badge used to authenticate the operator.".to_owned(), locked;
+            //         }
+            //     ))
+            //     .mint_initial_supply(1);
+            // let admin_rule = rule!(require(admin_badge.resource_address()));
+            // let op_rule = rule!(require(op_badge.resource_address()));
             
             let component = Self{
                 validator_map: HashMap::new(),
                 res_validator_map: HashMap::new()
             }.instantiate()
-            .prepare_to_globalize(OwnerRole::Fixed(rule!(require(admin_badge.resource_address()))))
+            // .prepare_to_globalize(OwnerRole::Fixed(rule!(require(admin_badge.resource_address()))))
+            .prepare_to_globalize(OwnerRole::Fixed(owner_rule))
             .roles(
                 roles!(
                     admin => admin_rule;
                     operator => op_rule;
                 )
             ).globalize();
-            (component, admin_badge.into(), op_badge.into())
+            
+            component
         }
 
         

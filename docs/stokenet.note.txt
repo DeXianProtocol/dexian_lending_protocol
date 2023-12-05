@@ -261,3 +261,80 @@ export borrow_token=$usdc
 export borrow_amount=100
 ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
+
+===========================v1.0.8=======================
+# init
+export admin_account=account_tdx_2_129th30gyg5w0fh06swecmtg6ddcqfl77qme7ffvqzrgwc7kyelr5tp
+export p1=account_tdx_2_12x7ljug6zxrsalvgqlekufr676la4xt4qy8q0e98utw92e55409e30
+export p2=account_tdx_2_1286na8966hx2qar2c5k6gp56jgdk2lyyvsst59req34wej86ue9xdc
+export p3=account_tdx_2_129v2sa7652vlmwr5z4fyushc3kpvygzvu6glyvwvvmd349rg9xsz5p
+
+-----
+# faucet
+## usdt
+export usdt_component=component_tdx_2_1cq78nnnn9a60azdezxhyvcuy58qnus8y8prwnzmdl9f6uhehw9d5ga
+export account=$p2
+./docs/replace_holder.sh ./docs/transactions/faucet_usdt.rtm
+
+## usdc
+export usdc_component=component_tdx_2_1cpl96cytlsrdyc555dhmlt3j9w4d2uz4tcejx7phun7ddzzhtvcclj
+export account=$p3
+./docs/replace_holder.sh ./docs/transactions/faucet_usdc.rtm
+
+
+----
+# init
+export admin_account=account_tdx_2_129th30gyg5w0fh06swecmtg6ddcqfl77qme7ffvqzrgwc7kyelr5tp
+export p1=account_tdx_2_12x7ljug6zxrsalvgqlekufr676la4xt4qy8q0e98utw92e55409e30
+export p2=account_tdx_2_1286na8966hx2qar2c5k6gp56jgdk2lyyvsst59req34wej86ue9xdc
+export p3=account_tdx_2_129v2sa7652vlmwr5z4fyushc3kpvygzvu6glyvwvvmd349rg9xsz5p
+
+export pkg=package_tdx_2_1p4nyxse7cyrgwc4q552cs0ug6gggz3m7vdg4hyfxw97g0wnlm8p3hj
+export account=$admin_account
+export usdt=resource_tdx_2_1t42p2eyad03gly8txm28x4arzkx27wtjqtznz33smqt6ea2d7jlx2s
+export usdc=resource_tdx_2_1t5gfw86e6flve6w558q45gw5h99zu32ua4jshpmjsln4zyvztjk2zk
+
+./docs/replace_holder.sh ./docs/transactions/new_keeper.rtm
+export keeper=component_tdx_2_1cqj9vv4j46dh326u3w44wfm4l9rhka5h5n45tgxakr2gckeualqfd6
+export keeper_admin_badge=resource_tdx_2_1thfv7m8jkx6jjswvnhk3d2t6g5uk2ep47wu083rc4tjmk0p34hljf5
+export keeper_op_badge=resource_tdx_2_1t4pdxvru57c0s59xn03u8r2vkahv862lza58304c9lykfp6f9d7qve
+
+./docs/replace_holder.sh ./docs/transactions/new_interest.rtm
+export def_interest_model=component_tdx_2_1cq2e6jga0awanwea8m8xg5vy7cpq3kdu6xg2tnrdvgkt9snfc2t9c7
+
+account_sim1c956qr3kxlgypxwst89j9yf24tjc7zxd4up38x37zr6q4jxdx9rhma
+priv:0000000000000000000000000000000000000000000000000000000000000001
+pk=6d187b0f2e66d74410e92e2dc92a5141a55c241646ce87acbcad4ab413170f9b
+pk=6d187b0f2e66d74410e92e2dc92a5141a55c241646ce87acbcad4ab413170f9b
+
+#Private key: 2c2c7b0618f14e06ded6870aede991af915b2892d41aaddf0cac2b1c31459bc2
+#Owner badge: resource_sim1nfzf2h73frult99zd060vfcml5kncq3mxpthusm9lkglvhsr0guahy:#1#
+export price_signer_pk=6d187b0f2e66d74410e92e2dc92a5141a55c241646ce87acbcad4ab413170f9b
+
+
+./docs/replace_holder.sh ./docs/transactions/new_lending_factory.rtm
+export lending_component=component_tdx_2_1cquet8049sedt82n0z4heeng9h90g56e0c9q64gfju3kkujt4sw4ru
+export oracle=component_tdx_2_1crxmctul9wnujtgxqx53fhnqj7cztyh44zlmha905nf45vf05w76y3
+export cdp_mgr=component_tdx_2_1cr34ujqqcm32vhfw8uksv7vknzds8x4xw4wgdjyq2wk8lqeengdmvm
+export admin_badge=resource_tdx_2_1t44pldtn3sc6083ykngfjwpmqe374q6k2ktz28zu9ph5l37asl9q9g
+export op_badge=resource_tdx_2_1t586e877j6e35srwyvh2ued0vd7yzsv9yjt9nr7zt5g34v8t88acz9
+export cdp=resource_tdx_2_1n206x8883nqaga8z4pazy4l84yy95xeqnhxr5qvtprnn7hrquk2v90
+
+# xrd pool
+export xrd=resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc
+./docs/replace_holder.sh ./docs/transactions/new_xrd_pool.rtm
+export xrd_pool=component_tdx_2_1cpqh2hsa22ra8l60uepdx66852fl2z04atk583evqpe4efyv0hhfj3
+export dx_xrd=resource_tdx_2_1tkpp7wqdj3wllnwr60lsxpuqlmtpra69sfpy9wunnctrs3ng5sc2ny
+
+#usdt pool
+./docs/replace_holder.sh ./docs/transactions/new_usdt_pool.rtm
+export usdt_pool=component_tdx_2_1cp7kcq4skzss4l68zaevuqu74jamux4jqvqh9r35pjr85tx3dm0zvu
+export dx_usdt=resource_tdx_2_1t5lxkppeta7hgp2ya54unldsf7n3zm3lkxduvvddewdqssz48vyqt0
+
+#usdc pool
+./docs/replace_holder.sh ./docs/transactions/new_usdc_pool.rtm
+export usdc_pool=component_tdx_2_1cz3h4h4ukvxncgjeurfdu70lra7aw7raswmw3sdqydqpznjzqhfxje
+export dx_usdc=resource_tdx_2_1tkf0ugjw22hz7g6ed6mgty4c7awln6avwlsggjylnn38gfzxuuzrrv
+
+./docs/replace_holder.sh docs/transactions/set_price.rtm
+
