@@ -1,0 +1,9 @@
+CALL_FUNCTION
+    Address("${pkg}")
+    "ValidatorKeeper"
+    "instantiate"
+;
+CALL_METHOD
+    Address("${admin_account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");
