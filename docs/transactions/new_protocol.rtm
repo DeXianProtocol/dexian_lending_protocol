@@ -1,0 +1,27 @@
+CALL_METHOD
+    Address("${admin_account}")
+    "lock_fee"
+    Decimal("10")
+;
+CALL_FUNCTION
+    Address("${pkg}")
+    "DeXianProtocol"
+    "instantiate"
+    Address("${keeper}")
+    Enum<2u8>(
+        Enum<0u8>(
+            Enum<0u8>(
+                Enum<1u8>(Address("${admin_badge}"))
+            )
+        )
+    )
+    Address("${op_badge}")
+    "${price_signer_pk}"
+    30000u64
+    2016u64
+;
+CALL_METHOD
+    Address("${admin_account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");
+

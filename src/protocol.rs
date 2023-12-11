@@ -17,9 +17,11 @@ mod dexian_protocol{
             operator => updatable_by: [admin];
         },
         methods {
+            // pool
             new_pool => restrict_to: [admin, OWNER];
             withdraw_insurance => restrict_to: [operator, OWNER];
 
+            //lending
             supply => PUBLIC;
             withdraw => PUBLIC;
             borrow_variable => PUBLIC;
@@ -29,6 +31,10 @@ mod dexian_protocol{
             repay => PUBLIC;
             addition_collateral => PUBLIC;
             liquidation => PUBLIC;
+
+            //staking earning
+            join => PUBLIC;
+            redeem => PUBLIC;
         }
     }
     
@@ -46,6 +52,8 @@ mod dexian_protocol{
 
         pub fn instantiate(
             validator_keeper: Global<ValidatorKeeper>, 
+            admin_rule: AccessRule,
+            op_res_addr: ResourceAddress,
             price_signer_pk: String, 
             price_validity_ms: u64,
             unstake_epoch_num: u64
@@ -53,80 +61,81 @@ mod dexian_protocol{
             Global<DeXianProtocol>,
             Global<PriceOracle>,
             Global<StakingEarning>, 
-            Bucket, 
-            Bucket,
+            ResourceAddress,
             ResourceAddress
         ){
             
-            let admin_badge = ResourceBuilder::new_fungible(OwnerRole::None)
-                .divisibility(DIVISIBILITY_NONE)
-                .metadata(metadata!(
-                    init {
-                        "name" => "Admin Badge".to_owned(), locked;
-                        "description" => 
-                        "This is a DeXian Lending Protocol admin badge used to authenticate the admin.".to_owned(), locked;
-                    }
-                ))
-                .mint_initial_supply(1);
-            let op_badge = ResourceBuilder::new_fungible(OwnerRole::None)
-                .divisibility(DIVISIBILITY_NONE)
-                .metadata(metadata!(
-                    init {
-                        "name" => "Operator Badge".to_owned(), locked;
-                        "description" => 
-                        "This is a DeXian Lending Protocol operator badge used to authenticate the operator.".to_owned(), locked;
-                    }
-                ))
-                .mint_initial_supply(1);
+            // let admin_badge = ResourceBuilder::new_fungible(OwnerRole::None)
+            //     .divisibility(DIVISIBILITY_NONE)
+            //     .metadata(metadata!(
+            //         init {
+            //             "name" => "Admin Badge".to_owned(), locked;
+            //             "description" => 
+            //             "This is a DeXian Lending Protocol admin badge used to authenticate the admin.".to_owned(), locked;
+            //         }
+            //     ))
+            //     .mint_initial_supply(1);
+            // let op_badge = ResourceBuilder::new_fungible(OwnerRole::None)
+            //     .divisibility(DIVISIBILITY_NONE)
+            //     .metadata(metadata!(
+            //         init {
+            //             "name" => "Operator Badge".to_owned(), locked;
+            //             "description" => 
+            //             "This is a DeXian Lending Protocol operator badge used to authenticate the operator.".to_owned(), locked;
+            //         }
+            //     ))
+            //     .mint_initial_supply(1);
             
-            let admin_badge_addr = admin_badge.resource_address();
-            let op_badge_addr = op_badge.resource_address();
+            // let admin_badge_addr = admin_badge.resource_address();
+            // let op_badge_addr = op_badge.resource_address();
 
             let (address_reservation, component_address) =
             Runtime::allocate_component_address(DeXianProtocol::blueprint_id());
 
             let price_oracle = PriceOracle::instantiate(
-                OwnerRole::Fixed(rule!(require(admin_badge_addr))),
-                rule!(require(op_badge_addr)),
-                rule!(require(admin_badge_addr)),
+                OwnerRole::Fixed(admin_rule.clone()),
+                rule!(require(op_res_addr)),
+                admin_rule.clone(),
                 price_signer_pk,
                 price_validity_ms
             );
+
+            let mgr_rule = rule!(require(op_res_addr) || require(global_caller(component_address)));
+            let staking_mgr = StakingEarning::instantiate(
+                validator_keeper,
+                unstake_epoch_num,
+                admin_rule.clone(),
+                mgr_rule.clone()
+            );
             
-            let mgr_rule = rule!(require(op_badge_addr) || require(global_caller(component_address)));
-            let caller_rule = rule!(require(global_caller(component_address)));
+            
+            let caller_rule = rule!(require(global_caller(component_address)) || require(global_caller(staking_mgr.address())));
             let (cdp_mgr, cdp_res_addr) = CollateralDebtManager::instantiate(
-                rule!(require(admin_badge_addr)),
+                admin_rule.clone(),
                 mgr_rule.clone(),
                 caller_rule,
                 price_oracle
             );
             
-            let staking_mgr = StakingEarning::instantiate(
-                validator_keeper,
-                unstake_epoch_num,
-                rule!(require(admin_badge_addr)),
-                mgr_rule.clone()
-            );
-
+            let dse_res_addr = staking_mgr.get_dse_token();
             let component = Self{
-                admin_rule: rule!(require(admin_badge_addr)),
-                op_rule: rule!(require(op_badge_addr)),
-                dse_res_addr: staking_mgr.get_dse_token(),
+                admin_rule: admin_rule.clone(),
+                op_rule: rule!(require(op_res_addr)),
+                dse_res_addr,
                 price_oracle,
                 staking_mgr,
                 cdp_mgr,
                 cdp_res_addr
             }.instantiate()
-            .prepare_to_globalize(OwnerRole::Fixed(rule!(require(admin_badge_addr))))
+            .prepare_to_globalize(OwnerRole::Fixed(admin_rule.clone()))
             .with_address(address_reservation)
             .roles(roles! {
-                admin => rule!(require(admin_badge_addr));
-                operator => rule!(require(op_badge_addr));
+                admin => admin_rule.clone();
+                operator => rule!(require(op_res_addr));
             })
             .globalize();
             
-            (component, price_oracle, staking_mgr, admin_badge.into(), op_badge.into(), cdp_res_addr)
+            (component, price_oracle, staking_mgr, dse_res_addr, cdp_res_addr)
         }
 
         pub fn new_pool(&mut self,
@@ -326,6 +335,14 @@ mod dexian_protocol{
 
         pub fn withdraw_insurance(&mut self, underlying_token_addr: ResourceAddress, amount: Decimal) -> Bucket{
             self.cdp_mgr.withdraw_insurance(underlying_token_addr, amount)
+        }
+
+        pub fn join(&mut self, validator: ComponentAddress, xrd_bucket: Bucket) -> Bucket{
+            self.staking_mgr.join(validator, xrd_bucket)
+        }
+
+        pub fn redeem(&mut self, validator: ComponentAddress, bucket: Bucket, is_faster: bool) ->Bucket{
+            self.staking_mgr.redeem(self.cdp_mgr, validator, bucket, is_faster)
         }
 
         fn extra_params(&self,

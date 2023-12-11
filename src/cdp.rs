@@ -64,12 +64,15 @@ mod cdp_mgr{
             withdraw_collateral => restrict_to:[protocol_caller, OWNER];
             liquidation => restrict_to:[protocol_caller, OWNER];
 
+            staking_borrow => restrict_to: [protocol_caller, OWNER];
+
             supply => PUBLIC;
             withdraw => PUBLIC;
             repay => PUBLIC;
             addition_collateral => PUBLIC;
             get_underlying_token => PUBLIC;
             get_cdp_resource_address => PUBLIC;
+            get_interest_rate => PUBLIC;
         }
     }
 
@@ -184,6 +187,18 @@ mod cdp_mgr{
             self.collateral_vaults.entry(dx_token_addr).or_insert(Vault::new(dx_token_addr));
             self.deposit_asset_map.entry(dx_token_addr).or_insert(underlying_token_addr);
             dx_token_addr
+        }
+
+        pub fn staking_borrow(&mut self, underlying_token_addr: ResourceAddress, borrow_amount: Decimal, stable_rate: Decimal) -> Bucket{
+            assert!(self.pools.contains_key(&underlying_token_addr), "There is no pool of funds corresponding to the assets!");
+            let lending_pool = self.pools.get_mut(&underlying_token_addr).unwrap();
+            lending_pool.borrow_stable(borrow_amount, stable_rate)
+        }
+
+        pub fn get_interest_rate(&self, underlying_token_addr: ResourceAddress) -> (Decimal, Decimal, Decimal){
+            assert!(self.pools.contains_key(&underlying_token_addr), "There is no pool of funds corresponding to the assets!");
+            let lending_pool = self.pools.get(&underlying_token_addr).unwrap();
+            lending_pool.get_interest_rate()
         }
 
         pub fn set_close_factor(&mut self, new_close_factor: Decimal){

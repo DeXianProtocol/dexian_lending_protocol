@@ -1,7 +1,7 @@
 use scrypto::prelude::*;
 use crate::utils::*;
 use crate::pools::staking::staking_pool::*;
-use crate::pools::lending::lend_pool::*;
+use crate::cdp::cdp_mgr::CollateralDebtManager;
 use crate::validator::keeper::UnstakeData;
 use crate::validator::keeper::validator_keeper::ValidatorKeeper;
 
@@ -10,6 +10,7 @@ use crate::validator::keeper::validator_keeper::ValidatorKeeper;
 #[blueprint]
 #[events(JoinEvent, RedeemEvent)]
 mod staking_earning {
+
 
     enable_method_auth! {
         roles{
@@ -74,7 +75,7 @@ mod staking_earning {
         ///
         /// claim xrd with claimNFT
         /// 
-        pub fn claim_xrd(&mut self, lending_pool: Global<LendResourcePool>, validator_addr:ComponentAddress, claim_nft_bucket: Bucket) -> Bucket{
+        pub fn claim_xrd(&mut self, cdp_mgr: Global<CollateralDebtManager>, validator_addr:ComponentAddress, claim_nft_bucket: Bucket) -> Bucket{
             let nft_addr = claim_nft_bucket.resource_address();            
             let mut validator: Global<Validator> = Global::from(validator_addr);
 
@@ -88,10 +89,10 @@ mod staking_earning {
                     bucket.put(validator.claim_xrd(nft_bucket.take_non_fungible(nft_local_id).into()));
                 }
                 else{
-                    let (_, _, stable_rate) = lending_pool.get_interest_rate();
+                    let (_, _, stable_rate) = cdp_mgr.get_interest_rate(XRD);
                     let remain_epoch = unstake_data.claim_epoch.number() - current_epoch;
                     let principal = calc_principal(unstake_data.claim_amount, stable_rate, Decimal::from(EPOCH_OF_YEAR), remain_epoch);
-                    bucket.put(lending_pool.borrow_stable(principal, stable_rate));
+                    bucket.put(cdp_mgr.staking_borrow(XRD, principal, stable_rate));
                     let mut vault = Vault::new(nft_addr).as_non_fungible();
                     vault.put(nft_bucket.take_non_fungible(nft_local_id));
                     self.claim_nft_map.entry(nft_addr).and_modify(|v|{
@@ -108,7 +109,7 @@ mod staking_earning {
             self.staking_pool.contribute(bucket, validator_addr)
         }
 
-        pub fn redeem(&mut self, lending_pool: Global<LendResourcePool>, validator_addr: ComponentAddress,  bucket: Bucket, faster: bool) -> Bucket{
+        pub fn redeem(&mut self, cdp_mgr: Global<CollateralDebtManager>, validator_addr: ComponentAddress,  bucket: Bucket, faster: bool) -> Bucket{
             let res_addr = bucket.resource_address();
             let claim_nft_bucket = if res_addr == self.dse_token {
                  self.staking_pool.redeem(validator_addr, bucket)
@@ -119,7 +120,7 @@ mod staking_earning {
             };
             
             if faster {
-                self.claim_xrd(lending_pool, validator_addr, claim_nft_bucket)
+                self.claim_xrd(cdp_mgr, validator_addr, claim_nft_bucket)
             }
             else{
                 claim_nft_bucket
