@@ -5,13 +5,20 @@ use crate::validator::keeper::{StakeData, UnstakeData};
 #[blueprint]
 mod staking_pool {
 
-    // enable_method_auth!{
-    //     roles{
-    //         pool_owner => updatable_by: [];
-    //     },
-    //     methods {
-    //     }
-    // }
+    enable_method_auth!{
+        roles{
+            admin => updatable_by: [];
+            operator => updatable_by: [];
+        },
+        methods {
+            contribute => restrict_to:[operator, OWNER];
+            redeem => restrict_to:[operator, OWNER];
+
+            get_redemption_value => PUBLIC;
+            get_vault_amount => PUBLIC;
+            get_underlying_token => PUBLIC;
+        }
+    }
 
     struct StakingResourePool{
         underlying_token: ResourceAddress,
@@ -25,7 +32,7 @@ mod staking_pool {
         pub fn instantiate(
             underlying_token: ResourceAddress,
             admin_rule: AccessRule,
-            pool_mgr_rule: AccessRule
+            op_rule: AccessRule
         ) -> (Global<StakingResourePool>, ResourceAddress) {
             let (address_reservation, address) =
                 Runtime::allocate_component_address(StakingResourePool::blueprint_id());
@@ -40,11 +47,11 @@ mod staking_pool {
 
                 }))
                 .mint_roles(mint_roles! {
-                    minter => pool_mgr_rule.clone();
+                    minter => rule!(require(global_caller(address)));
                     minter_updater => rule!(deny_all);
                 })
                 .burn_roles(burn_roles! {
-                    burner => pool_mgr_rule.clone();
+                    burner => rule!(require(global_caller(address)));
                     burner_updater => rule!(deny_all);
                 })
                 .create_with_no_initial_supply();
@@ -59,10 +66,14 @@ mod staking_pool {
             .prepare_to_globalize(OwnerRole::Fixed(admin_rule.clone()))
             .with_address(address_reservation)
             // .metadata(metadata! {
-            //     "pool_resources" => vec![underlying_token, staking_unit_token], locked;
+            //     // "pool_resources" => vec![underlying_token, staking_unit_token], locked;
             //     "pool_unit" => staking_unit_token, locked;
             //     }
             // )
+            .roles(roles!{
+                admin => admin_rule.clone();
+                operator => op_rule.clone();
+            })
             .globalize();
             
             (component, staking_unit_token)

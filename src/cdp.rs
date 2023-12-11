@@ -51,21 +51,23 @@ mod cdp_mgr{
         roles{
             admin => updatable_by: [];
             operator => updatable_by: [];
+            protocol_caller => updatable_by:[];
         },
         methods{
             new_pool => restrict_to:[operator, OWNER];
             withdraw_insurance => restrict_to: [operator, OWNER];
             set_close_factor =>restrict_to: [operator, OWNER];
 
+            borrow_variable => restrict_to: [protocol_caller, OWNER];
+            borrow_stable => restrict_to: [protocol_caller, OWNER];
+            extend_borrow => restrict_to: [protocol_caller, OWNER];
+            withdraw_collateral => restrict_to:[protocol_caller, OWNER];
+            liquidation => restrict_to:[protocol_caller, OWNER];
+
             supply => PUBLIC;
             withdraw => PUBLIC;
-            borrow_variable => PUBLIC;
-            borrow_stable => PUBLIC;
-            extend_borrow => PUBLIC;
-            withdraw_collateral => PUBLIC;
             repay => PUBLIC;
             addition_collateral => PUBLIC;
-            liquidation => PUBLIC;
             get_underlying_token => PUBLIC;
             get_cdp_resource_address => PUBLIC;
         }
@@ -92,7 +94,13 @@ mod cdp_mgr{
 
     impl CollateralDebtManager{
 
-        pub fn instantiate(admin_rule: AccessRule, pool_mgr_rule: AccessRule, price_oracle: Global<PriceOracle>)->(Global<CollateralDebtManager>, ResourceAddress){
+        /// Collateral Debt Position Manager
+        pub fn instantiate(
+            admin_rule: AccessRule, 
+            pool_mgr_rule: AccessRule,
+            caller_rule: AccessRule,
+            price_oracle: Global<PriceOracle>
+        )->(Global<CollateralDebtManager>, ResourceAddress){
             let (address_reservation, address) = Runtime::allocate_component_address(CollateralDebtManager::blueprint_id());
             let cdp_res_mgr = ResourceBuilder::new_integer_non_fungible::<CollateralDebtPosition>(OwnerRole::None)
                 .metadata(metadata!(init{
@@ -129,6 +137,7 @@ mod cdp_mgr{
             .roles(roles!{
                 admin => admin_rule.clone();
                 operator => pool_mgr_rule.clone();
+                protocol_caller => caller_rule.clone();
             }
             )
             .globalize();
@@ -144,8 +153,17 @@ mod cdp_mgr{
             liquidation_bonus: Decimal,
             insurance_ratio: Decimal,
             admin_rule: AccessRule,
+            protocol_caller: Option<ComponentAddress>
         ) -> ResourceAddress{
-            let pool_mgr_rule = rule!(require(global_caller(self.self_cmp_addr)));
+            let pool_mgr_rule = if protocol_caller.is_some(){
+                rule!(
+                    require(global_caller(self.self_cmp_addr)) ||
+                    require(global_caller(protocol_caller.unwrap()))
+                )
+            }
+            else{
+                rule!(require(global_caller(self.self_cmp_addr)))
+            };
             let (lend_res_pool, dx_token_addr) = LendResourcePool::instantiate(
                 underlying_token_addr, 
                 interest_model_cmp_addr,

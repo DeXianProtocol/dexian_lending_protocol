@@ -5,10 +5,12 @@ CALL_METHOD
 ;
 CALL_FUNCTION
     Address("${pkg}")
-    "LendingProtocol"
+    "DeXianProtocol"
     "instantiate"
+    Address("${keeper}")
     "${price_signer_pk}"
     30000u64
+    2016u64
 ;
 CALL_METHOD
     Address("${admin_account}")

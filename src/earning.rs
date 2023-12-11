@@ -19,17 +19,18 @@ mod staking_earning {
         methods {
             // new_pool => restrict_to: [admin, OWNER];
             // withdraw_fee => restrict_to: [admin, OWNER];  // withdraw_fee should restrict to Pool?
+            set_unstake_epoch_num => restrict_to: [operator, OWNER];
+            join => restrict_to: [operator, OWNER];
+            claim_xrd => restrict_to: [operator, OWNER];
+            redeem => restrict_to: [operator, OWNER];
             
-            join => PUBLIC;
-            claim_xrd => PUBLIC;
-            redeem => PUBLIC;
+            get_dse_token => PUBLIC;
         }
     }
 
     struct StakingEarning{
         validator_keeper: Global<ValidatorKeeper>,
         staking_pool: Global<StakingResourePool>,
-        lending_pool: Global<LendResourcePool>,
         claim_nft_map: HashMap<ResourceAddress, NonFungibleVault>,
         dse_token: ResourceAddress,
         // dx_token: ResourceAddress,
@@ -39,31 +40,23 @@ mod staking_earning {
 
     impl StakingEarning{
 
-        pub fn instantiate(lending_pool: Global<LendResourcePool>, unstake_epoch_num: u64) -> (Global<StakingEarning>, Bucket){
-            let admin_badge = ResourceBuilder::new_fungible(OwnerRole::None)
-                .divisibility(DIVISIBILITY_NONE)
-                .metadata(metadata!(
-                    init {
-                        "name" => "Admin Badge".to_owned(), locked;
-                        "description" => 
-                        "This is a DeXian StakingEarning admin badge used to authenticate the admin.".to_owned(), locked;
-                    }
-                ))
-                .mint_initial_supply(1);
-
-            let (address_reservation, component_address) =
-            Runtime::allocate_component_address(StakingEarning::blueprint_id());
-
-            let admin_rule = rule!(require(admin_badge.resource_address()));
-            let op_rule = rule!(require(global_caller(component_address)));
-            let (staking_pool,dse_token) = StakingResourePool::instantiate(XRD, admin_rule.clone(), op_rule.clone());
-            let validator_keeper = ValidatorKeeper::instantiate(admin_rule.clone(), admin_rule.clone(), op_rule.clone());
+        pub fn instantiate(
+            validator_keeper: Global<ValidatorKeeper>,
+            unstake_epoch_num: u64,
+            admin_rule: AccessRule,
+            op_rule: AccessRule
+        ) -> Global<StakingEarning>{
+            let (address_reservation, component_address) = Runtime::allocate_component_address(
+                StakingEarning::blueprint_id()
+            );
+            let caller_rule = rule!(require(global_caller(component_address)));
+            let (staking_pool,dse_token) = StakingResourePool::instantiate(XRD, admin_rule.clone(), caller_rule);
+            
 
             let component = Self{
                 claim_nft_map: HashMap::new(),
                 validator_keeper,
                 staking_pool,
-                lending_pool,
                 dse_token,
                 // dx_token,
                 unstake_epoch_num
@@ -75,13 +68,13 @@ mod staking_earning {
                 operator => op_rule.clone();
             })
             .globalize();
-            (component, admin_badge.into())
+            component
         }
 
         ///
         /// claim xrd with claimNFT
         /// 
-        pub fn claim_xrd(&mut self, validator_addr:ComponentAddress, claim_nft_bucket: Bucket) -> Bucket{
+        pub fn claim_xrd(&mut self, lending_pool: Global<LendResourcePool>, validator_addr:ComponentAddress, claim_nft_bucket: Bucket) -> Bucket{
             let nft_addr = claim_nft_bucket.resource_address();            
             let mut validator: Global<Validator> = Global::from(validator_addr);
 
@@ -95,10 +88,10 @@ mod staking_earning {
                     bucket.put(validator.claim_xrd(nft_bucket.take_non_fungible(nft_local_id).into()));
                 }
                 else{
-                    let (_, _, stable_rate) = self.lending_pool.get_interest_rate();
+                    let (_, _, stable_rate) = lending_pool.get_interest_rate();
                     let remain_epoch = unstake_data.claim_epoch.number() - current_epoch;
                     let principal = calc_principal(unstake_data.claim_amount, stable_rate, Decimal::from(EPOCH_OF_YEAR), remain_epoch);
-                    bucket.put(self.lending_pool.borrow_stable(principal, stable_rate));
+                    bucket.put(lending_pool.borrow_stable(principal, stable_rate));
                     let mut vault = Vault::new(nft_addr).as_non_fungible();
                     vault.put(nft_bucket.take_non_fungible(nft_local_id));
                     self.claim_nft_map.entry(nft_addr).and_modify(|v|{
@@ -115,7 +108,7 @@ mod staking_earning {
             self.staking_pool.contribute(bucket, validator_addr)
         }
 
-        pub fn redeem(&mut self, validator_addr: ComponentAddress,  bucket: Bucket, faster: bool) -> Bucket{
+        pub fn redeem(&mut self, lending_pool: Global<LendResourcePool>, validator_addr: ComponentAddress,  bucket: Bucket, faster: bool) -> Bucket{
             let res_addr = bucket.resource_address();
             let claim_nft_bucket = if res_addr == self.dse_token {
                  self.staking_pool.redeem(validator_addr, bucket)
@@ -126,12 +119,19 @@ mod staking_earning {
             };
             
             if faster {
-                self.claim_xrd(validator_addr, claim_nft_bucket)
+                self.claim_xrd(lending_pool, validator_addr, claim_nft_bucket)
             }
             else{
                 claim_nft_bucket
             }
-            
+        }
+
+        pub fn set_unstake_epoch_num(&mut self, unstake_epoch_num: u64){
+            self.unstake_epoch_num = unstake_epoch_num;
+        }
+
+        pub fn get_dse_token(&self) -> ResourceAddress{
+            self.dse_token
         }
 
     }
