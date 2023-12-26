@@ -1,0 +1,28 @@
+CALL_METHOD
+    Address("${account}")
+    "lock_fee"
+    Decimal("10")
+;
+CALL_METHOD
+  Address("${account}")
+  "withdraw"
+  Address("${dse}")
+  Decimal("${amount}")
+;
+TAKE_FROM_WORKTOP
+  Address("${dse}")
+  Decimal("${amount}")
+  Bucket("bucket1")
+;
+CALL_METHOD
+    Address("${lending_component}")
+    "redeem"
+    Address("${validator}")
+    Bucket("bucket1")
+    $faster
+;
+CALL_METHOD
+    Address("${account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;

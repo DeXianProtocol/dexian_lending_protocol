@@ -91,8 +91,15 @@ mod staking_pool {
             let lsu = validator.stake(bucket);
             let lsu_amount = lsu.amount();
 
-            self.lsu_map.entry(validator_addr).or_insert(Vault::new(lsu.resource_address())).put(lsu);
-            let last_lsu = self.lsu_map.get(&validator_addr).unwrap().amount();
+            let last_lsu = if self.lsu_map.contains_key(&validator_addr){
+                let v = self.lsu_map.get_mut(&validator_addr).unwrap();
+                v.put(lsu);
+                v.amount()
+            }
+            else{
+                self.lsu_map.insert(validator_addr.clone(), Vault::with_bucket(lsu));
+                lsu_amount
+            };
             self.validator_map.entry(validator_addr).and_modify(|stake_data|{
                 stake_data.last_staked = validator.get_redemption_value(last_lsu);
                 stake_data.last_stake_epoch = current_epoch;
@@ -117,7 +124,8 @@ mod staking_pool {
             let mut validator: Global<Validator> = Global::from(validator_addr);
             let lsu_value = validator.get_redemption_value(lsu.amount());
             
-            assert_amount(lsu_value, redeem_value);
+            // assert_amount(lsu_value, redeem_value);
+            assert!(lsu_value < redeem_value, "target value {} less than expect {}!", lsu_value, redeem_value);
             let lsu_index = lsu_value.checked_div(lsu.amount()).unwrap();
             let unstake_lsu_bucket = lsu.take_advanced(redeem_value.checked_div(lsu_index).unwrap(), WithdrawStrategy::Rounded(RoundingMode::ToZero));
             let claim_nft = validator.unstake(unstake_lsu_bucket);
