@@ -241,20 +241,21 @@ export pkg=$(echo $result | awk -F ": " '{print $2}')
 
 result=$(resim call-function $pkg "ValidatorKeeper" "instantiate")
 export keeper=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
-export admin_badge1=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
-export op_badge1=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $3}' | awk -F " " '{print $1}')
+export admin_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
+export op_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $3}' | awk -F " " '{print $1}')
 
 result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_interest.rtm)
 export def_interest_model=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
 
 export price_signer_pk=6d187b0f2e66d74410e92e2dc92a5141a55c241646ce87acbcad4ab413170f9b
-result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_lending_factory.rtm)
+result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_protocol.rtm)
 export lending_component=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
 export oracle=$(echo $result | grep "Component: "| awk -F "Component: " '{print $3}' | awk -F " " '{print $1}')
-export cdp_mgr=$(echo $result | grep "Component: "| awk -F "Component: " '{print $4}' | awk -F " " '{print $1}')
-export admin_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
-export op_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $3}' | awk -F " " '{print $1}')
-export cdp=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $4}' | awk -F " " '{print $1}')
+export dse_mgr=$(echo $result | grep "Component: "| awk -F "Component: " '{print $4}' | awk -F " " '{print $1}')
+export staking=$(echo $result | grep "Component: "| awk -F "Component: " '{print $5}' | awk -F " " '{print $1}')
+export cdp_mgr=$(echo $result | grep "Component: "| awk -F "Component: " '{print $6}' | awk -F " " '{print $1}')
+export dse=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
+export cdp=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $3}' | awk -F " " '{print $1}')
 
 resim run < ./docs/replace_holder.sh docs/transactions/set_price.rtm
 
@@ -268,6 +269,9 @@ export dx_usdt=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR
 result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_usdc_pool.rtm)
 export usdc_pool=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
 export dx_usdc=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}')
+
+export validator=component_sim1cps88mghrackj6pcqmzsax52wwdgs9t67zrv508jdxpdn9eg5v3h3l
+resim run < ./docs/replace_holder.sh docs/transactions/fill_keeper.rtm
 
 
 # supply

@@ -115,7 +115,8 @@ mod validator_keeper{
         }
 
         pub fn fill_validator_staking(&mut self, validator_addr: ComponentAddress, stake_data_vec: Vec<StakeData>){
-            self.validator_map.entry(validator_addr).or_insert(stake_data_vec);
+            self.validator_map.entry(validator_addr).or_insert(stake_data_vec.clone());
+            info!("{}: {},{},{}", Runtime::bech32_encode_address(validator_addr), stake_data_vec[0].last_lsu, stake_data_vec[0].last_staked, stake_data_vec[0].last_stake_epoch);
         }
 
 
@@ -223,7 +224,7 @@ mod validator_keeper{
                 .fold((Decimal::ZERO, Decimal::ZERO), |(sum, count), apy| {
                     (sum + apy, count + Decimal::ONE)
                 });
-        
+            info!("sum:{}, count:{}", sum, count);
             if count.is_zero() {
                 Decimal::ZERO
             } else {
@@ -236,7 +237,8 @@ mod validator_keeper{
             let latest = vec.first()?;
             let latest_week_index = Self::get_week_index(latest.last_stake_epoch);
         
-            if latest_week_index != current_week_index {
+            // The last entry must be within the last week (inclusive).
+            if latest_week_index < current_week_index -1 {
                 return None;
             }
         
@@ -248,7 +250,10 @@ mod validator_keeper{
                     let previous_index = previous.last_staked.checked_div(previous.last_lsu)?;
                     let delta_index = latest_index.checked_sub(previous_index)?;
                     let delta_epoch = Decimal::from(latest.last_stake_epoch - previous.last_stake_epoch);
-                    return Some((delta_index).checked_mul(Decimal::from(EPOCH_OF_YEAR)).unwrap().checked_div(delta_epoch).unwrap());
+                    return Some(
+                        (delta_index).checked_mul(Decimal::from(EPOCH_OF_YEAR)).unwrap()
+                        .checked_div(delta_epoch).unwrap()
+                    );
                 }
             }
         
