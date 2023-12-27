@@ -66,12 +66,12 @@ pub fn get_weight_rate(amount: Decimal, rate: Decimal, new_amount:Decimal, new_r
         .checked_div(latest_amount).unwrap()
 }
 
-#[warn(dead_code)]
 pub fn calc_principal(amount: Decimal,  apy: Decimal, epoch_of_year: Decimal, delta_epoch: u64) -> Decimal{
     amount.checked_div(
         Decimal::ONE.checked_add(
             apy.checked_div(epoch_of_year).unwrap()
-        ).unwrap().checked_powi(delta_epoch as i64).unwrap()
+        ).unwrap()
+        .checked_powi(delta_epoch as i64).unwrap()
     ).unwrap()
 }
 
