@@ -143,9 +143,11 @@ mod staking_pool {
             let unstake_data = ResourceManager::from_address(claim_nft.resource_address()).get_non_fungible_data::<UnstakeData>(&claim_nft_id);
 
             self.validator_map.entry(validator_addr).and_modify(|stake_data|{
-                stake_data.last_staked = lsu_value.checked_sub(unstake_data.claim_amount).unwrap();
+                stake_data.last_staked = lsu_value.checked_sub(redeem_value).unwrap();
                 stake_data.last_stake_epoch = Runtime::current_epoch().number();
             });
+
+            self.staking_unit_res_mgr.burn(bucket);
 
             (claim_nft, claim_nft_id, unstake_data.claim_amount)
             
