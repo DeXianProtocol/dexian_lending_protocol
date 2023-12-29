@@ -76,32 +76,31 @@ mod staking_earning {
             let nft_addr = claim_nft_bucket.resource_address();            
             let mut validator: Global<Validator> = Global::from(validator_addr);
 
-            let mut bucket = Bucket::new(XRD);
-            let mut claim_amount = Decimal::ZERO;
-            let res_mgr = ResourceManager::from(nft_addr);
+            let res_mgr = ResourceManager::from(nft_addr.clone());
+            let nft_bucket = claim_nft_bucket.as_non_fungible();
             let current_epoch = Runtime::current_epoch().number();
-            let mut nft_bucket = claim_nft_bucket.as_non_fungible();
-            nft_bucket.non_fungible_local_ids().iter().for_each(|nft_local_id|{
-                let unstake_data = res_mgr.get_non_fungible_data::<UnstakeData>(nft_local_id);
-                claim_amount = claim_amount.checked_add(unstake_data.claim_amount).unwrap();
-                let claim_epoch = unstake_data.claim_epoch.number();
-                if claim_epoch <= current_epoch {
-                    bucket.put(validator.claim_xrd(nft_bucket.take_non_fungible(nft_local_id).into()));
+            let nft_id = nft_bucket.non_fungible_local_id();
+            let unstake_data = res_mgr.get_non_fungible_data::<UnstakeData>(&nft_id);
+            let claim_amount = unstake_data.claim_amount;
+            let claim_epoch = unstake_data.claim_epoch.number();
+            if claim_epoch <= current_epoch {
+                (validator.claim_xrd(claim_nft_bucket), claim_amount)
+            }
+            else{
+                let (_, _, stable_rate) = cdp_mgr.get_interest_rate(XRD);
+                let remain_epoch = claim_epoch - current_epoch;
+                let principal = calc_principal(unstake_data.claim_amount, stable_rate, Decimal::from(EPOCH_OF_YEAR), remain_epoch);
+                let bucket = cdp_mgr.staking_borrow(XRD, principal, stable_rate);
+                
+                if self.claim_nft_map.contains_key(&nft_addr) {
+                    self.claim_nft_map.get_mut(&nft_addr).unwrap().put(nft_bucket);
                 }
                 else{
-                    let (_, _, stable_rate) = cdp_mgr.get_interest_rate(XRD);
-                    let remain_epoch = claim_epoch - current_epoch;
-                    let principal = calc_principal(unstake_data.claim_amount, stable_rate, Decimal::from(EPOCH_OF_YEAR), remain_epoch);
-                    bucket.put(cdp_mgr.staking_borrow(XRD, principal, stable_rate));
-                    let mut vault = Vault::new(nft_addr).as_non_fungible();
-                    vault.put(nft_bucket.take_non_fungible(nft_local_id));
-                    self.claim_nft_map.entry(nft_addr).and_modify(|v|{
-                        v.put(nft_bucket.take_non_fungible(nft_local_id));
-                    }).or_insert(vault);
-                }
-            });
+                    self.claim_nft_map.insert(nft_addr.clone(), NonFungibleVault::with_bucket(nft_bucket));
+                }   
 
-            (bucket, claim_amount)
+                (bucket, claim_amount)
+            }
         }
 
         pub fn join(&mut self, validator_addr: ComponentAddress, bucket: Bucket) -> Bucket{
