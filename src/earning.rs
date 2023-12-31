@@ -8,7 +8,7 @@ use crate::validator::keeper::validator_keeper::ValidatorKeeper;
 
 
 #[blueprint]
-#[events(JoinEvent, FasterRedeemEvent, NormalRedeemEvent, NftFasterRedeemEvent)]
+#[events(JoinEvent, FasterRedeemEvent, NormalRedeemEvent, NftFasterRedeemEvent, ClaimXrdEvent)]
 mod staking_earning {
 
     enable_method_auth! {
@@ -86,7 +86,13 @@ mod staking_earning {
             if claim_epoch <= current_epoch {
                 let bucket = validator.claim_xrd(claim_nft_bucket);
                 Runtime::emit_event(ClaimXrdEvent{
-                    
+                    rate: Decimal::ZERO,
+                    receive: bucket.amount(),
+                    nft_addr,
+                    nft_id,
+                    claim_amount,
+                    claim_epoch,
+                    current_epoch
                 });
                 (bucket, claim_amount)
             }
@@ -102,7 +108,15 @@ mod staking_earning {
                 else{
                     self.claim_nft_map.insert(nft_addr.clone(), NonFungibleVault::with_bucket(nft_bucket));
                 }   
-
+                Runtime::emit_event(ClaimXrdEvent{
+                    rate: stable_rate,
+                    receive: bucket.amount(),
+                    nft_addr,
+                    nft_id,
+                    claim_amount,
+                    claim_epoch,
+                    current_epoch
+                });
                 (bucket, claim_amount)
             }
         }
@@ -210,5 +224,11 @@ pub struct NftFasterRedeemEvent{
 
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct ClaimXrdEvent{
-
+    pub rate: Decimal,
+    pub receive: Decimal,
+    pub nft_addr: ResourceAddress,
+    pub nft_id: NonFungibleLocalId,
+    pub claim_amount: Decimal,
+    pub claim_epoch: u64,
+    pub current_epoch: u64
 }
