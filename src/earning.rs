@@ -84,7 +84,11 @@ mod staking_earning {
             let claim_amount = unstake_data.claim_amount;
             let claim_epoch = unstake_data.claim_epoch.number();
             if claim_epoch <= current_epoch {
-                (validator.claim_xrd(claim_nft_bucket), claim_amount)
+                let bucket = validator.claim_xrd(claim_nft_bucket);
+                Runtime::emit_event(ClaimXrdEvent{
+                    
+                });
+                (bucket, claim_amount)
             }
             else{
                 let (_, _, stable_rate) = cdp_mgr.get_interest_rate(XRD);
@@ -202,4 +206,9 @@ pub struct NftFasterRedeemEvent{
     pub validator_addr: ComponentAddress,
     pub xrd_amount: Decimal,
     pub fee: Decimal
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct ClaimXrdEvent{
+
 }
