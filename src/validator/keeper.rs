@@ -27,6 +27,7 @@ pub struct UnstakeData {
 
 
 #[blueprint]
+#[events(DebugGetApy, DebugGetApy2)]
 mod validator_keeper{
 
     enable_method_auth!{
@@ -38,6 +39,7 @@ mod validator_keeper{
             // admin
             fill_validator_staking => restrict_to: [admin, OWNER];
             log_validator_staking => restrict_to: [admin, OWNER];
+            insert_validator_staking => restrict_to: [admin, OWNER];
             // op
             register_validator_address => restrict_to: [operator, OWNER];
 
@@ -119,6 +121,11 @@ mod validator_keeper{
             info!("{}: {},{},{}", Runtime::bech32_encode_address(validator_addr), stake_data_vec[0].last_lsu, stake_data_vec[0].last_staked, stake_data_vec[0].last_stake_epoch);
         }
 
+        pub fn insert_validator_staking(&mut self, validator_addr: ComponentAddress, index:usize,  stake_data: StakeData){
+            assert!(self.validator_map.contains_key(&validator_addr), "unknown validator");
+            self.validator_map.get_mut(&validator_addr).unwrap().insert(index, stake_data);
+        }
+
 
         pub fn log_validator_staking(&mut self, add_validator_list: Vec<ComponentAddress>, remove_validator_list: Vec<ComponentAddress>) {
             let current_epoch = Runtime::current_epoch().number();
@@ -175,7 +182,6 @@ mod validator_keeper{
                 if current_week_index > last_index {
                     vec.insert(0, Self::new_stake_data(last_lsu, last_staked, current_epoch));
                     while vec.capacity() > RESERVE_WEEKS {
-                        // queue.pop_back();
                         vec.remove(vec.capacity()-1);
                     }
                 }
@@ -225,6 +231,10 @@ mod validator_keeper{
                     (sum + apy, count + Decimal::ONE)
                 });
             info!("sum:{}, count:{}", sum, count);
+            Runtime::emit_event(DebugGetApy2{
+                sum,
+                count
+            });
             if count.is_zero() {
                 Decimal::ZERO
             } else {
@@ -239,6 +249,15 @@ mod validator_keeper{
         
             // The last entry must be within the last week (inclusive).
             if latest_week_index < current_week_index -1 {
+                Runtime::emit_event(DebugGetApy{
+                    validator: _validator_addr.clone(),
+                    last_epoch: latest.last_stake_epoch,
+                    latest_index: Decimal::ZERO,
+                    previous_index: Decimal::ZERO,
+                    delta_epoch: Decimal::ZERO,
+                    current_week_index,
+                    latest_week_index
+                });
                 return None;
             }
         
@@ -250,6 +269,15 @@ mod validator_keeper{
                     let previous_index = previous.last_staked.checked_div(previous.last_lsu)?;
                     let delta_index = latest_index.checked_sub(previous_index)?;
                     let delta_epoch = Decimal::from(latest.last_stake_epoch - previous.last_stake_epoch);
+                    Runtime::emit_event(DebugGetApy{
+                        validator: _validator_addr.clone(),
+                        last_epoch: latest.last_stake_epoch,
+                        current_week_index,
+                        latest_week_index,
+                        latest_index,
+                        previous_index,
+                        delta_epoch
+                    });
                     return Some(
                         (delta_index).checked_mul(Decimal::from(EPOCH_OF_YEAR)).unwrap()
                         .checked_div(delta_epoch).unwrap()
@@ -262,4 +290,21 @@ mod validator_keeper{
 
     }
 
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct DebugGetApy{
+    pub validator: ComponentAddress,
+    pub last_epoch: u64,
+    pub current_week_index: usize,
+    pub latest_week_index: usize,
+    pub latest_index: Decimal,
+    pub previous_index: Decimal,
+    pub delta_epoch: Decimal
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct DebugGetApy2{
+    pub sum: Decimal,
+    pub count: Decimal
 }

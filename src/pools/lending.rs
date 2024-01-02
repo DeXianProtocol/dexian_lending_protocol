@@ -315,12 +315,12 @@ mod lend_pool {
             )
         }
 
-        pub fn get_interest_rate(&self) -> (Decimal, Decimal, Decimal){
+        pub fn get_interest_rate(&self, stable_borrow_amount: Decimal) -> (Decimal, Decimal, Decimal){
             let (supply_index, variable_borrow_index) = self.get_current_index();
             // This supply could be equal to zero.
             let supply: Decimal = self.get_deposit_share_quantity().checked_mul(supply_index).unwrap();
             let variable_borrow = self.get_variable_share_quantity().checked_mul(variable_borrow_index).unwrap();
-            let stable_borrow = self.get_stable_loan_value();
+            let stable_borrow = self.get_stable_loan_value().checked_add(stable_borrow_amount).unwrap();
 
             self.calc_interest_rate(supply, variable_borrow, stable_borrow)
         }

@@ -97,7 +97,7 @@ mod staking_earning {
                 (bucket, claim_amount)
             }
             else{
-                let (_, _, stable_rate) = cdp_mgr.get_interest_rate(XRD);
+                let (_, stable_rate, _) = cdp_mgr.get_interest_rate(XRD, unstake_data.claim_amount);
                 let remain_epoch = claim_epoch - current_epoch;
                 let principal = calc_principal(unstake_data.claim_amount, stable_rate, Decimal::from(EPOCH_OF_YEAR), remain_epoch);
                 let bucket = cdp_mgr.staking_borrow(XRD, principal, stable_rate);

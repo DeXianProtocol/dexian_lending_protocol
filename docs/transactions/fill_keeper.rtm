@@ -20,3 +20,9 @@ CALL_METHOD
         Tuple(Decimal("100091982.656489868013368137"),Decimal("100678206.639740363535715291"),16128u64)
     )
 ;
+CALL_METHOD
+    Address("${keeper}")
+    "log_validator_staking"
+    Array<Address>()
+    Array<Address>()
+;

@@ -195,10 +195,10 @@ mod cdp_mgr{
             lending_pool.borrow_stable(borrow_amount, stable_rate)
         }
 
-        pub fn get_interest_rate(&self, underlying_token_addr: ResourceAddress) -> (Decimal, Decimal, Decimal){
+        pub fn get_interest_rate(&self, underlying_token_addr: ResourceAddress, stable_borrow_amount:Decimal) -> (Decimal, Decimal, Decimal){
             assert!(self.pools.contains_key(&underlying_token_addr), "There is no pool of funds corresponding to the assets!");
             let lending_pool = self.pools.get(&underlying_token_addr).unwrap();
-            lending_pool.get_interest_rate()
+            lending_pool.get_interest_rate(stable_borrow_amount)
         }
 
         pub fn set_close_factor(&mut self, new_close_factor: Decimal){
@@ -274,7 +274,7 @@ mod cdp_mgr{
             
             self.put_collateral_vault(dx_bucket);
             let lending_pool = self.pools.get_mut(&borrow_token).unwrap();
-            let (_variable_rate,stable_rate,_supply_rate) = lending_pool.get_interest_rate();
+            let (_variable_rate,stable_rate,_supply_rate) = lending_pool.get_interest_rate(borrow_amount);
             let borrow_bucket = lending_pool.borrow_stable(borrow_amount, stable_rate);
             
             //mint cdp
@@ -315,7 +315,7 @@ mod cdp_mgr{
                 info!("exist stable: {}:{},{},{}", borrow_token.to_hex(), cdp_data.borrow_amount, interest, borrow_intent);
                 assert_amount(borrow_intent, max_loan_amount);
                 
-                let (_variable_rate, stable_rate, _supply_rate)  = borrow_pool.get_interest_rate();
+                let (_variable_rate, stable_rate, _supply_rate)  = borrow_pool.get_interest_rate(amount);
                 let borrow_bucket = borrow_pool.borrow_stable(amount, stable_rate);
                 cdp_avg_rate = get_weight_rate(cdp_data.borrow_amount.checked_add(interest).unwrap(), cdp_data.stable_rate, amount, stable_rate);
 

@@ -7,6 +7,7 @@ pub enum InterestModel {
 }
 
 #[blueprint]
+#[events(DebugGetInterestRateEvent)]
 mod def_interest_model{
     
     struct DefInterestModel{
@@ -40,6 +41,12 @@ mod def_interest_model{
             let apy = self.get_variable_interest_rate(borrow_ratio, model);
             let validator_apy = self.validator_keeper
                 .call_raw::<Decimal>("get_active_set_apy", scrypto_args!());
+            Runtime::emit_event(DebugGetInterestRateEvent{
+                variable_rate: apy,
+                stable_ratio: _stable_ratio,
+                borrow_ratio,
+                validator_apy
+            });
             (apy, if apy > validator_apy {apy} else {validator_apy})
         }
 
@@ -66,4 +73,12 @@ mod def_interest_model{
     }
 
 
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct DebugGetInterestRateEvent{
+    pub borrow_ratio: Decimal,
+    pub stable_ratio: Decimal,
+    pub variable_rate: Decimal,
+    pub validator_apy: Decimal
 }
