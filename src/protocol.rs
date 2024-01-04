@@ -12,7 +12,7 @@ use crate::validator::keeper::validator_keeper::ValidatorKeeper;
 mod dexian_protocol{
 
     extern_blueprint!(
-        "package_tdx_2_1pkttmrv706k5ydc4nhz4p4wjdu8haql2ractmjrnv39zhznre0qrsl",
+        "package_sim1p5h5gldmvn863xwm3gezgflgf7le2nj7yq9aujx0gv3myj8f8c0slg",
         LendingProtocol {
             fn repay(&mut self, repay_bucket: Bucket, id: u64) -> (Bucket,Decimal);
     

@@ -19,4 +19,5 @@ CALL_METHOD
     Decimal("0.7")
     Decimal("0.07")
     Decimal("0.25")
+    Decimal("0.001")
 ;
