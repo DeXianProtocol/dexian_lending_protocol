@@ -17,10 +17,12 @@ mod lend_pool {
             borrow_stable => restrict_to: [operator];
             repay_stable => restrict_to: [operator];
             repay_variable => restrict_to: [operator];
+            borrow_flashloan => restrict_to:[operator];
+            repay_flashloan => restrict_to:[operator];
             
             //business method
             add_liquity => PUBLIC;
-            remove_liquity => PUBLIC;
+            remove_liquity => PUBLIC; 
 
             // readonly
             get_current_index => PUBLIC;
@@ -33,6 +35,7 @@ mod lend_pool {
             get_last_update => PUBLIC;
             get_redemption_value => PUBLIC;
             get_underlying_value => PUBLIC;
+            get_flashloan_fee_ratio => PUBLIC;
         }
     }
     
@@ -42,7 +45,7 @@ mod lend_pool {
         interest_model: InterestModel,
         
         underlying_token: ResourceAddress,
-        deposit_share_token: ResourceAddress,
+        deposit_share_res_mgr: ResourceManager,
         
         vault: Vault,
         insurance_balance: Decimal,
@@ -53,6 +56,7 @@ mod lend_pool {
         last_update: u64,
 
         insurance_ratio: Decimal,
+        flashloan_fee_ratio: Decimal,
         
         deposit_interest_rate: Decimal,
         
@@ -72,6 +76,7 @@ mod lend_pool {
             interest_model_cmp_addr: ComponentAddress,
             interest_model: InterestModel,
             insurance_ratio: Decimal,
+            flashloan_fee_ratio: Decimal,
             admin_rule: AccessRule,
             pool_mgr_rule: AccessRule
         ) -> (Global<LendResourcePool>, ResourceAddress) {
@@ -97,10 +102,8 @@ mod lend_pool {
                 })
                 .create_with_no_initial_supply();
 
-            let deposit_share_addr = deposit_share_res_mgr.address();
             let component = Self {
                 interest_model_cmp: Global::from(interest_model_cmp_addr),
-                deposit_share_token: deposit_share_addr,
                 deposit_index: Decimal::ONE,
                 loan_index: Decimal::ONE,
                 last_update: 0u64,
@@ -114,7 +117,9 @@ mod lend_pool {
                 insurance_balance: Decimal::ZERO,
                 interest_model,
                 insurance_ratio,
-                underlying_token
+                underlying_token,
+                flashloan_fee_ratio,
+                deposit_share_res_mgr
             }.instantiate()
             .prepare_to_globalize(OwnerRole::Fixed(admin_rule.clone()))
             .roles(
@@ -126,7 +131,7 @@ mod lend_pool {
             .with_address(address_reservation)
             .globalize();
             
-            (component, deposit_share_addr)
+            (component, deposit_share_res_mgr.address())
 
         }
 
@@ -148,10 +153,10 @@ mod lend_pool {
             self.update_index();
             
             self.vault.put(bucket);
-            let deposit_share_res_mgr = ResourceManager::from_address(self.deposit_share_token);
-            let divisibility = deposit_share_res_mgr.resource_type().divisibility().unwrap();
+            
+            let divisibility = self.deposit_share_res_mgr.resource_type().divisibility().unwrap();
             let mint_amount = floor(deposit_amount.checked_div(self.deposit_index).unwrap(), divisibility);
-            let dx_bucket = deposit_share_res_mgr.mint(mint_amount);
+            let dx_bucket = self.deposit_share_res_mgr.mint(mint_amount);
             
             info!("after interest rate:{}, {}, index:{}, {}", self.variable_loan_interest_rate, self.stable_loan_interest_rate, self.deposit_index, self.loan_index);
             self.update_interest_rate();
@@ -160,7 +165,7 @@ mod lend_pool {
 
         }
         pub fn remove_liquity(&mut self, bucket: Bucket) -> Bucket{
-            assert_resource(&bucket.resource_address(), &self.deposit_share_token);
+            assert_resource(&bucket.resource_address(), &self.deposit_share_res_mgr.address());
 
             self.update_index();
 
@@ -168,8 +173,7 @@ mod lend_pool {
             let divisibility = get_divisibility(self.underlying_token).unwrap();
             let withdraw_amount = floor(self.get_redemption_value(burn_amount), divisibility);
             assert_vault_amount(&self.vault, withdraw_amount);
-            let deposit_share_res_mgr = ResourceManager::from_address(self.deposit_share_token);
-            deposit_share_res_mgr.burn(bucket);
+            self.deposit_share_res_mgr.burn(bucket);
 
             info!("after interest rate:{}, {}, index:{}, {}", self.variable_loan_interest_rate, self.stable_loan_interest_rate, self.deposit_index, self.loan_index);
             self.update_interest_rate();
@@ -217,7 +221,7 @@ mod lend_pool {
             if repay_opt.is_some_and(|uplimit| uplimit < amount){
                 amount = repay_opt.unwrap();
             }
-            let loan_share = floor_by_resource(self.deposit_share_token, amount.checked_div(self.loan_index).unwrap());
+            let loan_share = floor(amount.checked_div(self.loan_index).unwrap(), self.deposit_share_res_mgr.resource_type().divisibility().unwrap());
 
             self.variable_loan_share_quantity = self.variable_loan_share_quantity.checked_sub(loan_share).unwrap();
             self.vault.put(repay_bucket.take(amount));
@@ -297,6 +301,31 @@ mod lend_pool {
 
             (repay_bucket, repay_amount, repay_in_borrow, interest, current_epoch_at)
 
+        }
+
+        pub fn borrow_flashloan(&mut self, amount: Decimal) -> Bucket {
+            assert_vault_amount(&self.vault, amount);
+            self.vault.take_advanced(amount, WithdrawStrategy::Rounded(RoundingMode::ToZero))
+        }
+
+        pub fn repay_flashloan(&mut self, mut repay_bucket: Bucket, amount: Decimal, fee: Decimal) -> Bucket{
+            let total = ceil_by_resource(self.underlying_token.clone(), amount.checked_add(fee).unwrap());
+            assert_amount(repay_bucket.amount(), total);
+            self.vault.put(repay_bucket.take(total));
+            if fee > Decimal::ZERO {
+                self.update_index();
+                
+                let (supply_index, _) = self.get_current_index();
+                let supply: Decimal = self.get_deposit_share_quantity().checked_mul(supply_index).unwrap();
+                
+                let insurance = fee.checked_mul(self.insurance_ratio).unwrap();
+                self.insurance_balance = self.insurance_balance.checked_add(insurance).unwrap();
+                let cumulate_to_supply_index = fee.checked_sub(insurance).unwrap().checked_div(supply).unwrap();
+                self.deposit_index = supply_index.checked_add(cumulate_to_supply_index).unwrap();
+
+                self.update_interest_rate();
+            }
+            repay_bucket
         }
 
         pub fn get_current_index(&self) -> (Decimal, Decimal){
@@ -410,9 +439,12 @@ mod lend_pool {
             self.last_update
         }
 
+        pub fn get_flashloan_fee_ratio(&self) -> Decimal{
+            self.flashloan_fee_ratio
+        }
+
         pub fn get_deposit_share_quantity(&self) -> Decimal{
-            let res_mgr = ResourceManager::from_address(self.deposit_share_token);
-            res_mgr.total_supply().unwrap()
+            self.deposit_share_res_mgr.total_supply().unwrap()
         }
 
         /// .

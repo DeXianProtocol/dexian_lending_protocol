@@ -1,15 +1,37 @@
 use scrypto::prelude::*;
 use crate::interest::InterestModel;
 use crate::oracle::oracle::PriceOracle;
+use crate::cdp::CollateralDebtPosition;
 use crate::cdp::cdp_mgr::CollateralDebtManager;
 use crate::earning::staking_earning::StakingEarning;
 use crate::validator::keeper::validator_keeper::ValidatorKeeper;
 
 
-
 #[blueprint]
 #[events(SupplyEvent, WithdrawEvent, CreateCDPEvent, ExtendBorrowEvent, AdditionCollateralEvent, WithdrawCollateralEvent, RepayEvent, LiquidationEvent)]
 mod dexian_protocol{
+
+    extern_blueprint!(
+        "package_tdx_2_1pkttmrv706k5ydc4nhz4p4wjdu8haql2ractmjrnv39zhznre0qrsl",
+        LendingProtocol {
+            fn repay(&mut self, repay_bucket: Bucket, id: u64) -> (Bucket,Decimal);
+    
+            fn withdraw_collateral(&mut self,
+                cdp: Bucket,
+                amount: Decimal,
+                price1: String,
+                quote1: ResourceAddress,
+                timestamp1: u64,
+                signature1: String,
+                price2: Option<String>,
+                quote2: Option<ResourceAddress>,
+                timestamp2: Option<u64>,
+                signature2: Option<String>
+            ) -> (Bucket, Bucket);
+    
+            fn withdraw(&mut self, bucket: Bucket) -> Bucket;
+        }
+    );
 
     enable_method_auth! {
         roles{
@@ -32,6 +54,11 @@ mod dexian_protocol{
             addition_collateral => PUBLIC;
             liquidation => PUBLIC;
 
+            //flashloan
+            migrate_cdp => PUBLIC;
+            borrow_flashloan => PUBLIC;
+            repay_flashloan => PUBLIC;
+
             //staking earning
             join => PUBLIC;
             redeem => PUBLIC;
@@ -45,18 +72,18 @@ mod dexian_protocol{
         dse_res_addr: ResourceAddress,
         cdp_res_addr: ResourceAddress,
         admin_rule: AccessRule,
-        op_rule: AccessRule
+        op_rule: AccessRule,
     }
 
     impl DeXianProtocol{
 
         pub fn instantiate(
-            validator_keeper: Global<ValidatorKeeper>, 
+            validator_keeper: Global<ValidatorKeeper>,
             admin_rule: AccessRule,
             op_res_addr: ResourceAddress,
             price_signer_pk: String, 
             price_validity_ms: u64,
-            unstake_epoch_num: u64
+            unstake_epoch_num: u64,
         ) -> (
             Global<DeXianProtocol>,
             Global<PriceOracle>,
@@ -64,31 +91,6 @@ mod dexian_protocol{
             ResourceAddress,
             ResourceAddress
         ){
-            
-            // let admin_badge = ResourceBuilder::new_fungible(OwnerRole::None)
-            //     .divisibility(DIVISIBILITY_NONE)
-            //     .metadata(metadata!(
-            //         init {
-            //             "name" => "Admin Badge".to_owned(), locked;
-            //             "description" => 
-            //             "This is a DeXian Lending Protocol admin badge used to authenticate the admin.".to_owned(), locked;
-            //         }
-            //     ))
-            //     .mint_initial_supply(1);
-            // let op_badge = ResourceBuilder::new_fungible(OwnerRole::None)
-            //     .divisibility(DIVISIBILITY_NONE)
-            //     .metadata(metadata!(
-            //         init {
-            //             "name" => "Operator Badge".to_owned(), locked;
-            //             "description" => 
-            //             "This is a DeXian Lending Protocol operator badge used to authenticate the operator.".to_owned(), locked;
-            //         }
-            //     ))
-            //     .mint_initial_supply(1);
-            
-            // let admin_badge_addr = admin_badge.resource_address();
-            // let op_badge_addr = op_badge.resource_address();
-
             let (address_reservation, component_address) =
             Runtime::allocate_component_address(DeXianProtocol::blueprint_id());
 
@@ -145,7 +147,8 @@ mod dexian_protocol{
             ltv: Decimal,
             liquidation_threshold: Decimal,
             liquidation_bonus: Decimal,
-            insurance_ratio: Decimal
+            insurance_ratio: Decimal,
+            flashloan_fee_ratio: Decimal
         ) -> ResourceAddress {
             self.cdp_mgr.new_pool(
                 underlying_token_addr,
@@ -155,6 +158,7 @@ mod dexian_protocol{
                 liquidation_threshold, 
                 liquidation_bonus, 
                 insurance_ratio, 
+                flashloan_fee_ratio,
                 self.admin_rule.clone(), 
                 if underlying_token_addr == XRD {
                     Some(self.staking_mgr.address().into())
@@ -331,6 +335,43 @@ mod dexian_protocol{
                 debt_to_cover
             });
             (underlying_bucket,refund_bucket)
+        }
+
+        pub fn migrate_cdp(&mut self, 
+            cdp: Bucket, id: u64, repay_amount: Decimal, withdraw_collateral_amount: Decimal,
+            price1: String, quote1: ResourceAddress, timestamp1: u64, signature1: String,
+            price2: Option<String>, quote2: Option<ResourceAddress>, timestamp2: Option<u64>, signature2: Option<String>
+        )->(Bucket, Bucket, Bucket){
+            let mut lending_factory : Global<LendingProtocol> = global_component!(
+                LendingProtocol,
+                "component_tdx_2_1cp5myuprxam5a7hayygh4vx3l6dzwdlx7g20nqnzdqlck6gf40zk0f"
+            );
+            
+            let cdp_id = cdp.as_non_fungible().non_fungible_local_id();
+            let cdp_res_mgr = ResourceManager::from(cdp.resource_address());
+            let cdp_data = cdp_res_mgr.get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
+            let borrow_token = cdp_data.borrow_token.clone();
+            // let lend_pool = self.get_lend_resource_pool(borrow_token);
+            // let rapay_amount = if cdp_data.is_stable {
+            //     lend_pool.get_stable_interest(cdp_data.borrow_amount, cdp_data.last_update_epoch, cdp_data.stable_rate)
+            // } else {
+            //     lend_pool.get_variable_interest(cdp_data.normalized_amount);
+            // };
+            let (repay_bucket, flashloan_bucket) = self.cdp_mgr.borrow_flashloan(borrow_token, repay_amount);
+            let (_remain_bucket, _actual) = lending_factory.repay(repay_bucket, id);
+            let (collateral_bucket, cdp_bucket) = lending_factory.withdraw_collateral(cdp, withdraw_collateral_amount, price1.clone(), quote1, timestamp1, signature1.clone(), price2.clone(), quote2, timestamp2, signature2.clone());
+            let dx_bucket = self.cdp_mgr.supply(collateral_bucket);
+            let (borrow_bucket, new_cdp) = self.borrow_variable(dx_bucket, borrow_token, repay_amount, price1, quote1, timestamp1, signature1, price2, quote2, timestamp2, signature2);
+            let flashloan_remain = self.repay_flashloan(borrow_bucket, flashloan_bucket);
+            (flashloan_remain, cdp_bucket, new_cdp)
+        }
+
+        pub fn borrow_flashloan(&mut self, res_addr: ResourceAddress, amount: Decimal) -> (Bucket, Bucket){
+            self.cdp_mgr.borrow_flashloan(res_addr, amount)
+        }
+
+        pub fn repay_flashloan(&mut self, repay_bucket: Bucket, flashloan: Bucket) -> Bucket{
+            self.cdp_mgr.repay_flashloan(repay_bucket, flashloan)
         }
 
         pub fn withdraw_insurance(&mut self, underlying_token_addr: ResourceAddress, amount: Decimal) -> Bucket{

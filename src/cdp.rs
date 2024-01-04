@@ -4,6 +4,12 @@ use crate::interest::InterestModel;
 use crate::oracle::oracle::PriceOracle;
 use crate::utils::*;
 
+#[derive(ScryptoSbor, NonFungibleData)]
+pub struct FlashLoanData{
+    pub res_addr: ResourceAddress,
+    pub amount: Decimal,
+    pub fee: Decimal
+}
 
 #[derive(ScryptoSbor, NonFungibleData)]
 pub struct CollateralDebtPosition{
@@ -66,6 +72,9 @@ mod cdp_mgr{
 
             staking_borrow => restrict_to: [protocol_caller, OWNER];
 
+            borrow_flashloan => PUBLIC;
+            repay_flashloan => PUBLIC;
+            migrate_flashloan => PUBLIC;
             supply => PUBLIC;
             withdraw => PUBLIC;
             repay => PUBLIC;
@@ -92,7 +101,11 @@ mod cdp_mgr{
         cdp_id_counter: u64,
         self_cmp_addr: ComponentAddress,
         // close factor for liquidation
-        close_factor_percent: Decimal
+        close_factor_percent: Decimal,
+        /// flashloan NFT resource manager
+        transient_nft_res_mgr: ResourceManager,
+        // flashloan NFT counter
+        transient_id_counter: u64
     }
 
     impl CollateralDebtManager{
@@ -123,6 +136,25 @@ mod cdp_mgr{
                     non_fungible_data_updater_updater => rule!(deny_all);
                 ))
                 .create_with_no_initial_supply();
+
+            let transient_nft_res_mgr = ResourceBuilder::new_integer_non_fungible::<FlashLoanData>(
+                OwnerRole::Fixed(admin_rule.clone())
+            ).metadata(metadata!{
+                init{
+                    "name"=> "dxLoanNFT", locked;
+                    "description" => "DeXian FlashLoan NFT", locked;
+                    "dapp_definitions" => "DeXian Protocol", locked;
+                }
+            }).mint_roles(mint_roles!(
+                minter => rule!(require(global_caller(address)));
+                minter_updater => rule!(deny_all);
+            )).burn_roles(burn_roles!(
+                burner => rule!(require(global_caller(address)));
+                burner_updater => rule!(deny_all);
+            )).deposit_roles(deposit_roles!(
+                depositor => rule!(deny_all);
+                depositor_updater => rule!(deny_all);
+            )).create_with_no_initial_supply();
             
             let component = Self{
                 pools: HashMap::new(),
@@ -131,9 +163,11 @@ mod cdp_mgr{
                 collateral_vaults: HashMap::new(),
                 self_cmp_addr: address,
                 close_factor_percent: Decimal::from(50),
-                price_oracle,
                 cdp_id_counter: 0u64,
-                cdp_res_mgr
+                transient_id_counter: 0u64,
+                price_oracle,
+                cdp_res_mgr,
+                transient_nft_res_mgr
             }.instantiate()
             .prepare_to_globalize(OwnerRole::Fixed(admin_rule.clone()))
             .with_address(address_reservation)
@@ -155,6 +189,7 @@ mod cdp_mgr{
             liquidation_threshold: Decimal,
             liquidation_bonus: Decimal,
             insurance_ratio: Decimal,
+            flashloan_fee_ratio: Decimal,
             admin_rule: AccessRule,
             protocol_caller: Option<ComponentAddress>
         ) -> ResourceAddress{
@@ -172,6 +207,7 @@ mod cdp_mgr{
                 interest_model_cmp_addr,
                 interest_model.clone(),
                 insurance_ratio,
+                flashloan_fee_ratio,
                 admin_rule,
                 pool_mgr_rule
                 );
@@ -472,6 +508,54 @@ mod cdp_mgr{
             (release_underlying_bucket, bucket)
 
         }
+
+        pub fn migrate_flashloan(&mut self, res_addr: ResourceAddress, amount: Decimal) -> (Bucket, Bucket){
+            assert!(self.pools.contains_key(&res_addr), "unknow token resource address.");
+            let pool = self.pools.get_mut(&res_addr).unwrap();
+            let bucket = pool.borrow_flashloan(amount);
+            self.transient_id_counter += 1;
+            let data = FlashLoanData{
+                amount: bucket.amount(),
+                fee: Decimal::ZERO,
+                res_addr
+            };
+            let flashloan_nft = self.transient_nft_res_mgr.mint_non_fungible::<FlashLoanData>(&NonFungibleLocalId::integer(self.transient_id_counter), data);
+            (bucket, flashloan_nft)
+        }
+
+        pub fn borrow_flashloan(&mut self, res_addr: ResourceAddress, amount: Decimal) -> (Bucket, Bucket){
+            assert!(self.pools.contains_key(&res_addr), "unknow token resource address.");
+            let pool = self.pools.get_mut(&res_addr).unwrap();
+            let bucket = pool.borrow_flashloan(amount);
+            let fee = bucket.amount().checked_mul(pool.get_flashloan_fee_ratio()).unwrap();
+            self.transient_id_counter += 1;
+            let data = FlashLoanData{
+                amount: bucket.amount(),
+                res_addr,
+                fee
+            };
+            let flashloan_nft = self.transient_nft_res_mgr.mint_non_fungible::<FlashLoanData>(&NonFungibleLocalId::integer(self.transient_id_counter), data);
+            (bucket, flashloan_nft)
+        }
+
+        pub fn repay_flashloan(&mut self, repay_bucket: Bucket, flashloan: Bucket) -> Bucket{
+            let underlying = repay_bucket.resource_address();
+            assert!(self.pools.contains_key(&underlying), "unknow token resource address.");
+
+            let flashloan_id : NonFungibleLocalId = flashloan.as_non_fungible().non_fungible_local_id();
+            let flashloan_data = self.transient_nft_res_mgr.get_non_fungible_data::<FlashLoanData>(&flashloan_id);
+            assert!(
+                underlying == flashloan_data.res_addr 
+                && repay_bucket.amount() >= flashloan_data.amount.checked_add(flashloan_data.fee).unwrap(),
+                 "The token resource address does not matches!"
+                );
+            
+            self.transient_nft_res_mgr.burn(flashloan);
+            let pool = self.pools.get_mut(&underlying).unwrap();
+            pool.repay_flashloan(repay_bucket, flashloan_data.amount, flashloan_data.fee)
+        }
+
+
 
         pub fn withdraw_insurance(&mut self, underlying_token_addr: ResourceAddress, amount: Decimal) -> Bucket{
             assert!(self.pools.contains_key(&underlying_token_addr), "unknow token resource address.");
