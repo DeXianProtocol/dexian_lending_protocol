@@ -10,7 +10,7 @@ CALL_METHOD
     Decimal("1")
 ;
 CALL_METHOD
-  Address("${account}")
+  Address("${admin_account}")
   "withdraw"
   Address("${xrd}")
   Decimal("${amount}")

@@ -1,7 +1,7 @@
 use scrypto::prelude::*;
 use crate::interest::InterestModel;
 use crate::oracle::oracle::PriceOracle;
-use crate::cdp::CollateralDebtPosition;
+// use crate::cdp::CollateralDebtPosition;
 use crate::cdp::cdp_mgr::CollateralDebtManager;
 use crate::earning::staking_earning::StakingEarning;
 use crate::validator::keeper::validator_keeper::ValidatorKeeper;
@@ -11,27 +11,27 @@ use crate::validator::keeper::validator_keeper::ValidatorKeeper;
 #[events(SupplyEvent, WithdrawEvent, CreateCDPEvent, ExtendBorrowEvent, AdditionCollateralEvent, WithdrawCollateralEvent, RepayEvent, LiquidationEvent)]
 mod dexian_protocol{
 
-    extern_blueprint!(
-        "package_sim1p5h5gldmvn863xwm3gezgflgf7le2nj7yq9aujx0gv3myj8f8c0slg",
-        LendingProtocol {
-            fn repay(&mut self, repay_bucket: Bucket, id: u64) -> (Bucket,Decimal);
+    // extern_blueprint!(
+    //     "package_sim1p5h5gldmvn863xwm3gezgflgf7le2nj7yq9aujx0gv3myj8f8c0slg",
+    //     LendingProtocol {
+    //         fn repay(&mut self, repay_bucket: Bucket, id: u64) -> Bucket;
     
-            fn withdraw_collateral(&mut self,
-                cdp: Bucket,
-                amount: Decimal,
-                price1: String,
-                quote1: ResourceAddress,
-                timestamp1: u64,
-                signature1: String,
-                price2: Option<String>,
-                quote2: Option<ResourceAddress>,
-                timestamp2: Option<u64>,
-                signature2: Option<String>
-            ) -> (Bucket, Bucket);
+    //         fn withdraw_collateral(&mut self,
+    //             cdp: Bucket,
+    //             amount: Decimal,
+    //             price1: String,
+    //             quote1: ResourceAddress,
+    //             timestamp1: u64,
+    //             signature1: String,
+    //             price2: Option<String>,
+    //             quote2: Option<ResourceAddress>,
+    //             timestamp2: Option<u64>,
+    //             signature2: Option<String>
+    //         ) -> (Bucket, Bucket);
     
-            fn withdraw(&mut self, bucket: Bucket) -> Bucket;
-        }
-    );
+    //         fn withdraw(&mut self, bucket: Bucket) -> Bucket;
+    //     }
+    // );
 
     enable_method_auth! {
         roles{
@@ -55,7 +55,7 @@ mod dexian_protocol{
             liquidation => PUBLIC;
 
             //flashloan
-            migrate_cdp => PUBLIC;
+            // migrate_cdp => PUBLIC;
             borrow_flashloan => PUBLIC;
             repay_flashloan => PUBLIC;
 
@@ -337,34 +337,34 @@ mod dexian_protocol{
             (underlying_bucket,refund_bucket)
         }
 
-        pub fn migrate_cdp(&mut self, 
-            cdp: Bucket, id: u64, repay_amount: Decimal, withdraw_collateral_amount: Decimal,
-            price1: String, quote1: ResourceAddress, timestamp1: u64, signature1: String,
-            price2: Option<String>, quote2: Option<ResourceAddress>, timestamp2: Option<u64>, signature2: Option<String>
-        )->(Bucket, Bucket, Bucket){
-            let mut lending_factory : Global<LendingProtocol> = global_component!(
-                LendingProtocol,
-                "component_tdx_2_1cp5myuprxam5a7hayygh4vx3l6dzwdlx7g20nqnzdqlck6gf40zk0f"
-            );
+        // pub fn migrate_cdp(&mut self, 
+        //     cdp: Bucket, id: u64, repay_amount: Decimal, withdraw_collateral_amount: Decimal,
+        //     price1: String, quote1: ResourceAddress, timestamp1: u64, signature1: String,
+        //     price2: Option<String>, quote2: Option<ResourceAddress>, timestamp2: Option<u64>, signature2: Option<String>
+        // )->(Bucket, Bucket, Bucket){
+        //     let mut lending_factory : Global<LendingProtocol> = global_component!(
+        //         LendingProtocol,
+        //         "component_sim1cq7t704hs8memnzk0yevz3qfsvwp4hk04spy0apt8u7ks0j69wgyl2"
+        //     );
             
-            let cdp_id = cdp.as_non_fungible().non_fungible_local_id();
-            let cdp_res_mgr = ResourceManager::from(cdp.resource_address());
-            let cdp_data = cdp_res_mgr.get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
-            let borrow_token = cdp_data.borrow_token.clone();
-            // let lend_pool = self.get_lend_resource_pool(borrow_token);
-            // let rapay_amount = if cdp_data.is_stable {
-            //     lend_pool.get_stable_interest(cdp_data.borrow_amount, cdp_data.last_update_epoch, cdp_data.stable_rate)
-            // } else {
-            //     lend_pool.get_variable_interest(cdp_data.normalized_amount);
-            // };
-            let (repay_bucket, flashloan_bucket) = self.cdp_mgr.borrow_flashloan(borrow_token, repay_amount);
-            let (_remain_bucket, _actual) = lending_factory.repay(repay_bucket, id);
-            let (collateral_bucket, cdp_bucket) = lending_factory.withdraw_collateral(cdp, withdraw_collateral_amount, price1.clone(), quote1, timestamp1, signature1.clone(), price2.clone(), quote2, timestamp2, signature2.clone());
-            let dx_bucket = self.cdp_mgr.supply(collateral_bucket);
-            let (borrow_bucket, new_cdp) = self.borrow_variable(dx_bucket, borrow_token, repay_amount, price1, quote1, timestamp1, signature1, price2, quote2, timestamp2, signature2);
-            let flashloan_remain = self.repay_flashloan(borrow_bucket, flashloan_bucket);
-            (flashloan_remain, cdp_bucket, new_cdp)
-        }
+        //     let cdp_id = cdp.as_non_fungible().non_fungible_local_id();
+        //     let cdp_res_mgr = ResourceManager::from(cdp.resource_address());
+        //     let cdp_data = cdp_res_mgr.get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
+        //     let borrow_token = cdp_data.borrow_token.clone();
+        //     let (repay_bucket, flashloan_bucket) = self.cdp_mgr.borrow_flashloan(borrow_token, repay_amount);
+        //     info!("cdp_data{}, borrow_normalized:{} repay_bucket.amount:{}", Runtime::bech32_encode_address(borrow_token), cdp_data.normalized_borrow, repay_bucket.amount());
+        //     let _remain_bucket = lending_factory.repay(repay_bucket, id);
+        //     info!("repay: _remain_bucket.amount {}", _remain_bucket.amount());
+        //     let (collateral_bucket, cdp_bucket) = lending_factory.withdraw_collateral(cdp, withdraw_collateral_amount, price1.clone(), quote1, timestamp1, signature1.clone(), price2.clone(), quote2, timestamp2, signature2.clone());
+        //     info!("withdraw_collateral: collateral_bucket.amount {}", collateral_bucket.amount());
+        //     let dx_bucket = self.cdp_mgr.supply(collateral_bucket);
+        //     info!("supply: dx_bucket.amount {}", dx_bucket.amount());
+        //     let (borrow_bucket, new_cdp) = self.borrow_variable(dx_bucket, borrow_token, repay_amount, price1, quote1, timestamp1, signature1, price2, quote2, timestamp2, signature2);
+        //     info!("borrow_bucket: borrow_bucket.amount {}", borrow_bucket.amount());
+        //     let flashloan_remain = self.repay_flashloan(borrow_bucket, flashloan_bucket);
+        //     info!("flashloan_remain: flashloan_remain.amount {}", flashloan_remain.amount());
+        //     (flashloan_remain, cdp_bucket, new_cdp)
+        // }
 
         pub fn borrow_flashloan(&mut self, res_addr: ResourceAddress, amount: Decimal) -> (Bucket, Bucket){
             self.cdp_mgr.borrow_flashloan(res_addr, amount)

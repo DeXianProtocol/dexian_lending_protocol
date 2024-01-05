@@ -1,0 +1,53 @@
+CALL_METHOD
+    Address("${account}")
+    "lock_fee"
+    Decimal("10")
+;
+CALL_METHOD
+  Address("${account}")
+  "withdraw"
+  Address("${repay_token}")
+  Decimal("${repay_amount}")
+;
+CALL_METHOD
+  Address("${account}")
+  "withdraw_non_fungibles"
+  Address("${cdp}")
+  Array<NonFungibleLocalId>(
+      NonFungibleLocalId("#${cdp_id}#")
+  )
+;
+TAKE_FROM_WORKTOP
+  Address("${repay_token}")
+  Decimal("${repay_amount}")
+  Bucket("bucket1")
+;
+TAKE_ALL_FROM_WORKTOP
+  Address("${cdp}")
+  Bucket("bucket2")
+;
+CALL_METHOD
+    Address("${lending_component}")
+    "repay"
+    Bucket("bucket1")
+    ${cdp_id}u64
+;
+CALL_METHOD
+    Address("${lending_component}")
+    "withdraw_collateral"
+    Bucket("bucket2")
+    Decimal("${withdraw_amount}")
+    "${price1}"
+    Address("${quote1}")
+    ${timestamp1}u64
+    "${signature1}"
+    ${price2}
+    ${quote2}
+    ${timestamp2}
+    ${signature2}
+;
+CALL_METHOD
+    Address("${account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;

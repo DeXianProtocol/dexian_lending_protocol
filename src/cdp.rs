@@ -391,7 +391,7 @@ mod cdp_mgr{
             let underlying_pool = self.pools.get(underlying_token).unwrap();
             let (supply_index, _borrow_index) = underlying_pool.get_current_index();
             let underlying_state = self.states.get(underlying_token).unwrap();
-            let underlying_token_amount = underlying_pool.get_redemption_value(dx_amount);
+            let underlying_token_amount = dx_amount.checked_mul(supply_index).unwrap();
             let underlying_reserve_amount = underlying_token_amount.checked_sub(amount).unwrap();
             let ltv = underlying_state.ltv;
 
@@ -399,13 +399,15 @@ mod cdp_mgr{
             let borrow_pool = self.pools.get(&borrow_token).unwrap();
             let (_supply_index, borrow_index) = borrow_pool.get_current_index();
             let current_borrow_amount = cdp_data.normalized_borrow.checked_mul(borrow_index).unwrap();
-            assert_amount(current_borrow_amount, max_loan_amount);
+            info!("dx_amount:{}, supply_index:{}, underlying_token_amount:{}, ltv:{}, max_loan_amount:{}, current_borrow_amount:{}", dx_amount, supply_index, underlying_token_amount, ltv, max_loan_amount, current_borrow_amount);
+            assert!(max_loan_amount >= current_borrow_amount, "Insufficient remaining collateral.");
             
             let divisibility = get_divisibility(dx_token).unwrap();
             let take_amount = floor(amount.checked_div(supply_index).unwrap(), divisibility);
             let dx_bucket = self.collateral_vaults.get_mut(&dx_token).unwrap().take(take_amount);
             let normalized_amount = ceil(amount.checked_div(supply_index).unwrap(), divisibility);
             let underlying_bucket = underlying_pool.remove_liquity(dx_bucket);
+            info!("amount:{}, take_amount:{}, normalized_amount:{}, underlying_bucket.amount:{}",amount, take_amount, normalized_amount, underlying_bucket.amount());
             self.cdp_res_mgr.update_non_fungible_data(&cdp_id, "collateral_amount", dx_amount.checked_sub(normalized_amount).unwrap());
             (underlying_bucket, cdp)
         }

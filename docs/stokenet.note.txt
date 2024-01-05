@@ -262,6 +262,81 @@ export borrow_amount=100
 ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
 
+#  repay & withdraw_collateral
+export xrd=resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc
+export cdp=resource_tdx_2_1n206x8883nqaga8z4pazy4l84yy95xeqnhxr5qvtprnn7hrquk2v90
+export usdt=resource_tdx_2_1t42p2eyad03gly8txm28x4arzkx27wtjqtznz33smqt6ea2d7jlx2s
+export usdc=resource_tdx_2_1t5gfw86e6flve6w558q45gw5h99zu32ua4jshpmjsln4zyvztjk2zk
+export admin_account=account_tdx_2_129th30gyg5w0fh06swecmtg6ddcqfl77qme7ffvqzrgwc7kyelr5tp
+export p1=account_tdx_2_12x7ljug6zxrsalvgqlekufr676la4xt4qy8q0e98utw92e55409e30
+export p2=account_tdx_2_1286na8966hx2qar2c5k6gp56jgdk2lyyvsst59req34wej86ue9xdc
+export p3=account_tdx_2_129v2sa7652vlmwr5z4fyushc3kpvygzvu6glyvwvvmd349rg9xsz5p
+export lending_component=component_tdx_2_1cquet8049sedt82n0z4heeng9h90g56e0c9q64gfju3kkujt4sw4ru
+export repay_token=$usdt
+export repay_amount=10
+export cdp_id=3
+export withdraw_amount=10
+export borrow_token=$usdt
+export quote="usdt"
+#result=$(curl --request POST "https://stokenet.radixdlt.com/status/gateway-status")
+#export epoch=$(echo $result | jq ".ledger_state.epoch")
+#result=$(curl "https://price.dexian.io/stokenet/xrd-$quote")
+export price1=$(echo $result | jq -r ".data.price")
+export price1="0.043017"
+export quote1=$usdt
+#export timestamp1=$(echo $result | jq ".data.timestamp")
+export timestamp1=1704461453u64
+export epoch=$(echo $result | jq ".data.epoch_at")
+#export signature1=$(echo $result | jq -r ".data.signature")
+export signature1=$(python sign-util.py $xrd $quote1 $price1 $epoch $timestamp1)
+#echo "$xrd/$usdt$price1$epoch$timestamp1"
+#echo "$signature1 / $sig  $epoch"
+#export quote="usdc"
+#result=$(curl "https://price.dexian.io/xrd-$quote")
+#export price2=$(echo $result | jq ".data.price")
+#export quote2=$usdc
+#export timestamp2=$(echo $result | jq ".data.timestamp")
+#export signature2=$(echo $result | jq ".data.signature")
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$admin_account
+./docs/replace_holder.sh docs/transactions/close_cdp.rtm
+
+
+export quote="usdc"
+#result=$(curl --request POST "https://stokenet.radixdlt.com/status/gateway-status")
+#export epoch=$(echo $result | jq ".ledger_state.epoch")
+result=$(curl "https://price.dexian.io/stokenet/xrd-$quote")
+export price1=$(echo $result | jq -r ".data.price")
+export quote1=$usdc
+export timestamp1=$(echo $result | jq ".data.timestamp")
+export signature1=$(echo $result | jq -r ".data.signature")
+export epoch=$(echo $result | jq ".data.epoch_at")
+export sig=$(python sign-util.py $xrd $quote1 $price1 $epoch $timestamp1)
+echo "$xrd/$usdt$price1$epoch$timestamp1"
+echo "$signature1 / $sig  $epoch"
+#export quote="usdc"
+#result=$(curl "https://price.dexian.io/xrd-$quote")
+#export price2=$(echo $result | jq ".data.price")
+#export quote2=$usdc
+#export timestamp2=$(echo $result | jq ".data.timestamp")
+#export signature2=$(echo $result | jq ".data.signature")
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p3
+export dx_token=$dx_xrd
+export amount=4000
+export borrow_token=$usdc
+export borrow_amount=100
+./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+
+
+
+
 ===========================v1.0.8=======================
 # init
 export admin_account=account_tdx_2_129th30gyg5w0fh06swecmtg6ddcqfl77qme7ffvqzrgwc7kyelr5tp

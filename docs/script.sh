@@ -248,14 +248,13 @@ result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_interest.rtm
 export def_interest_model=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
 
 export price_signer_pk=6d187b0f2e66d74410e92e2dc92a5141a55c241646ce87acbcad4ab413170f9b
-result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_protocol.rtm)
+result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_lending_factory.rtm)
 export lending_component=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
 export oracle=$(echo $result | grep "Component: "| awk -F "Component: " '{print $3}' | awk -F " " '{print $1}')
-export dse_mgr=$(echo $result | grep "Component: "| awk -F "Component: " '{print $4}' | awk -F " " '{print $1}')
-export staking=$(echo $result | grep "Component: "| awk -F "Component: " '{print $5}' | awk -F " " '{print $1}')
-export cdp_mgr=$(echo $result | grep "Component: "| awk -F "Component: " '{print $6}' | awk -F " " '{print $1}')
-export dse=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
-export cdp=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $3}' | awk -F " " '{print $1}')
+export cdp_mgr=$(echo $result | grep "Component: "| awk -F "Component: " '{print $4}' | awk -F " " '{print $1}')
+export admin_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
+export op_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $3}' | awk -F " " '{print $1}')
+export cdp=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $4}' | awk -F " " '{print $1}')
 
 resim run < ./docs/replace_holder.sh docs/transactions/set_price.rtm
 
@@ -334,7 +333,7 @@ resim show $usdc_pool
 # export borrow_amount=10
 # resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
-
+resim set-current-epoch 2
 resim set-default-account $p1 $p1_priv $p1_badge
 export quote="usdt"
 export epoch=2
@@ -350,7 +349,7 @@ export account=$p1
 export dx_token=$dx_xrd
 export amount=2000
 export borrow_token=$usdt
-export borrow_amount=10
+export borrow_amount=60
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
 resim set-default-account $p1 $p1_priv $p1_badge
@@ -497,3 +496,197 @@ export repay_token=$usdt
 export debt_to_cover=70
 export cdp_id=1
 resim run < ./docs/replace_holder.sh docs/transactions/liquidation.rtm
+
+## ==============
+## ===============
+## 2024.1.4
+resim set-default-account $admin_account $admin_account_priv $admin_account_badge
+result=$(resim publish ".")
+export pkg=$(echo $result | awk -F ": " '{print $2}')
+
+
+result=$(resim call-function $pkg "ValidatorKeeper" "instantiate")
+export keeper=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
+export admin_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
+export op_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $3}' | awk -F " " '{print $1}')
+
+result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_interest.rtm)
+export def_interest_model=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
+
+export price_signer_pk=6d187b0f2e66d74410e92e2dc92a5141a55c241646ce87acbcad4ab413170f9b
+result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_protocol.rtm)
+export lending_component=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
+export oracle=$(echo $result | grep "Component: "| awk -F "Component: " '{print $3}' | awk -F " " '{print $1}')
+export dse_mgr=$(echo $result | grep "Component: "| awk -F "Component: " '{print $4}' | awk -F " " '{print $1}')
+export staking=$(echo $result | grep "Component: "| awk -F "Component: " '{print $5}' | awk -F " " '{print $1}')
+export cdp_mgr=$(echo $result | grep "Component: "| awk -F "Component: " '{print $6}' | awk -F " " '{print $1}')
+export dse=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
+export cdp=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $3}' | awk -F " " '{print $1}')
+export flash=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $4}' | awk -F " " '{print $1}')
+export xrd="resource_sim1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxakj8n3"
+
+resim run < ./docs/replace_holder.sh docs/transactions/set_price.rtm
+export xrd="resource_sim1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxakj8n3"
+result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_xrd_pool.rtm)
+export xrd_pool=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
+export dx_xrd=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
+result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_usdt_pool.rtm)
+export usdt_pool=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
+export dx_usdt=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}')
+result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_usdc_pool.rtm)
+export usdc_pool=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
+export dx_usdc=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}')
+
+
+
+# supply
+resim set-default-account $p1 $p1_priv $p1_badge
+export supply_token=$xrd
+export account=$p1
+export amount=4000
+resim run < ./docs/replace_holder.sh docs/transactions/supply.rtm
+
+# export withdraw_token=$dx_xrd
+# export account=$p1
+# export amount=1000
+# resim run < ./docs/replace_holder.sh docs/transactions/withdraw.rtm
+
+resim set-default-account $p2 $p2_priv $p2_badge
+export supply_token=$xrd
+export account=$p2
+export amount=4000
+resim run < ./docs/replace_holder.sh docs/transactions/supply.rtm
+
+
+export supply_token=$usdt
+export amount=200
+resim run < ./docs/replace_holder.sh docs/transactions/supply.rtm
+
+resim set-default-account $p3 $p3_priv $p3_badge
+export account=$p3
+export supply_token=$usdc
+export amount=200
+resim run < ./docs/replace_holder.sh docs/transactions/supply.rtm
+
+resim show $xrd_pool
+resim show $usdt_pool
+resim show $usdc_pool
+
+
+resim set-current-epoch 2
+resim set-default-account $p1 $p1_priv $p1_badge
+export quote="usdt"
+export epoch=2
+export price1="0.056259787085"
+export quote1=$usdt
+export timestamp1=1700658816
+export signature1=$(python sign-util.py $xrd $quote1 $price1 $epoch $timestamp1)
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p1
+export dx_token=$dx_xrd
+export amount=2000
+export borrow_token=$usdt
+export borrow_amount=60
+resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+
+resim set-default-account $p3 $p3_priv $p3_badge
+export quote="usdc"
+export epoch=2
+export price1="0.056259787085"
+export quote1=$usdc
+export timestamp1=1700658816
+export signature1=$(python sign-util.py $xrd $quote1 $price1 $epoch $timestamp1)
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p3
+export dx_token=$dx_usdc
+export amount=200
+export borrow_token=$xrd
+export borrow_amount=3000
+resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
+
+resim set-current-epoch 15122
+resim set-default-account $p1 $p1_priv $p1_badge
+export repay_token=$usdt
+export amount=70
+export account=$p1
+export cdp_id=1
+resim run < ./docs/replace_holder.sh docs/transactions/repay.rtm
+
+# 2011.756876070205478000 = 2000 * xrd_pool.supply_index
+export amount=2011.756876070205478000
+export cdp_id="#1#"
+export quote="usdt"
+export epoch=15122
+export price1="0.056259787085"
+export quote1=$usdt
+export timestamp1=1700658816
+export signature1=$(python sign-util.py $xrd $quote1 $price1 $epoch $timestamp1)
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p1
+resim run < ./docs/replace_holder.sh docs/transactions/withdraw_collateral.rtm
+
+export withdraw_token=$dx_xrd
+export account=$p1
+export amount=2000
+resim run < ./docs/replace_holder.sh docs/transactions/withdraw.rtm
+
+resim set-default-account $p2 $p2_priv $p2_badge
+export withdraw_token=$dx_usdt
+export account=$p2
+export amount=100
+resim run < ./docs/replace_holder.sh docs/transactions/withdraw.rtm
+
+
+resim set-default-account $p3 $p3_priv $p3_badge
+export repay_token=$xrd
+export amount=3100
+export account=$p3
+export cdp_id=2
+resim run < ./docs/replace_holder.sh docs/transactions/repay.rtm
+
+
+export quote="usdc"
+export epoch=15122
+export price1="0.056259787085"
+export quote1=$usdc
+export timestamp1=1700658816
+export signature1=$(python sign-util.py $xrd $quote1 $price1 $epoch $timestamp1)
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p3
+export dx_token=$dx_usdc
+export amount=200
+export borrow_token=$xrd
+export borrow_amount=3000
+export cdp_id="#2#"
+export account=$p3
+resim run < ./docs/replace_holder.sh docs/transactions/extend_borrow.rtm
+
+
+export repay_amount=1000
+export repay_token=$xrd
+export cdp_id=2
+export withdraw_amount=10
+export quote="usdc"
+export epoch=15122
+export price1="0.056259787085"
+export quote1=$usdc
+export timestamp1=1700658816
+export signature1=$(python sign-util.py $xrd $quote1 $price1 $epoch $timestamp1)
+export price2=None
+export quote2=None
+export timestamp2=None
+export signature2=None
+export account=$p3
+resim run < ./docs/replace_holder.sh docs/transactions/close_cdp.rtm
