@@ -208,11 +208,11 @@ mod dexian_protocol{
         ) -> (Bucket, Bucket){
             let dx_token = dx_bucket.resource_address();
             let dx_amount = dx_bucket.amount();
-            let (collateral_underlying_token,borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.extra_params(dx_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
+            let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.extra_params(dx_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
             info!("borrow_price_in_xrd:{}, collateral_underlying_price_in_xrd:{}",borrow_price_in_xrd, collateral_underlying_price_in_xrd);
             assert!(borrow_price_in_xrd.is_positive() && collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
-            info!("collateral {}, amount:{}; {} price:{}/{}", Runtime::bech32_encode_address(dx_token), dx_amount, Runtime::bech32_encode_address(collateral_underlying_token), borrow_price_in_xrd, collateral_underlying_price_in_xrd);
-            let (borrow_bucket, cdp_bucket) = self.cdp_mgr.borrow_variable(dx_bucket, collateral_underlying_token, borrow_token, borrow_amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
+            info!("collateral {}, amount:{}; price:{}/{}", Runtime::bech32_encode_address(dx_token), dx_amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
+            let (borrow_bucket, cdp_bucket) = self.cdp_mgr.borrow_variable(dx_bucket, borrow_token, borrow_amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
             Runtime::emit_event(CreateCDPEvent{dx_token, dx_amount, borrow_token, borrow_amount, cdp_id:cdp_bucket.as_non_fungible().non_fungible_local_id(), is_stable:false});
             (borrow_bucket, cdp_bucket)
         }
@@ -232,9 +232,9 @@ mod dexian_protocol{
         ) -> (Bucket, Bucket){
             let dx_token = dx_bucket.resource_address();
             let dx_amount = dx_bucket.amount();
-            let (collateral_underlying_token,borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.extra_params(dx_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
+            let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.extra_params(dx_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
             assert!(borrow_price_in_xrd.is_positive() && collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
-            let (borrow_bucket, cdp_bucket) = self.cdp_mgr.borrow_stable(dx_bucket, collateral_underlying_token, borrow_token, borrow_amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
+            let (borrow_bucket, cdp_bucket) = self.cdp_mgr.borrow_stable(dx_bucket, borrow_token, borrow_amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
             Runtime::emit_event(CreateCDPEvent{dx_token, dx_amount, borrow_token, borrow_amount, cdp_id:cdp_bucket.as_non_fungible().non_fungible_local_id(), is_stable:true});
             (borrow_bucket, cdp_bucket)
         }
@@ -397,10 +397,9 @@ mod dexian_protocol{
             quote2: Option<ResourceAddress>,
             timestamp2: Option<u64>,
             signature2: Option<String>
-        ) -> (ResourceAddress, Decimal, Decimal){
+        ) -> (Decimal, Decimal){
             let collateral_underlying_token = self.cdp_mgr.get_underlying_token(dx_token);
-            let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.get_price_in_xrd(collateral_underlying_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
-            (collateral_underlying_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd)
+            self.get_price_in_xrd(collateral_underlying_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2)
         }
 
         fn get_price_in_xrd(&self,
