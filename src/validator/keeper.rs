@@ -52,7 +52,7 @@ mod validator_keeper{
 
     struct ValidatorKeeper{
         validator_map: HashMap<ComponentAddress, Vec<StakeData>>,
-        res_validator_map: HashMap<ResourceAddress, ComponentAddress>
+        res_validator_map: KeyValueStore<ResourceAddress, ComponentAddress>
     }
 
     impl ValidatorKeeper {
@@ -87,7 +87,7 @@ mod validator_keeper{
             
             let component = Self{
                 validator_map: HashMap::new(),
-                res_validator_map: HashMap::new()
+                res_validator_map: KeyValueStore::new()
             }.instantiate()
             // .prepare_to_globalize(OwnerRole::Fixed(rule!(require(admin_badge.resource_address()))))
             .prepare_to_globalize(OwnerRole::Fixed(owner_rule))
@@ -112,7 +112,7 @@ mod validator_keeper{
 
         // /// get validator by LSU address or ClaimNFT address
         pub fn get_validator_address(&self, res_addr: ResourceAddress) -> ComponentAddress{
-            assert!(self.res_validator_map.contains_key(&res_addr), "unknow resource address");
+            assert!(self.res_validator_map.get(&res_addr).is_some(), "unknow resource address");
             self.res_validator_map.get(&res_addr).unwrap().clone()
         }
 

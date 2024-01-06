@@ -278,16 +278,11 @@ export cdp_id=3
 export withdraw_amount=10
 export borrow_token=$usdt
 export quote="usdt"
-#result=$(curl --request POST "https://stokenet.radixdlt.com/status/gateway-status")
-#export epoch=$(echo $result | jq ".ledger_state.epoch")
-#result=$(curl "https://price.dexian.io/stokenet/xrd-$quote")
-export price1=$(echo $result | jq -r ".data.price")
+result=$(curl --request POST "https://stokenet.radixdlt.com/status/gateway-status")
+export epoch=$(echo $result | jq ".ledger_state.epoch")
 export price1="0.043017"
 export quote1=$usdt
-#export timestamp1=$(echo $result | jq ".data.timestamp")
-export timestamp1=1704461453u64
-export epoch=$(echo $result | jq ".data.epoch_at")
-#export signature1=$(echo $result | jq -r ".data.signature")
+export timestamp1=1704461453
 export signature1=$(python sign-util.py $xrd $quote1 $price1 $epoch $timestamp1)
 #echo "$xrd/$usdt$price1$epoch$timestamp1"
 #echo "$signature1 / $sig  $epoch"
@@ -425,35 +420,36 @@ export p1=account_tdx_2_12x7ljug6zxrsalvgqlekufr676la4xt4qy8q0e98utw92e55409e30
 export p2=account_tdx_2_1286na8966hx2qar2c5k6gp56jgdk2lyyvsst59req34wej86ue9xdc
 export p3=account_tdx_2_129v2sa7652vlmwr5z4fyushc3kpvygzvu6glyvwvvmd349rg9xsz5p
 
-export pkg=package_tdx_2_1pkttmrv706k5ydc4nhz4p4wjdu8haql2ractmjrnv39zhznre0qrsl
+export pkg=package_tdx_2_1p4u3776fk8xzsja7ac34fv4d9xyywy4zya9450crc3dnhccn7kgp2q
 export account=$admin_account
 export usdt=resource_tdx_2_1t42p2eyad03gly8txm28x4arzkx27wtjqtznz33smqt6ea2d7jlx2s
 export usdc=resource_tdx_2_1t5gfw86e6flve6w558q45gw5h99zu32ua4jshpmjsln4zyvztjk2zk
 ./docs/replace_holder.sh ./docs/transactions/new_keeper.rtm
-export keeper=component_tdx_2_1cp5myuprxam5a7hayygh4vx3l6dzwdlx7g20nqnzdqlck6gf40zk0f
-export admin_badge=resource_tdx_2_1thj4yul597fpayy0hnk2uul2lf07n0e2fj476tplrs6ehwjw9zragr
-export op_badge=resource_tdx_2_1t5fgpa022m70fj9q5spc2wrzqy2v5s27qh0eepsdqssxc3xs60hpqw
+export keeper=component_tdx_2_1cra4l2ms23407tmljlr3sh7c8sapusg36ydacead5wnyvq3s5yjqsu
+export admin_badge=resource_tdx_2_1t5r4v43j47y9d50zt8hlywdqtn4jtf89rhgldlaxvw5pdgvk29aav2
+export op_badge=resource_tdx_2_1thqdazgc2xf5l22fuxdus8jtxmuehh824aaxkqufrjgmek0lckgnz6
 ./docs/replace_holder.sh ./docs/transactions/new_interest.rtm
-export def_interest_model=component_tdx_2_1crug2u4zlcd4auxks4tqzla7p0g0f5tfps42d2a3uetgmwmyvgphue
+export def_interest_model=component_tdx_2_1crdu53p0ztksavzsegt499kqtw22yv5y7da8jj5dmg4rrefycskxrm
 export price_signer_pk=6d187b0f2e66d74410e92e2dc92a5141a55c241646ce87acbcad4ab413170f9b
 ./docs/replace_holder.sh ./docs/transactions/new_protocol.rtm
-export lending_component=component_tdx_2_1cpdmd3zpf8a9w8clhem8763vnjy7nguk5cu7fpl4m7avuatmz9lgtm
-export oracle=component_tdx_2_1czm0hq4wzsm5mlwhl9hgm3sdtc8t68zsnrn6eyc72eeurxucterlc5
-export dse_mgr=component_tdx_2_1cpl9jgpmurdd5s08qjehecq3xgn6xe34cuqx78la3xw9nkash0tqju
-export staking=component_tdx_2_1cq57tll28jw3mhtzf2j2fhggdd0tlead0tterf5wzymtdxturnkukj
-export cdp_mgr=component_tdx_2_1cp950c9flwwhsdh8x32shw548lrfjwwjsjudk7wwvvwz7t75x3pl23
-export dse=resource_tdx_2_1t4y7j7ucngty436pcjkzwlg6zslffhjeg5vkc0kkk6pkn5ghyedgxj
-export cdp=resource_tdx_2_1n272z2764wvsju20lcgpxc69p2t9m50pudm0lw570hytqrlz42dt2c
+export lending_component=component_tdx_2_1cr6ulnvauprp3kjhhtyaenfcxgygxkan9whlgmcxy0msg38770yysf
+export oracle=component_tdx_2_1cz7qehzvdytw4m8ncr726ufmf8zfjr3ufl72vqa2y59sp6m3p7nqzq
+export dse_mgr=component_tdx_2_1cpsr639v7ma9kr66relgw72js03pnj5y5rwrp0y7qccv70m4u7ar30
+export staking=component_tdx_2_1cqtazwqaw36whyqs5tceedxy4amgvuujkxtwva6frt7qcw3e8jrvcm
+export cdp_mgr=component_tdx_2_1cq63chg2jdph8g0y4g4c7pk628pq87ljsduvcsamr3ruvycg6r6c8t
+export dse=resource_tdx_2_1t5xm64wttgszcs4x4937u5zvadw3wpqmnvzd2zyykdauzmf854q5xy
+export cdp=resource_tdx_2_1nfeujjnge9pe93luhcuumgcxq6knz7pey2e0xxngv86cfkqxszm27a
+export flash=resource_tdx_2_1n2kl4f48vkpfl3wga77gxdz3n008lzwjjx6xufjeg894atxmpakx2w
 export xrd=resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc
 ./docs/replace_holder.sh ./docs/transactions/new_xrd_pool.rtm
-export xrd_pool=component_tdx_2_1cpvt9lmzr93mzvsnq7kmqwdl8tvfxtxu3x7nmv8vaa8w8kn8675h4v
-export dx_xrd=resource_tdx_2_1tkgd63fyer669mejrsa3nkzedeqrhp0kj06z946x35kt6s36vca7ht
+export xrd_pool=component_tdx_2_1cqck7d50n4lq4t9kdv3uzv3m06qwk2hzarn8mxpcfw3saq64x7es2r
+export dx_xrd=resource_tdx_2_1t55uvy6wekyy2jn8j2z99twlhg6h2fd3uyddtdvev53q8pfpcxrj2e
 ./docs/replace_holder.sh ./docs/transactions/new_usdt_pool.rtm
-export usdt_pool=component_tdx_2_1cz790wt8x4ejt0zrkedqmwrr9mqxz24mge3yc86n9hzamjtl7d3kxz
-export dx_usdt=resource_tdx_2_1thp73sdvs4qdhwaph9nhr0a58ehz76ka9aclg7r4nldx7zw8xatvfv
+export usdt_pool=component_tdx_2_1czq04fuxdtyw0099rz9n2u2zrxktnzk7gwemmm570lkj9q3tkz8mdz
+export dx_usdt=resource_tdx_2_1thhtxyaehaddag3vjmtx8k6500ef5t6fa505d7lc53wcs8vxwkz57a
 ./docs/replace_holder.sh ./docs/transactions/new_usdc_pool.rtm
-export usdc_pool=component_tdx_2_1czc2hvcq5dk22cu8w4mp8a4rdv5uhnup3yac4dsq7hq9duakrwpfyd
-export dx_usdc=resource_tdx_2_1t4p5438z0e9yp86wz3d45gzew2jsyvks77ete3uegfcmmfp2sz080y
+export usdc_pool=component_tdx_2_1czyzrfsupxcp0gttf6cpkf2q674jfpht6k82tzvqnmpmj3tscmn6d7
+export dx_usdc=resource_tdx_2_1tkletrqae4g8qckf909kee3q9uq24mfukt2pa3xw4g3yvr8v3mmdfw
 
 ./docs/replace_holder.sh docs/transactions/set_price.rtm
 export validator=validator_tdx_2_1s0j35ansmur5q8kxem4edr23j2leutupveqc9g8kuuj29wc7uvmd8z
