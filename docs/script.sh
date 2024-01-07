@@ -623,7 +623,7 @@ export account=$p1
 export dx_token=$dx_xrd
 export amount=2000
 export borrow_token=$usdt
-export borrow_amount=60
+export borrow_amount=70
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
 resim set-default-account $p3 $p3_priv $p3_badge
