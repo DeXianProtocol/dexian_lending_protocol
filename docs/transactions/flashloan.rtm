@@ -1,0 +1,37 @@
+CALL_METHOD
+    Address("${account}")
+    "lock_fee"
+    Decimal("10")
+;
+CALL_METHOD
+  Address("${account}")
+  "withdraw"
+  Address("${token}")
+  Decimal("${fee}");
+
+CALL_METHOD
+    Address("${lending_component}")
+    "borrow_flashloan"
+    Address("${token}")
+    Decimal("${amount}")
+;
+TAKE_FROM_WORKTOP
+  Address("${token}")
+  Decimal("${total}")
+  Bucket("bucket1");
+
+TAKE_ALL_FROM_WORKTOP
+  Address("${flash}")
+  Bucket("bucket2")
+;
+CALL_METHOD
+    Address("${lending_component}")
+    "repay_flashloan"
+    Bucket("bucket1")
+    Bucket("bucket2")
+;
+CALL_METHOD
+    Address("${account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;

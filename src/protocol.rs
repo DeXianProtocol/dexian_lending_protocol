@@ -8,7 +8,7 @@ use crate::validator::keeper::validator_keeper::ValidatorKeeper;
 
 
 #[blueprint]
-#[events(SupplyEvent, WithdrawEvent, CreateCDPEvent, ExtendBorrowEvent, AdditionCollateralEvent, WithdrawCollateralEvent, RepayEvent, LiquidationEvent)]
+#[events(SupplyEvent, WithdrawEvent, CreateCDPEvent, ExtendBorrowEvent, AdditionCollateralEvent, WithdrawCollateralEvent, RepayEvent, LiquidationEvent, FlashLoanEvent)]
 mod dexian_protocol{
 
     // extern_blueprint!(
@@ -32,6 +32,8 @@ mod dexian_protocol{
     //         fn withdraw(&mut self, bucket: Bucket) -> Bucket;
     //     }
     // );
+
+    use crate::cdp::FlashLoanData;
 
     enable_method_auth! {
         roles{
@@ -373,6 +375,16 @@ mod dexian_protocol{
         }
 
         pub fn repay_flashloan(&mut self, repay_bucket: Bucket, flashloan: Bucket) -> Bucket{
+            let nft_id: NonFungibleLocalId = flashloan.as_non_fungible().non_fungible_local_id();
+            let flashloan_data = ResourceManager::from(flashloan.resource_address()).get_non_fungible_data::<FlashLoanData>(&nft_id);
+            Runtime::emit_event(FlashLoanEvent{
+                res_addr: flashloan_data.res_addr,
+                bucket_amount: repay_bucket.amount(),
+                amount: flashloan_data.amount,
+                fee: flashloan_data.fee,
+                nft_addr: flashloan.resource_address(),
+                nft_id
+            });
             self.cdp_mgr.repay_flashloan(repay_bucket, flashloan)
         }
 
@@ -504,4 +516,14 @@ pub struct LiquidationEvent{
     pub underlying_token: ResourceAddress,
     pub underlying_price: Decimal,
     pub underlying_amount: Decimal
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct FlashLoanEvent{
+    pub res_addr: ResourceAddress,
+    pub bucket_amount: Decimal,
+    pub amount: Decimal,
+    pub fee: Decimal,
+    pub nft_addr: ResourceAddress,
+    pub nft_id: NonFungibleLocalId
 }
