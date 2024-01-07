@@ -27,7 +27,7 @@ pub struct UnstakeData {
 
 
 #[blueprint]
-#[events(DebugGetApy, DebugGetApy2)]
+// #[events(DebugGetApy, DebugGetApy2)]
 mod validator_keeper{
 
     enable_method_auth!{
@@ -231,10 +231,10 @@ mod validator_keeper{
                     (sum + apy, count + Decimal::ONE)
                 });
             info!("sum:{}, count:{}", sum, count);
-            Runtime::emit_event(DebugGetApy2{
-                sum,
-                count
-            });
+            // Runtime::emit_event(DebugGetApy2{
+            //     sum,
+            //     count
+            // });
             if count.is_zero() {
                 Decimal::ZERO
             } else {
@@ -249,15 +249,15 @@ mod validator_keeper{
         
             // The last entry must be within the last week (inclusive).
             if latest_week_index < current_week_index -1 {
-                Runtime::emit_event(DebugGetApy{
-                    validator: _validator_addr.clone(),
-                    last_epoch: latest.last_stake_epoch,
-                    latest_index: Decimal::ZERO,
-                    previous_index: Decimal::ZERO,
-                    delta_epoch: Decimal::ZERO,
-                    current_week_index,
-                    latest_week_index
-                });
+                // Runtime::emit_event(DebugGetApy{
+                //     validator: _validator_addr.clone(),
+                //     last_epoch: latest.last_stake_epoch,
+                //     latest_index: Decimal::ZERO,
+                //     previous_index: Decimal::ZERO,
+                //     delta_epoch: Decimal::ZERO,
+                //     current_week_index,
+                //     latest_week_index
+                // });
                 return None;
             }
         
@@ -269,15 +269,15 @@ mod validator_keeper{
                     let previous_index = previous.last_staked.checked_div(previous.last_lsu)?;
                     let delta_index = latest_index.checked_sub(previous_index)?;
                     let delta_epoch = Decimal::from(latest.last_stake_epoch - previous.last_stake_epoch);
-                    Runtime::emit_event(DebugGetApy{
-                        validator: _validator_addr.clone(),
-                        last_epoch: latest.last_stake_epoch,
-                        current_week_index,
-                        latest_week_index,
-                        latest_index,
-                        previous_index,
-                        delta_epoch
-                    });
+                    // Runtime::emit_event(DebugGetApy{
+                    //     validator: _validator_addr.clone(),
+                    //     last_epoch: latest.last_stake_epoch,
+                    //     current_week_index,
+                    //     latest_week_index,
+                    //     latest_index,
+                    //     previous_index,
+                    //     delta_epoch
+                    // });
                     return Some(
                         (delta_index).checked_mul(Decimal::from(EPOCH_OF_YEAR)).unwrap()
                         .checked_div(delta_epoch).unwrap()
@@ -292,19 +292,19 @@ mod validator_keeper{
 
 }
 
-#[derive(ScryptoSbor, ScryptoEvent)]
-pub struct DebugGetApy{
-    pub validator: ComponentAddress,
-    pub last_epoch: u64,
-    pub current_week_index: usize,
-    pub latest_week_index: usize,
-    pub latest_index: Decimal,
-    pub previous_index: Decimal,
-    pub delta_epoch: Decimal
-}
+// #[derive(ScryptoSbor, ScryptoEvent)]
+// pub struct DebugGetApy{
+//     pub validator: ComponentAddress,
+//     pub last_epoch: u64,
+//     pub current_week_index: usize,
+//     pub latest_week_index: usize,
+//     pub latest_index: Decimal,
+//     pub previous_index: Decimal,
+//     pub delta_epoch: Decimal
+// }
 
-#[derive(ScryptoSbor, ScryptoEvent)]
-pub struct DebugGetApy2{
-    pub sum: Decimal,
-    pub count: Decimal
-}
+// #[derive(ScryptoSbor, ScryptoEvent)]
+// pub struct DebugGetApy2{
+//     pub sum: Decimal,
+//     pub count: Decimal
+// }

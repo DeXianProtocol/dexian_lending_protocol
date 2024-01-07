@@ -309,13 +309,13 @@ mod lend_pool {
         }
 
         pub fn borrow_flashloan(&mut self, amount: Decimal) -> Bucket {
-            assert_vault_amount(&self.vault, amount);
+            assert!(self.vault.amount() >= amount, "Insufficient vault amount!");
             self.vault.take_advanced(amount, WithdrawStrategy::Rounded(RoundingMode::ToZero))
         }
 
         pub fn repay_flashloan(&mut self, mut repay_bucket: Bucket, amount: Decimal, fee: Decimal) -> Bucket{
             let total = ceil_by_resource(self.underlying_token.clone(), amount.checked_add(fee).unwrap());
-            assert_amount(repay_bucket.amount(), total);
+            assert!(repay_bucket.amount() >= total, "Insufficient repay amount!");
             self.vault.put(repay_bucket.take(total));
             if fee > Decimal::ZERO {
                 self.update_index();

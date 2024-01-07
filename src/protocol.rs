@@ -278,9 +278,9 @@ mod dexian_protocol{
             let cdp_id: NonFungibleLocalId = cdp.as_non_fungible().non_fungible_local_id();
             let (borrow_token, collateral_underlying_token) = self.cdp_mgr.get_cdp_resource_address(cdp_id.clone());
             let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.get_price_in_xrd(collateral_underlying_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
-            assert!(borrow_price_in_xrd.is_positive() || collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
+            assert!(borrow_price_in_xrd.is_positive() && collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
             let (underlying_bucket, cdp_bucket) = self.cdp_mgr.withdraw_collateral(cdp, amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
-            Runtime::emit_event(WithdrawCollateralEvent{underlying_token:collateral_underlying_token, amount, cdp_id:cdp_id.clone()});
+            Runtime::emit_event(WithdrawCollateralEvent{underlying_token:collateral_underlying_token, amount:underlying_bucket.amount(), cdp_id:cdp_id.clone()});
             (underlying_bucket, cdp_bucket)
         }
 

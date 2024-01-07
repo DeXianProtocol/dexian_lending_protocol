@@ -88,9 +88,9 @@ mod cdp_mgr{
     struct CollateralDebtManager{
         price_oracle: Global<PriceOracle>,
         // Lend Pool of each asset in the lending pool. I.E.: XRD ==> LendResourcePool(XRD)
-        pools: KeyValueStore<ResourceAddress, Global<LendResourcePool>>,
+        pools: HashMap<ResourceAddress, Global<LendResourcePool>>,
         //Status of each asset in the lending pool, I.E.: XRD ==> AssetState(XRD)
-        states: KeyValueStore<ResourceAddress, AssetState>,
+        states: HashMap<ResourceAddress, AssetState>,
         // address map for supply token(K) and deposit token(V), I.E. dxXRD --> XRD
         deposit_asset_map: KeyValueStore<ResourceAddress, ResourceAddress>,
         // vault for each collateral asset(supply token), I.E. dxXRD ==> Vault(dxXRD)
@@ -157,8 +157,8 @@ mod cdp_mgr{
             )).create_with_no_initial_supply();
             
             let component = Self{
-                pools: KeyValueStore::new(),
-                states: KeyValueStore::new(),
+                pools: HashMap::new(),
+                states: HashMap::new(),
                 deposit_asset_map: KeyValueStore::new(),
                 collateral_vaults: KeyValueStore::new(),
                 self_cmp_addr: address,
