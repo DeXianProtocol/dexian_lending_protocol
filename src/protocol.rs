@@ -141,6 +141,7 @@ mod dexian_protocol{
         }
 
         pub fn new_pool(&mut self,
+            share_divisibility: u8,
             underlying_token_addr: ResourceAddress,
             interest_model: InterestModel,
             interest_model_cmp_addr: ComponentAddress,
@@ -151,6 +152,7 @@ mod dexian_protocol{
             flashloan_fee_ratio: Decimal
         ) -> ResourceAddress {
             self.cdp_mgr.new_pool(
+                share_divisibility,
                 underlying_token_addr,
                 interest_model, 
                 interest_model_cmp_addr, 

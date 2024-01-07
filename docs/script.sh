@@ -500,6 +500,40 @@ resim run < ./docs/replace_holder.sh docs/transactions/liquidation.rtm
 ## ==============
 ## ===============
 ## 2024.1.4
+scrypto build
+resim reset
+result=$(resim new-account)
+export admin_account=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
+export admin_account_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
+export admin_account_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
+export account=$admin_account
+result=$(resim new-account)
+export p1=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
+export p1_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
+export p1_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
+result=$(resim new-account)
+export p2=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
+export p2_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
+export p2_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
+result=$(resim new-account)
+export p3=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
+export p3_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
+export p3_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
+
+result=$(resim new-token-fixed --symbol=USDT --name=USDT 1000000)
+# export usdt=$(echo $result | grep "Resource:" | awk -F " " '{print $3}')
+export usdt=$(echo $result | awk -F "Resource: " '{print $2}')
+result=$(resim new-token-fixed --symbol=USDC --name=USDC 1000000)
+# export usdc=$(echo $result | grep "Resource:" | awk -F " " '{print $3}')
+export usdc=$(echo $result | awk -F "Resource: " '{print $2}')
+resim transfer $usdt:100000 $p2
+resim transfer $usdc:100000 $p2
+resim transfer $usdc:100000 $p3
+resim transfer $usdt:200 $p1
+resim transfer $usdc:200 $p1
+
+
+
 resim set-default-account $admin_account $admin_account_priv $admin_account_badge
 result=$(resim publish ".")
 export pkg=$(echo $result | awk -F ": " '{print $2}')

@@ -72,6 +72,7 @@ mod lend_pool {
     impl LendResourcePool {
 
         pub fn instantiate(
+            share_divisibility: u8,
             underlying_token: ResourceAddress,
             interest_model_cmp_addr: ComponentAddress,
             interest_model: InterestModel,
@@ -92,6 +93,7 @@ mod lend_pool {
                     "symbol" => format!("dx{}", origin_symbol), locked;
                     "name" => format!("DeXian Lending LP token({}) ", origin_symbol), locked;
                 }))
+                .divisibility(share_divisibility)
                 .mint_roles(mint_roles! {
                     minter => dx_rule.clone();
                     minter_updater => rule!(deny_all);
@@ -137,7 +139,7 @@ mod lend_pool {
 
         pub fn withdraw_insurance(&mut self, amount: Decimal) -> Bucket{
             assert_amount(amount, self.insurance_balance);
-            self.vault.take(amount)
+            self.vault.take_advanced(amount, WithdrawStrategy::Rounded(RoundingMode::ToZero))
         }
 
         pub fn get_underlying_value(&self) -> Decimal{
@@ -188,7 +190,10 @@ mod lend_pool {
             
             self.update_index();
             
-            let variable_share = borrow_amount.checked_div(self.loan_index).unwrap();
+            let variable_share = ceil(
+                borrow_amount.checked_div(self.loan_index).unwrap(), 
+                self.deposit_share_res_mgr.resource_type().divisibility().unwrap()
+            );
             self.variable_loan_share_quantity = self.variable_loan_share_quantity.checked_add(variable_share).unwrap();
             
             self.update_interest_rate();

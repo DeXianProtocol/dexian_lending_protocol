@@ -88,9 +88,9 @@ mod cdp_mgr{
     struct CollateralDebtManager{
         price_oracle: Global<PriceOracle>,
         // Lend Pool of each asset in the lending pool. I.E.: XRD ==> LendResourcePool(XRD)
-        pools: HashMap<ResourceAddress, Global<LendResourcePool>>,
+        pools: KeyValueStore<ResourceAddress, Global<LendResourcePool>>,
         //Status of each asset in the lending pool, I.E.: XRD ==> AssetState(XRD)
-        states: HashMap<ResourceAddress, AssetState>,
+        states: KeyValueStore<ResourceAddress, AssetState>,
         // address map for supply token(K) and deposit token(V), I.E. dxXRD --> XRD
         deposit_asset_map: KeyValueStore<ResourceAddress, ResourceAddress>,
         // vault for each collateral asset(supply token), I.E. dxXRD ==> Vault(dxXRD)
@@ -157,8 +157,8 @@ mod cdp_mgr{
             )).create_with_no_initial_supply();
             
             let component = Self{
-                pools: HashMap::new(),
-                states: HashMap::new(),
+                pools: KeyValueStore::new(),
+                states: KeyValueStore::new(),
                 deposit_asset_map: KeyValueStore::new(),
                 collateral_vaults: KeyValueStore::new(),
                 self_cmp_addr: address,
@@ -182,6 +182,7 @@ mod cdp_mgr{
         }
 
         pub fn new_pool(&mut self, 
+            share_divisibility: u8,
             underlying_token_addr: ResourceAddress,
             interest_model: InterestModel,
             interest_model_cmp_addr: ComponentAddress,
@@ -203,6 +204,7 @@ mod cdp_mgr{
                 rule!(require(global_caller(self.self_cmp_addr)))
             };
             let (lend_res_pool, dx_token_addr) = LendResourcePool::instantiate(
+                share_divisibility,
                 underlying_token_addr, 
                 interest_model_cmp_addr,
                 interest_model.clone(),
@@ -218,21 +220,21 @@ mod cdp_mgr{
                 liquidation_threshold,
                 liquidation_bonus
             };
-            self.pools.entry(underlying_token_addr).or_insert(lend_res_pool);
-            self.states.entry(underlying_token_addr).or_insert(asset_state);
+            self.pools.insert(underlying_token_addr, lend_res_pool);
+            self.states.insert(underlying_token_addr, asset_state);
             self.collateral_vaults.insert(dx_token_addr, Vault::new(dx_token_addr));
             self.deposit_asset_map.insert(dx_token_addr, underlying_token_addr);
             dx_token_addr
         }
 
         pub fn staking_borrow(&mut self, underlying_token_addr: ResourceAddress, borrow_amount: Decimal, stable_rate: Decimal) -> Bucket{
-            assert!(self.pools.contains_key(&underlying_token_addr), "There is no pool of funds corresponding to the assets!");
+            assert!(self.pools.get(&underlying_token_addr).is_some(), "There is no pool of funds corresponding to the assets!");
             let lending_pool = self.pools.get_mut(&underlying_token_addr).unwrap();
             lending_pool.borrow_stable(borrow_amount, stable_rate)
         }
 
         pub fn get_interest_rate(&self, underlying_token_addr: ResourceAddress, stable_borrow_amount:Decimal) -> (Decimal, Decimal, Decimal){
-            assert!(self.pools.contains_key(&underlying_token_addr), "There is no pool of funds corresponding to the assets!");
+            assert!(self.pools.get(&underlying_token_addr).is_some(), "There is no pool of funds corresponding to the assets!");
             let lending_pool = self.pools.get(&underlying_token_addr).unwrap();
             lending_pool.get_interest_rate(stable_borrow_amount)
         }
@@ -243,7 +245,7 @@ mod cdp_mgr{
 
         pub fn supply(&mut self, bucket: Bucket) -> Bucket{
             let supply_res_addr = bucket.resource_address();
-            assert!(self.pools.contains_key(&supply_res_addr), "There is no pool of funds corresponding to the assets!");
+            assert!(self.pools.get(&supply_res_addr).is_some(), "There is no pool of funds corresponding to the assets!");
             let lending_pool = self.pools.get_mut(&supply_res_addr).unwrap();
             lending_pool.add_liquity(bucket)
         }
@@ -265,15 +267,19 @@ mod cdp_mgr{
         ) -> (Bucket, Bucket){
             let dx_token = dx_bucket.resource_address();
             let dx_amount = dx_bucket.amount();
-            let max_loan_amount = self.get_max_loan_amount(dx_token, dx_amount, borrow_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
+            let max_loan_amount = self.get_max_loan_amount(dx_token, dx_amount, borrow_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd, Decimal::ZERO);
             assert!(borrow_amount <= max_loan_amount, "The amount borrowed exceeds the borrowable quantity of the collateral.");
 
             self.put_collateral_vault(dx_bucket);
-            let lending_pool = self.pools.get_mut(&borrow_token).unwrap();
-            let (borrow_bucket, borrow_normalized_amount) = lending_pool.borrow_variable(borrow_amount);
+            let (borrow_bucket, borrow_normalized_amount) = self.borrow_variable_from_pool(borrow_token, borrow_amount);
             //mint cdp
             let cdp_bucket = self.new_cdp(dx_token, borrow_token, borrow_amount, dx_amount, borrow_normalized_amount, Decimal::ZERO, false);
             (borrow_bucket, cdp_bucket)
+        }
+
+        fn borrow_variable_from_pool(&mut self, borrow_token: ResourceAddress, borrow_amount: Decimal) -> (Bucket, Decimal){
+            let lending_pool = self.pools.get_mut(&borrow_token).unwrap();
+            lending_pool.borrow_variable(borrow_amount)
         }
 
         pub fn borrow_stable(&mut self,
@@ -285,17 +291,21 @@ mod cdp_mgr{
         ) -> (Bucket, Bucket){
             let dx_token = dx_bucket.resource_address();
             let dx_amount = dx_bucket.amount();
-            let max_loan_amount = self.get_max_loan_amount(dx_token, dx_amount, borrow_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
+            let max_loan_amount = self.get_max_loan_amount(dx_token, dx_amount, borrow_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd, Decimal::ZERO);
             assert!(borrow_amount <= max_loan_amount, "The amount borrowed exceeds the borrowable quantity of the collateral.");
             
             self.put_collateral_vault(dx_bucket);
-            let lending_pool = self.pools.get_mut(&borrow_token).unwrap();
-            let (_variable_rate,stable_rate,_supply_rate) = lending_pool.get_interest_rate(borrow_amount);
-            let borrow_bucket = lending_pool.borrow_stable(borrow_amount, stable_rate);
+            let (borrow_bucket, stable_rate) = self.borrow_stable_from_pool(borrow_token, borrow_amount);
             
             //mint cdp
             let cdp_bucket = self.new_cdp(dx_token, borrow_token, borrow_amount, dx_amount, Decimal::ZERO, stable_rate, true);
             (borrow_bucket, cdp_bucket)
+        }
+
+        fn borrow_stable_from_pool(&mut self, borrow_token: ResourceAddress, borrow_amount:Decimal) -> (Bucket, Decimal){
+            let lending_pool = self.pools.get_mut(&borrow_token).unwrap();
+            let (_variable_rate,stable_rate,_supply_rate) = lending_pool.get_interest_rate(borrow_amount);
+            (lending_pool.borrow_stable(borrow_amount, stable_rate), stable_rate)
         }
 
         pub fn extend_borrow(&mut self,
@@ -312,13 +322,14 @@ mod cdp_mgr{
             let borrow_token = cdp_data.borrow_token;
             let dx_token = cdp_data.collateral_token;
             let dx_amount = cdp_data.collateral_amount;
-            let max_loan_amount = self.get_max_loan_amount(dx_token, dx_amount, borrow_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
+            let max_loan_amount = self.get_max_loan_amount(dx_token, dx_amount, borrow_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd, Decimal::ZERO);
             
             let mut cdp_avg_rate = Decimal::ZERO;
             let mut interest = Decimal::ZERO;
             let mut delta_normalized_amount = Decimal::ZERO;
-            let borrow_pool = self.pools.get_mut(&borrow_token).unwrap();
+            
             let borrow_bucket: Bucket = if cdp_data.is_stable {
+                let borrow_pool = self.pools.get_mut(&borrow_token).unwrap();
                 interest = borrow_pool.get_stable_interest(cdp_data.borrow_amount, cdp_data.last_update_epoch, cdp_data.stable_rate);
                 let borrow_intent = cdp_data.borrow_amount.checked_add(interest).unwrap().checked_add(amount).unwrap();
                 info!("exist stable: {}:{},{},{}", borrow_token.to_hex(), cdp_data.borrow_amount, interest, borrow_intent);
@@ -331,6 +342,7 @@ mod cdp_mgr{
                 borrow_bucket
             }
             else{
+                let borrow_pool = self.pools.get_mut(&borrow_token).unwrap();
                 let (_, current_borrow_index) = borrow_pool.get_current_index();
                 let exist_borrow = cdp_data.normalized_borrow.checked_mul(current_borrow_index).unwrap();
                 let borrow_intent = exist_borrow.checked_add(amount).unwrap();
@@ -360,12 +372,7 @@ mod cdp_mgr{
             let dx_token = cdp_data.collateral_token;
             let dx_amount = cdp_data.collateral_amount;
 
-            let max_loan_amount = self.get_max_loan_amount(dx_token.clone(), dx_amount, borrow_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
-            let borrow_pool = self.pools.get(&borrow_token).unwrap();
-            let (_supply_index, borrow_index) = borrow_pool.get_current_index();
-            let current_borrow_amount = cdp_data.normalized_borrow.checked_mul(borrow_index).unwrap();
-            info!("current_borrow_amount:{}, max_loan_amount:{}, amount:{}",  current_borrow_amount, max_loan_amount, amount);
-            assert!(max_loan_amount >= current_borrow_amount.checked_add(amount).unwrap(), "Insufficient remaining collateral.");
+            self.validate_withdraw_collateral(dx_token, dx_amount, borrow_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd, cdp_data.normalized_borrow, amount);
 
             let divisibility = get_divisibility(dx_token.clone()).unwrap();
             let underlying_token = self.deposit_asset_map.get(&dx_token).unwrap();
@@ -379,6 +386,19 @@ mod cdp_mgr{
             info!("amount:{}, take_amount:{}, normalized_amount:{}, underlying_bucket.amount:{}",amount, take_amount, normalized_amount, underlying_bucket.amount());
             self.cdp_res_mgr.update_non_fungible_data(&cdp_id, "collateral_amount", dx_amount.checked_sub(normalized_amount).unwrap());
             (underlying_bucket, cdp)
+        }
+        
+        fn validate_withdraw_collateral(&self, dx_token: ResourceAddress, dx_amount: Decimal,
+            borrow_token: ResourceAddress, borrow_price_in_xrd: Decimal, 
+            collateral_underlying_price_in_xrd: Decimal, cdp_normalized_borrow: Decimal,
+            withdraw_amount: Decimal
+        ){
+            let max_loan_amount = self.get_max_loan_amount(dx_token, dx_amount, borrow_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd, withdraw_amount);
+            let borrow_pool = self.pools.get(&borrow_token).unwrap();
+            let (_supply_index, borrow_index) = borrow_pool.get_current_index();
+            let current_borrow_amount = cdp_normalized_borrow.checked_mul(borrow_index).unwrap();
+            info!("current_borrow_amount:{}, max_loan_amount:{}, withdraw_amount:{}",  current_borrow_amount, max_loan_amount, withdraw_amount);
+            assert!(max_loan_amount >= current_borrow_amount, "Insufficient remaining collateral.");
         }
 
         pub fn addition_collateral(&mut self, id: u64, bucket: Bucket){
@@ -411,27 +431,35 @@ mod cdp_mgr{
             let cdp_data = self.cdp_res_mgr.get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
             let borrow_token = cdp_data.borrow_token;
             assert_resource(&borrow_token, &repay_bucket.resource_address());
-            let amount = repay_bucket.amount();
-
             
-            let borrow_pool = self.pools.get_mut(&borrow_token).unwrap();
-
             let (bucket, payment_amount) = if cdp_data.is_stable {
-                let (bucket, actual_repay_amount, repay_in_borrow, _interest, _current_epoch_at) = borrow_pool.repay_stable(
-                    repay_bucket, cdp_data.borrow_amount, cdp_data.stable_rate, cdp_data.last_update_epoch, None
-                );
+                let (return_bucket, actual_repay_amount, repay_in_borrow) = self.repay_stable_to_pool(borrow_token, repay_bucket, cdp_data.borrow_amount, cdp_data.stable_rate, cdp_data.last_update_epoch, None);
                 self.update_cdp_after_repay(&cdp_id, cdp_data, actual_repay_amount, repay_in_borrow, Decimal::ZERO, Decimal::ZERO);
-                (bucket, actual_repay_amount)
+                (return_bucket, actual_repay_amount)
             }
             else{
-
-                let (bucket, repay_normalized_amount) = borrow_pool.repay_variable(repay_bucket, cdp_data.normalized_borrow, None);
-                let actual_repay_amount = amount.checked_sub(bucket.amount()).unwrap();
+                let (return_bucket, actual_repay_amount, repay_normalized_amount) = self.repay_variable_to_pool(borrow_token, repay_bucket, cdp_data.normalized_borrow, None);
                 self.update_cdp_after_repay(&cdp_id, cdp_data, actual_repay_amount, Decimal::ZERO, repay_normalized_amount, Decimal::ZERO);
-                (bucket, actual_repay_amount)
+                (return_bucket, actual_repay_amount)
             };
 
             (bucket, payment_amount)
+        }
+
+        fn repay_variable_to_pool(&mut self, borrow_token: ResourceAddress, repay_bucket: Bucket, cdp_normalized_borrow: Decimal, repay_opt: Option<Decimal>) -> (Bucket, Decimal, Decimal){
+            let amount = repay_bucket.amount();
+            let borrow_pool = self.pools.get_mut(&borrow_token).unwrap();
+            let (bucket, repay_normalized_amount) = borrow_pool.repay_variable(repay_bucket, cdp_normalized_borrow, repay_opt);
+            let actual_repay_amount = amount.checked_sub(bucket.amount()).unwrap();
+            (bucket, actual_repay_amount, repay_normalized_amount)
+        }
+
+        fn repay_stable_to_pool(&mut self, borrow_token: ResourceAddress, repay_bucket: Bucket, stable_borrow_amount: Decimal, stable_rate: Decimal, last_update_epoch: u64, repay_opt: Option<Decimal>) -> (Bucket, Decimal, Decimal){
+            let borrow_pool = self.pools.get_mut(&borrow_token).unwrap();
+            let (bucket, actual_repay_amount, repay_in_borrow, _interest, _current_epoch_at) = borrow_pool.repay_stable(
+                repay_bucket, stable_borrow_amount, stable_rate, last_update_epoch, repay_opt
+            );
+            (bucket, actual_repay_amount, repay_in_borrow)
         }
 
         pub fn liquidation(&mut self,
@@ -456,20 +484,18 @@ mod cdp_mgr{
 
             let repay_amount = debt_bucket.amount();
             assert!(repay_amount >= actual_debt_to_liquidate, "the debt bucket does not cover to debt of the CDP.");
-            let debt_pool = self.pools.get_mut(&borrow_token).unwrap();
+            
             let (bucket, actual_repay_amount) = if cdp_data.is_stable{
-                let (bucket, actual_repay_amount, repay_in_borrow, _interest, _current_epoch_at) = debt_pool.repay_stable(
-                    debt_bucket, cdp_data.borrow_amount, cdp_data.stable_rate, cdp_data.last_update_epoch, Some(actual_debt_to_liquidate)
-                );
-                info!("stable debt: actual_repay_amount:{}, bucket:{}", actual_repay_amount, bucket.amount());
+                let (return_bucket, actual_repay_amount, repay_in_borrow) = self.repay_stable_to_pool(borrow_token, debt_bucket, cdp_data.borrow_amount, cdp_data.stable_rate, cdp_data.last_update_epoch, Some(actual_debt_to_liquidate));
+                info!("stable debt: actual_repay_amount:{}, bucket:{}", actual_repay_amount, return_bucket.amount());
                 self.update_cdp_after_repay(&cdp_id, cdp_data, actual_repay_amount, repay_in_borrow, Decimal::ZERO, Decimal::ZERO);
-                (bucket, actual_repay_amount)
+                (return_bucket, actual_repay_amount)
             }
             else{
-                let (bucket, repay_normalized_amount) = debt_pool.repay_variable(debt_bucket, cdp_data.normalized_borrow, Some(actual_debt_to_liquidate));
-                info!("variable debt: repay_normalized_amount:{}, bucket:{}", repay_normalized_amount, bucket.amount());
+                let (return_bucket, actual_repay_amount, repay_normalized_amount) = self.repay_variable_to_pool(borrow_token, debt_bucket, cdp_data.normalized_borrow, Some(actual_debt_to_liquidate));
+                info!("variable debt: repay_normalized_amount:{}, bucket:{}, actual_repay_amount:{}", repay_normalized_amount, return_bucket.amount(), actual_repay_amount);
                 self.update_cdp_after_repay(&cdp_id, cdp_data, actual_debt_to_liquidate, Decimal::ZERO, repay_normalized_amount, Decimal::ZERO);
-                (bucket, actual_debt_to_liquidate)
+                (return_bucket, actual_repay_amount)
             };
             assert!(actual_repay_amount == actual_debt_to_liquidate, "The actual repay amount dose not matches debt to liquidate.");
 
@@ -486,7 +512,7 @@ mod cdp_mgr{
         }
 
         pub fn migrate_flashloan(&mut self, res_addr: ResourceAddress, amount: Decimal) -> (Bucket, Bucket){
-            assert!(self.pools.contains_key(&res_addr), "unknow token resource address.");
+            assert!(self.pools.get(&res_addr).is_some(), "unknow token resource address.");
             let pool = self.pools.get_mut(&res_addr).unwrap();
             let bucket = pool.borrow_flashloan(amount);
             self.transient_id_counter += 1;
@@ -500,7 +526,7 @@ mod cdp_mgr{
         }
 
         pub fn borrow_flashloan(&mut self, res_addr: ResourceAddress, amount: Decimal) -> (Bucket, Bucket){
-            assert!(self.pools.contains_key(&res_addr), "unknow token resource address.");
+            assert!(self.pools.get(&res_addr).is_some(), "unknow token resource address.");
             let pool = self.pools.get_mut(&res_addr).unwrap();
             let bucket = pool.borrow_flashloan(amount);
             let fee = bucket.amount().checked_mul(pool.get_flashloan_fee_ratio()).unwrap();
@@ -516,7 +542,7 @@ mod cdp_mgr{
 
         pub fn repay_flashloan(&mut self, repay_bucket: Bucket, flashloan: Bucket) -> Bucket{
             let underlying = repay_bucket.resource_address();
-            assert!(self.pools.contains_key(&underlying), "unknow token resource address.");
+            assert!(self.pools.get(&underlying).is_some(), "unknow token resource address.");
 
             let flashloan_id : NonFungibleLocalId = flashloan.as_non_fungible().non_fungible_local_id();
             let flashloan_data = self.transient_nft_res_mgr.get_non_fungible_data::<FlashLoanData>(&flashloan_id);
@@ -534,7 +560,7 @@ mod cdp_mgr{
 
 
         pub fn withdraw_insurance(&mut self, underlying_token_addr: ResourceAddress, amount: Decimal) -> Bucket{
-            assert!(self.pools.contains_key(&underlying_token_addr), "unknow token resource address.");
+            assert!(self.pools.get(&underlying_token_addr).is_some(), "unknow token resource address.");
             let pool = self.pools.get_mut(&underlying_token_addr).unwrap();
             pool.withdraw_insurance(amount)
         }
@@ -616,13 +642,16 @@ mod cdp_mgr{
             delta_normalized_borrow: Decimal,
             delta_collateral: Decimal
         ){
+            info!("total_repay:{}-{}", cdp_data.total_repay, repay_amount);
             self.cdp_res_mgr.update_non_fungible_data(cdp_id, "total_repay", cdp_data.total_repay.checked_add(repay_amount).unwrap());
             if !cdp_data.is_stable && delta_normalized_borrow != Decimal::ZERO{
+                info!("normalized_borrow:{}-{}", cdp_data.normalized_borrow, delta_normalized_borrow);
                 self.cdp_res_mgr.update_non_fungible_data(cdp_id, "normalized_borrow", cdp_data.normalized_borrow.checked_sub(delta_normalized_borrow).unwrap());
             }
 
             if cdp_data.is_stable && delta_borrow != Decimal::ZERO{
                 let new_borrow_amount = cdp_data.borrow_amount - delta_borrow;
+                info!("borrow_amount:{}-{}", cdp_data.borrow_amount, delta_borrow);
                 self.cdp_res_mgr.update_non_fungible_data(cdp_id, "borrow_amount", new_borrow_amount);
                 if new_borrow_amount == Decimal::ZERO {
                     self.cdp_res_mgr.update_non_fungible_data(cdp_id, "stable_rate", Decimal::ZERO);
@@ -631,6 +660,7 @@ mod cdp_mgr{
             }
 
             if delta_collateral != Decimal::ZERO{
+                info!("collateral_amount:{}|{}", cdp_data.collateral_amount, delta_collateral);
                 self.cdp_res_mgr.update_non_fungible_data(&cdp_id, "collateral_amount", cdp_data.collateral_amount + delta_collateral);
             }
         }
@@ -718,18 +748,20 @@ mod cdp_mgr{
             dx_amount: Decimal,
             borrow_token: ResourceAddress,
             borrow_price_in_xrd: Decimal,
-            collateral_price_in_xrd: Decimal
+            collateral_price_in_xrd: Decimal,
+            remove_amount: Decimal
         ) -> Decimal {
             let collateral_token = *self.deposit_asset_map.get(&dx_token).unwrap();
             let underlying_pool = self.pools.get(&collateral_token).unwrap();
             let underlying_state = self.states.get(&collateral_token).unwrap();
-            let amount = underlying_pool.get_redemption_value(dx_amount);
+            let underlying_amount = underlying_pool.get_redemption_value(dx_amount);
+            let amount = underlying_amount.checked_sub(remove_amount).unwrap();
             let ltv = underlying_state.ltv;
             assert!(ltv > Decimal::ZERO, "Loan to Value(LTV) of the collateral asset equals ZERO!");
             
             info!(
-                "get_max_loan_amount: {}|{},{}*{}, price:{}/{}",
-                Runtime::bech32_encode_address(dx_token),dx_amount, amount,ltv,borrow_price_in_xrd,collateral_price_in_xrd
+                "get_max_loan_amount: {}|{},{}*{}, price:{}/{}, underlying_amount:{}, remove_amount:{}",
+                Runtime::bech32_encode_address(dx_token),dx_amount, amount,ltv,borrow_price_in_xrd,collateral_price_in_xrd, underlying_amount, remove_amount
             );
 
 

@@ -12,6 +12,7 @@ CALL_METHOD
 CALL_METHOD
     Address("${lending_component}")
     "new_pool"
+    18u8
     Address("${usdt2}")
     Enum<1u8>()
     Address("${def_interest_model}")

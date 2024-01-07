@@ -29,7 +29,7 @@ mod staking_earning {
     struct StakingEarning{
         validator_keeper: Global<ValidatorKeeper>,
         staking_pool: Global<StakingResourePool>,
-        claim_nft_map: HashMap<ResourceAddress, NonFungibleVault>,
+        claim_nft_map: KeyValueStore<ResourceAddress, NonFungibleVault>,
         dse_token: ResourceAddress,
         // dx_token: ResourceAddress,
         unstake_epoch_num: u64
@@ -52,7 +52,7 @@ mod staking_earning {
             
 
             let component = Self{
-                claim_nft_map: HashMap::new(),
+                claim_nft_map: KeyValueStore::new(),
                 validator_keeper,
                 staking_pool,
                 dse_token,
@@ -102,7 +102,7 @@ mod staking_earning {
                 let principal = calc_principal(unstake_data.claim_amount, stable_rate, Decimal::from(EPOCH_OF_YEAR), remain_epoch);
                 let bucket = cdp_mgr.staking_borrow(XRD, principal, stable_rate);
                 
-                if self.claim_nft_map.contains_key(&nft_addr) {
+                if self.claim_nft_map.get(&nft_addr).is_some() {
                     self.claim_nft_map.get_mut(&nft_addr).unwrap().put(nft_bucket);
                 }
                 else{
