@@ -216,24 +216,38 @@ mod lend_pool {
         }
 
 
-        pub fn repay_variable(&mut self, mut repay_bucket: Bucket, loan_amount: Decimal, repay_opt: Option<Decimal>) -> (Bucket, Decimal){
+        pub fn repay_variable(&mut self, mut repay_bucket: Bucket, normalized_amount: Decimal, repay_opt: Option<Decimal>) -> (Bucket, Decimal){
             assert_resource(&repay_bucket.resource_address(), &self.underlying_token);
             
             self.update_index();
 
-            let debt_amount = ceil_by_resource(self.underlying_token, loan_amount.checked_mul(self.loan_index).unwrap());
-            let mut amount = if repay_bucket.amount() > debt_amount {debt_amount} else{repay_bucket.amount()};
-            if repay_opt.is_some_and(|uplimit| uplimit < amount){
-                amount = repay_opt.unwrap();
-            }
-            let loan_share = floor(amount.checked_div(self.loan_index).unwrap(), self.deposit_share_res_mgr.resource_type().divisibility().unwrap());
+            let debt_amount = ceil_by_resource(self.underlying_token, normalized_amount.checked_mul(self.loan_index).unwrap());
 
-            self.variable_loan_share_quantity = self.variable_loan_share_quantity.checked_sub(loan_share).unwrap();
-            self.vault.put(repay_bucket.take(amount));
+            let (actual_amount, normalized) = if repay_bucket.amount() >= debt_amount {
+                if repay_opt.is_some_and(|uplimit| uplimit < debt_amount){
+                    let amt = repay_opt.unwrap();
+                    (amt, floor(amt.checked_div(self.loan_index).unwrap(), self.deposit_share_res_mgr.resource_type().divisibility().unwrap()))
+                }
+                else{
+                    (debt_amount, normalized_amount)
+                }
+            } else{
+                if repay_opt.is_some_and(|uplimit| uplimit < repay_bucket.amount()){
+                    let amt = repay_opt.unwrap();
+                    (amt, floor(amt.checked_div(self.loan_index).unwrap(), self.deposit_share_res_mgr.resource_type().divisibility().unwrap()))
+                }
+                else{
+                    let amt = repay_bucket.amount();
+                    (amt, floor(amt.checked_div(self.loan_index).unwrap(), self.deposit_share_res_mgr.resource_type().divisibility().unwrap()))
+                }
+            };
+            
+            self.variable_loan_share_quantity = self.variable_loan_share_quantity.checked_sub(normalized).unwrap();
+            self.vault.put(repay_bucket.take(actual_amount));
             
             self.update_interest_rate();
             
-            (repay_bucket, loan_share)
+            (repay_bucket, normalized)
         }
 
         pub fn repay_stable(
@@ -400,9 +414,12 @@ mod lend_pool {
                 let recent_supply_interest = normalized_supply.checked_mul(current_supply_index.checked_sub(self.deposit_index).unwrap()).unwrap();
     
                 // the interest rate spread goes into the insurance pool
-                self.insurance_balance = self.insurance_balance.checked_add(recent_variable_interest.checked_add(recent_stable_interest).unwrap().checked_sub(recent_supply_interest).unwrap()).unwrap();
+                self.insurance_balance = self.insurance_balance.checked_add(
+                    recent_variable_interest.checked_add(recent_stable_interest).unwrap()
+                    .checked_sub(recent_supply_interest).unwrap()
+                ).unwrap();
     
-                info!("update_index({}), borrow_index:{}, current:{}, supply_index:{}, current:{}, stable:{}, stable_avg_rate:{}", Runtime::bech32_encode_address(self.underlying_token), self.loan_index, current_borrow_index, self.deposit_index, current_supply_index, self.stable_loan_amount, self.stable_loan_interest_rate);
+                info!("update_index({}), before loan_index:{}, current:{}, before supply_index:{}, current:{}, stable:{}, stable_avg_rate:{}", Runtime::bech32_encode_address(self.underlying_token), self.loan_index, current_borrow_index, self.deposit_index, current_supply_index, self.stable_loan_amount, self.stable_loan_interest_rate);
                 self.deposit_index = current_supply_index;
                 self.loan_index = current_borrow_index;
                 self.last_update = current_epoch;

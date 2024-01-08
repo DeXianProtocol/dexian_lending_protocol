@@ -1,7 +1,7 @@
 use scrypto::prelude::*;
 use crate::utils::EPOCH_OF_YEAR;
 
-pub const BABYLON_START_EPOCH: u64 = 0;  //32719; //mainnet: 32719, stokenet: 0
+pub const BABYLON_START_EPOCH: u64 = 0; //32718; //mainnet: 32718, stokenet: 0
 pub const A_WEEK_EPOCHS: u64 = 60/5*24*7;
 pub const RESERVE_WEEKS: usize = 52;
 

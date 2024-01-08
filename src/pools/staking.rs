@@ -103,6 +103,8 @@ mod staking_pool {
             self.validator_map.entry(validator_addr).and_modify(|stake_data|{
                 stake_data.last_staked = validator.get_redemption_value(last_lsu);
                 stake_data.last_stake_epoch = current_epoch;
+                //TODO:是否需要last_lsu
+                stake_data.last_lsu = last_lsu;
             }).or_insert(
                 StakeData { 
                         last_stake_epoch: current_epoch,
