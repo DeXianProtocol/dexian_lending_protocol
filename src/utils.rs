@@ -35,9 +35,6 @@ pub fn assert_vault_amount(vault: &Vault, not_less_than: Decimal){
     assert!(!vault.is_empty() && vault.amount() >= not_less_than, "the balance in vault is insufficient.");
 }
 
-pub fn assert_amount(v: Decimal, not_less_than: Decimal){
-    assert!(v < not_less_than, "target value less than expect!");
-}
 
 pub fn calc_linear_interest(amount: Decimal, apy: Decimal, epoch_of_year: Decimal, delta_epoch: u64) -> Decimal{
     let linear_rate = calc_linear_rate(apy, epoch_of_year, delta_epoch);

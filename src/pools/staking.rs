@@ -103,7 +103,6 @@ mod staking_pool {
             self.validator_map.entry(validator_addr).and_modify(|stake_data|{
                 stake_data.last_staked = validator.get_redemption_value(last_lsu);
                 stake_data.last_stake_epoch = current_epoch;
-                //TODO:是否需要last_lsu
                 stake_data.last_lsu = last_lsu;
             }).or_insert(
                 StakeData { 
@@ -136,7 +135,6 @@ mod staking_pool {
             let mut validator: Global<Validator> = Global::from(validator_addr);
             let lsu_value = validator.get_redemption_value(lsu.amount());
             
-            // assert_amount(lsu_value, redeem_value);
             assert!(redeem_value <= lsu_value, "target value {} less than expect {}!", lsu_value, redeem_value);
             let lsu_index = lsu_value.checked_div(lsu.amount()).unwrap();
             let unstake_lsu_bucket = lsu.take_advanced(redeem_value.checked_div(lsu_index).unwrap(), WithdrawStrategy::Rounded(RoundingMode::ToZero));

@@ -333,7 +333,7 @@ mod cdp_mgr{
                 interest = borrow_pool.get_stable_interest(cdp_data.borrow_amount, cdp_data.last_update_epoch, cdp_data.stable_rate);
                 let borrow_intent = cdp_data.borrow_amount.checked_add(interest).unwrap().checked_add(amount).unwrap();
                 info!("exist stable: {}:{},{},{}", borrow_token.to_hex(), cdp_data.borrow_amount, interest, borrow_intent);
-                assert_amount(borrow_intent, max_loan_amount);
+                assert!(borrow_intent < max_loan_amount, "Borrowing in excess of borrowable amount!");
                 
                 let (_variable_rate, stable_rate, _supply_rate)  = borrow_pool.get_interest_rate(amount);
                 let borrow_bucket = borrow_pool.borrow_stable(amount, stable_rate);
@@ -347,7 +347,7 @@ mod cdp_mgr{
                 let exist_borrow = cdp_data.normalized_borrow.checked_mul(current_borrow_index).unwrap();
                 let borrow_intent = exist_borrow.checked_add(amount).unwrap();
                 info!("exist variable: {}:{}*{},{}", borrow_token.to_hex(), cdp_data.normalized_borrow,current_borrow_index, borrow_intent);
-                assert_amount(borrow_intent, max_loan_amount);
+                assert!(borrow_intent < max_loan_amount, "Borrowing in excess of borrowable amount!");
                 let (borrow_bucket, normalized_amount) = borrow_pool.borrow_variable(amount);
                 delta_normalized_amount = normalized_amount;
                 borrow_bucket

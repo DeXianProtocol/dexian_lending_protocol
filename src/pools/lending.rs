@@ -138,7 +138,7 @@ mod lend_pool {
         }
 
         pub fn withdraw_insurance(&mut self, amount: Decimal) -> Bucket{
-            assert_amount(amount, self.insurance_balance);
+            assert!(amount <= self.insurance_balance, "insufficient insurance balance");
             self.vault.take_advanced(amount, WithdrawStrategy::Rounded(RoundingMode::ToZero))
         }
 
