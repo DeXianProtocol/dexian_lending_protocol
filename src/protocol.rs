@@ -8,7 +8,7 @@ use crate::validator::keeper::validator_keeper::ValidatorKeeper;
 
 
 #[blueprint]
-#[events(SupplyEvent, WithdrawEvent, CreateCDPEvent, ExtendBorrowEvent, AdditionCollateralEvent, WithdrawCollateralEvent, RepayEvent, LiquidationEvent)]
+#[events(SupplyEvent, WithdrawEvent, CreateCDPEvent, ExtendBorrowEvent, AdditionCollateralEvent, WithdrawCollateralEvent, RepayEvent, LiquidationEvent, FlashLoanEvent)]
 mod dexian_protocol{
 
     // extern_blueprint!(
@@ -84,6 +84,7 @@ mod dexian_protocol{
             price_signer_pk: String, 
             price_validity_ms: u64,
             unstake_epoch_num: u64,
+            settle_gas: Decimal
         ) -> (
             Global<DeXianProtocol>,
             Global<PriceOracle>,
@@ -106,6 +107,7 @@ mod dexian_protocol{
             let staking_mgr = StakingEarning::instantiate(
                 validator_keeper,
                 unstake_epoch_num,
+                settle_gas,
                 admin_rule.clone(),
                 mgr_rule.clone()
             );
@@ -373,6 +375,16 @@ mod dexian_protocol{
         }
 
         pub fn repay_flashloan(&mut self, repay_bucket: Bucket, flashloan: Bucket) -> Bucket{
+            let nft_id: NonFungibleLocalId = flashloan.as_non_fungible().non_fungible_local_id();
+            let flashloan_data = ResourceManager::from_address(flashloan.resource_address()).get_non_fungible_data::<FlashLoanData>(&nft_id);
+            Runtime::emit_event(FlashLoanEvent{
+                res_addr: flashloan_data.res_addr,
+                bucket_amount: repay_bucket.amount(),
+                amount: flashloan_data.amount,
+                fee: flashloan_data.fee,
+                nft_addr: flashloan.resource_address(),
+                nft_id
+            });
             self.cdp_mgr.repay_flashloan(repay_bucket, flashloan)
         }
 
@@ -504,4 +516,14 @@ pub struct LiquidationEvent{
     pub underlying_token: ResourceAddress,
     pub underlying_price: Decimal,
     pub underlying_amount: Decimal
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct FlashLoanEvent{
+    pub res_addr: ResourceAddress,
+    bucket_amount: Decimal,
+    amount: Decimal,
+    fee: Decimal,
+    nft_addr: ResourceAddress,
+    nft_id: NonFungibleLocalId
 }

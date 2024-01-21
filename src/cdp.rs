@@ -71,10 +71,10 @@ mod cdp_mgr{
             liquidation => restrict_to:[protocol_caller, OWNER];
 
             staking_borrow => restrict_to: [protocol_caller, OWNER];
+            staking_repay => restrict_to: [protocol_caller, OWNER];
 
             borrow_flashloan => PUBLIC;
             repay_flashloan => PUBLIC;
-            migrate_flashloan => PUBLIC;
             supply => PUBLIC;
             withdraw => PUBLIC;
             repay => PUBLIC;
@@ -105,7 +105,8 @@ mod cdp_mgr{
         /// flashloan NFT resource manager
         transient_nft_res_mgr: ResourceManager,
         // flashloan NFT counter
-        transient_id_counter: u64
+        transient_id_counter: u64,
+        cdp_vault: NonFungibleVault
     }
 
     impl CollateralDebtManager{
@@ -165,6 +166,7 @@ mod cdp_mgr{
                 close_factor_percent: Decimal::from(50),
                 cdp_id_counter: 0u64,
                 transient_id_counter: 0u64,
+                cdp_vault: NonFungibleVault::new(cdp_res_mgr.address()),
                 price_oracle,
                 cdp_res_mgr,
                 transient_nft_res_mgr
@@ -227,10 +229,32 @@ mod cdp_mgr{
             dx_token_addr
         }
 
-        pub fn staking_borrow(&mut self, underlying_token_addr: ResourceAddress, borrow_amount: Decimal, stable_rate: Decimal) -> Bucket{
+        pub fn staking_borrow(&mut self, underlying_token_addr: ResourceAddress, borrow_amount: Decimal, stable_rate: Decimal,
+            collateral_token: ResourceAddress, collateral_amount: Decimal
+        ) -> (Bucket, NonFungibleLocalId){
             assert!(self.pools.get(&underlying_token_addr).is_some(), "There is no pool of funds corresponding to the assets!");
             let lending_pool = self.pools.get_mut(&underlying_token_addr).unwrap();
-            lending_pool.borrow_stable(borrow_amount, stable_rate)
+            let borrow_bucket = lending_pool.borrow_stable(borrow_amount, stable_rate);
+            //mint cdp
+            let cdp_bucket = self.new_cdp(collateral_token, underlying_token_addr, borrow_amount, collateral_amount, Decimal::ZERO, stable_rate, true).as_non_fungible();
+            let cdp_nft_id = cdp_bucket.non_fungible_local_id();
+            self.cdp_vault.put(cdp_bucket);
+            (borrow_bucket, cdp_nft_id)
+        }
+
+        pub fn staking_repay(&mut self, repay_bucket: Bucket, cdp_id: NonFungibleLocalId) -> (Bucket, Decimal, Decimal){
+            let underlying_token_addr = repay_bucket.resource_address();
+            assert!(self.pools.get(&underlying_token_addr).is_some(), "There is no pool of funds corresponding to the assets!");
+            let repay_amount = repay_bucket.amount();
+            let cdp_data = self.cdp_res_mgr.get_non_fungible_data::<CollateralDebtPosition>(&cdp_id);
+            let (bucket, actual_repay_amount, repay_in_borrow) = self.repay_stable_to_pool(underlying_token_addr, repay_bucket, cdp_data.borrow_amount, cdp_data.stable_rate, cdp_data.last_update_epoch, None);
+            if repay_amount >= actual_repay_amount {
+                self.cdp_res_mgr.burn(self.cdp_vault.take_non_fungible(&cdp_id));
+            }
+            else{
+                self.update_cdp_after_repay(&cdp_id, cdp_data, actual_repay_amount, repay_in_borrow, Decimal::ZERO, Decimal::ZERO);
+            }
+            (bucket, actual_repay_amount, repay_in_borrow)
         }
 
         pub fn get_interest_rate(&self, underlying_token_addr: ResourceAddress, stable_borrow_amount:Decimal) -> (Decimal, Decimal, Decimal){
@@ -506,23 +530,8 @@ mod cdp_mgr{
             let release_underlying_bucket = underlying_pool.remove_liquity(vault.take(release_collateral_to_liqiudate));
             info!("underlying(collateral) amount:{}", release_underlying_bucket.amount());
             self.cdp_res_mgr.update_non_fungible_data(&cdp_id, "collateral_amount", dx_amount.checked_sub(release_collateral_to_liqiudate).unwrap());
-            info!("--------");
             (release_underlying_bucket, bucket)
 
-        }
-
-        pub fn migrate_flashloan(&mut self, res_addr: ResourceAddress, amount: Decimal) -> (Bucket, Bucket){
-            assert!(self.pools.get(&res_addr).is_some(), "unknow token resource address.");
-            let pool = self.pools.get_mut(&res_addr).unwrap();
-            let bucket = pool.borrow_flashloan(amount);
-            self.transient_id_counter += 1;
-            let data = FlashLoanData{
-                amount: bucket.amount(),
-                fee: Decimal::ZERO,
-                res_addr
-            };
-            let flashloan_nft = self.transient_nft_res_mgr.mint_non_fungible::<FlashLoanData>(&NonFungibleLocalId::integer(self.transient_id_counter), data);
-            (bucket, flashloan_nft)
         }
 
         pub fn borrow_flashloan(&mut self, res_addr: ResourceAddress, amount: Decimal) -> (Bucket, Bucket){

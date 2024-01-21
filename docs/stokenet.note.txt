@@ -420,11 +420,16 @@ export p1=account_tdx_2_12x7ljug6zxrsalvgqlekufr676la4xt4qy8q0e98utw92e55409e30
 export p2=account_tdx_2_1286na8966hx2qar2c5k6gp56jgdk2lyyvsst59req34wej86ue9xdc
 export p3=account_tdx_2_129v2sa7652vlmwr5z4fyushc3kpvygzvu6glyvwvvmd349rg9xsz5p
 
+<<<<<<< Updated upstream
 export pkg=package_tdx_2_1pkwlaxqwggwgfpy7pr7ym2yfpxjsmpuvzv8208y4l2tfg6skamp62k
+=======
+export pkg=package_tdx_2_1ph053l0e0hlj3dqy7a499ke36kwq3md5xss9kktkmqwshp600hczlx
+>>>>>>> Stashed changes
 export account=$admin_account
 export usdt=resource_tdx_2_1t42p2eyad03gly8txm28x4arzkx27wtjqtznz33smqt6ea2d7jlx2s
 export usdc=resource_tdx_2_1t5gfw86e6flve6w558q45gw5h99zu32ua4jshpmjsln4zyvztjk2zk
 ./docs/replace_holder.sh ./docs/transactions/new_keeper.rtm
+<<<<<<< Updated upstream
 export keeper=component_tdx_2_1cztal85p8arg8v72fkckgr6rxdfvgj00qd3dx467kh2eel3ppgpzjr
 export admin_badge=resource_tdx_2_1thvd82w4eumz0095fvl6y66uhpk4m5dfvjqaxaqf5lf530uq4ne5rn
 export op_badge=resource_tdx_2_1t47zw0s8ya8e86hn82xlveuemvtfs6jvjeelxdcgv26sm6392dussx
@@ -444,6 +449,27 @@ export xrd=resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2j
 ./docs/replace_holder.sh ./docs/transactions/new_xrd_pool.rtm
 export xrd_pool=component_tdx_2_1cp0fsjd6zhzv343ew9zx8nm484d054a547h8lw68jy7y3mzvzke6rh
 export dx_xrd=resource_tdx_2_1thslkvdnezac9m9ykp4adayxemq2udmc029m9h6g6xv4v8gynmpryl
+=======
+export keeper=component_tdx_2_1cqfsxxwkc985r85zjl2t7ngzx06nrt0c8e3w90nteh4uawh2ssqhz2
+export admin_badge=resource_tdx_2_1tkl60rfzk8e3dqpw5dn6esxx3dv09mwps8ha8lq3eqaghqkhwcn39a
+export op_badge=resource_tdx_2_1thvtt3fmpgjupajha8d8mnr2l2x9rd3gj3mxyhn6v047mkpaylkucr
+./docs/replace_holder.sh ./docs/transactions/new_interest.rtm
+export def_interest_model=component_tdx_2_1cr9rthh7r5k5qmmpwpsnjykvvxlzhnetcpp6ludkyy523cfnxtyfe4
+export price_signer_pk=6d187b0f2e66d74410e92e2dc92a5141a55c241646ce87acbcad4ab413170f9b
+./docs/replace_holder.sh ./docs/transactions/new_protocol.rtm
+export lending_component=component_tdx_2_1cp24j9ll070csr8t4rvuky0nn02vw7sv6y7jugp53skprett2z6kku
+export oracle=component_tdx_2_1cqr7cnv009tlhxa6ggxa0tlemh3va88mycpwquhvran3vxvc0a3lx9
+export dse_mgr=component_tdx_2_1czfjdzex9gve9409men9k2nghgsny23n0pmsna99ghy2m4y4a803rp
+export staking=component_tdx_2_1cql0u27dfgn9j3860s57ch8hswu7hjxc62mf4k4zztlx45u5fvmvvh
+export cdp_mgr=component_tdx_2_1czp0gzmf06k59876nsx6n5g34gp92u33z57j52arfu2ev0u6w8hu7k
+export dse=resource_tdx_2_1thlhczn2a69zcjug4ursqrruzz75j0tl55xsxchp8nemxx9yzcgyjj
+export cdp=resource_tdx_2_1n2vny9da6l42x59xu243a96h22mxjaln787memzejh4lj80g2xvdm4
+export flash=resource_tdx_2_1ntrgqjcpgs8gdjq8td8vg9l7wuwvtjfgys9krqj4txcvffz0xvv4pj
+export xrd=resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc
+./docs/replace_holder.sh ./docs/transactions/new_xrd_pool.rtm
+export xrd_pool=component_tdx_2_1cpg92gmva86t6gausgjr95l6tw9h5v8ec7rz2ggu8um6dfjx90uyvm
+export dx_xrd=resource_tdx_2_1thf8rcyhlcgkqzsa7n5zhdkc6q7ks66eq43ly3j5g9lpvf6890mcu7
+>>>>>>> Stashed changes
 ./docs/replace_holder.sh ./docs/transactions/new_usdt_pool.rtm
 export usdt_pool=component_tdx_2_1cpcxlw2tqsu03eqwlymgv9d4wmqwdswkermslrg5d6lnwgncf4w6dx
 export dx_usdt=resource_tdx_2_1th4hnvghk2lnv0kddeua3w4sgmcu7atgc9nxe38ydlkknxl2u2jgtw
@@ -454,6 +480,11 @@ export dx_usdc=resource_tdx_2_1t4d02fsg6pxn9dxts94m87hgppeyc4kxw784yl93n8aavr4tt
 ./docs/replace_holder.sh docs/transactions/set_price.rtm
 export validator=validator_tdx_2_1s0j35ansmur5q8kxem4edr23j2leutupveqc9g8kuuj29wc7uvmd8z
 ./docs/replace_holder.sh docs/transactions/fill_keeper.rtm
+<<<<<<< Updated upstream
+=======
+export amount=50
+export account=$p1
+>>>>>>> Stashed changes
 ./docs/replace_holder.sh ./docs/transactions/join.rtm
 amount=50
 ./docs/replace_holder.sh ./docs/transactions/redeem_dse.rtm
