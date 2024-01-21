@@ -233,13 +233,17 @@ mod cdp_mgr{
             collateral_token: ResourceAddress, collateral_amount: Decimal
         ) -> (Bucket, NonFungibleLocalId){
             assert!(self.pools.get(&underlying_token_addr).is_some(), "There is no pool of funds corresponding to the assets!");
-            let lending_pool = self.pools.get_mut(&underlying_token_addr).unwrap();
-            let borrow_bucket = lending_pool.borrow_stable(borrow_amount, stable_rate);
+            let borrow_bucket = self.staking_borrow_from_pool(underlying_token_addr, borrow_amount, stable_rate);
             //mint cdp
             let cdp_bucket = self.new_cdp(collateral_token, underlying_token_addr, borrow_amount, collateral_amount, Decimal::ZERO, stable_rate, true).as_non_fungible();
             let cdp_nft_id = cdp_bucket.non_fungible_local_id();
             self.cdp_vault.put(cdp_bucket);
             (borrow_bucket, cdp_nft_id)
+        }
+
+        fn staking_borrow_from_pool(&mut self, underlying_token_addr: ResourceAddress, borrow_amount: Decimal, stable_rate: Decimal)->Bucket{
+            let lending_pool = self.pools.get_mut(&underlying_token_addr).unwrap();
+            lending_pool.borrow_stable(borrow_amount, stable_rate)
         }
 
         pub fn staking_repay(&mut self, repay_bucket: Bucket, cdp_id: NonFungibleLocalId) -> (Bucket, Decimal, Decimal){

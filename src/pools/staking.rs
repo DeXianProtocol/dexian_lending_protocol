@@ -25,7 +25,7 @@ mod staking_pool {
         underlying_token: ResourceAddress,
         staking_unit_res_mgr: ResourceManager,
         validator_map: HashMap<ComponentAddress, StakeData>,
-        lsu_map: KeyValueStore<ComponentAddress, Vault>
+        lsu_map: HashMap<ComponentAddress, Vault>
     }
 
     impl StakingResourePool {
@@ -60,7 +60,7 @@ mod staking_pool {
             let staking_unit_token = staking_unit_res_mgr.address();
             let component = Self {
                 validator_map: HashMap::new(),
-                lsu_map: KeyValueStore::new(),
+                lsu_map: HashMap::new(),
                 underlying_token,
                 staking_unit_res_mgr
             }.instantiate()
@@ -99,7 +99,7 @@ mod staking_pool {
             let lsu_index = amount / lsu_amount;
 
             let last_lsu = if self.lsu_map.get(&validator_addr).is_some(){
-                let mut v = self.lsu_map.get_mut(&validator_addr).unwrap();
+                let v = self.lsu_map.get_mut(&validator_addr).unwrap();
                 v.put(lsu);
                 v.amount()
             }
@@ -138,7 +138,7 @@ mod staking_pool {
             let amount = bucket.amount();
             let redeem_value = amount.checked_mul(value_per_share).unwrap();
             
-            let mut lsu = self.lsu_map.get_mut(&validator_addr).unwrap();
+            let lsu = self.lsu_map.get_mut(&validator_addr).unwrap();
             let mut validator: Global<Validator> = Global::from(validator_addr);
             let lsu_amount = lsu.amount();
             let lsu_value = validator.get_redemption_value(lsu_amount);

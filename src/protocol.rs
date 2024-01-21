@@ -2,6 +2,7 @@ use scrypto::prelude::*;
 use crate::interest::InterestModel;
 use crate::oracle::oracle::PriceOracle;
 // use crate::cdp::CollateralDebtPosition;
+use crate::cdp::FlashLoanData;
 use crate::cdp::cdp_mgr::CollateralDebtManager;
 use crate::earning::staking_earning::StakingEarning;
 use crate::validator::keeper::validator_keeper::ValidatorKeeper;

@@ -214,7 +214,8 @@ mod staking_earning {
                     res_addr,
                     amount,
                     validator_addr,
-                    xrd_amount
+                    xrd_amount,
+                    claim_epoch
                 });
                 xrd_bucket
             }
@@ -257,7 +258,8 @@ pub struct FasterRedeemEvent{
     pub validator_addr: ComponentAddress,
     pub xrd_amount: Decimal,
     pub fee: Decimal,
-    pub settle_gas: Decimal
+    pub settle_gas: Decimal,
+    pub claim_epoch: u64
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
