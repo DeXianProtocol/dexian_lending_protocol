@@ -88,13 +88,16 @@ mod staking_earning {
             let nft_id = nft_bucket.non_fungible_local_id();
             let unstake_data = res_mgr.get_non_fungible_data::<UnstakeData>(&nft_id);
             let claim_amount = unstake_data.claim_amount;
-            let claim_epoch = unstake_data.claim_epoch.number();
+            let claim_epoch = unstake_data.claim_epoch.number();            
             if claim_epoch <= current_epoch {
                 let bucket = validator.claim_xrd(claim_nft_bucket);
                 Runtime::emit_event(ClaimXrdEvent{
                     rate: Decimal::ZERO,
-                    receive: bucket.amount(),
+                    settle_gas: Decimal::ZERO,
+                    fee: Decimal::ZERO,
+                    xrd_amount: bucket.amount(),
                     cdp_id: None,
+                    validator_addr,
                     nft_addr,
                     nft_id,
                     claim_amount,
@@ -115,10 +118,15 @@ mod staking_earning {
                 else{
                     self.claim_nft_map.insert(nft_addr.clone(), NonFungibleVault::with_bucket(nft_bucket));
                 }   
+                let settle_gas = self.settle_gas;
+                let xrd_amount = borrow_bucket.amount();
                 Runtime::emit_event(ClaimXrdEvent{
                     rate: stable_rate,
-                    receive: borrow_bucket.amount(),
                     cdp_id: Some(cdp_id),
+                    fee: claim_amount.checked_sub(settle_gas.checked_add(xrd_amount).unwrap()).unwrap(),
+                    xrd_amount,
+                    validator_addr,
+                    settle_gas,
                     nft_addr,
                     nft_id,
                     claim_amount,
@@ -193,7 +201,7 @@ mod staking_earning {
         pub fn redeem(&mut self, cdp_mgr: Global<CollateralDebtManager>, validator_addr: ComponentAddress,  bucket: Bucket, faster: bool) -> Bucket{
             let res_addr = bucket.resource_address();
             let amount = bucket.amount();
-            let (claim_nft_bucket, claim_nft_id, claim_amount, claim_epoch) = if res_addr == self.dse_token {
+            let (claim_nft_bucket, claim_nft_id, claim_amount) = if res_addr == self.dse_token {
                  self.staking_pool.redeem(validator_addr, bucket)
             }
             else{
@@ -201,21 +209,16 @@ mod staking_earning {
                 let claim_nft = validator.unstake(bucket);
                 let claim_nft_id = claim_nft.as_non_fungible().non_fungible_local_id();
                 let unstake_data = ResourceManager::from_address(claim_nft.resource_address()).get_non_fungible_data::<UnstakeData>(&claim_nft_id);
-                (claim_nft, claim_nft_id, unstake_data.claim_amount, unstake_data.claim_epoch.number())
+                (claim_nft, claim_nft_id, unstake_data.claim_amount)
             };
             
             if faster {
-                let settle_gas = self.settle_gas;
                 let (xrd_bucket, _) = self.claim_xrd(cdp_mgr, validator_addr, claim_nft_bucket);
                 let xrd_amount = xrd_bucket.amount();
                 Runtime::emit_event(FasterRedeemEvent{
-                    fee: claim_amount.checked_sub(xrd_amount).unwrap(),
-                    settle_gas,
                     res_addr,
                     amount,
-                    validator_addr,
-                    xrd_amount,
-                    claim_epoch
+                    xrd_amount
                 });
                 xrd_bucket
             }
@@ -224,7 +227,6 @@ mod staking_earning {
                     claim_nft: claim_nft_bucket.resource_address(),
                     res_addr,
                     amount,
-                    validator_addr,
                     claim_nft_id,
                     claim_amount
                 });
@@ -255,11 +257,7 @@ pub struct FasterRedeemEvent{
 /// resource address of LSUs or DSE
     pub res_addr: ResourceAddress,
     pub amount: Decimal,
-    pub validator_addr: ComponentAddress,
-    pub xrd_amount: Decimal,
-    pub fee: Decimal,
-    pub settle_gas: Decimal,
-    pub claim_epoch: u64
+    pub xrd_amount: Decimal
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
@@ -267,7 +265,6 @@ pub struct NormalRedeemEvent{
 /// resource address of LSUs or DSE
     pub res_addr: ResourceAddress,
     pub amount: Decimal,
-    pub validator_addr: ComponentAddress,
     pub claim_nft: ResourceAddress,
     pub claim_nft_id: NonFungibleLocalId,
     pub claim_amount: Decimal
@@ -288,12 +285,15 @@ pub struct NftFasterRedeemEvent{
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct ClaimXrdEvent{
     pub rate: Decimal,
-    pub receive: Decimal,
+    pub xrd_amount: Decimal,
+    pub validator_addr: ComponentAddress,
     pub nft_addr: ResourceAddress,
     pub nft_id: NonFungibleLocalId,
     pub claim_amount: Decimal,
     pub claim_epoch: u64,
     pub current_epoch: u64,
+    pub settle_gas: Decimal,
+    pub fee: Decimal,
     pub cdp_id: Option<NonFungibleLocalId>
 }
 

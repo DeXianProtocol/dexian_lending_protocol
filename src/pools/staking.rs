@@ -131,7 +131,7 @@ mod staking_pool {
             unit_bucket
         }
 
-        pub fn redeem(&mut self, validator_addr: ComponentAddress, bucket: Bucket) -> (Bucket, NonFungibleLocalId, Decimal, u64){
+        pub fn redeem(&mut self, validator_addr: ComponentAddress, bucket: Bucket) -> (Bucket, NonFungibleLocalId, Decimal){
             assert_resource(&bucket.resource_address(), &self.staking_unit_res_mgr.address());
             assert!(self.lsu_map.get(&validator_addr).is_some(), "the validator address not exists");
             let (_, _, value_per_share) = self.get_values();
@@ -171,7 +171,7 @@ mod staking_pool {
 
             });
 
-            (claim_nft, claim_nft_id, unstake_data.claim_amount, unstake_data.claim_epoch.number())
+            (claim_nft, claim_nft_id, unstake_data.claim_amount)
             
         }
 
