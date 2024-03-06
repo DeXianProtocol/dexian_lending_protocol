@@ -1,6 +1,3 @@
-export lsu=resource_tdx_2_1thydcf5zxpp20us8jka3p02ryzudndm82603j306zry8gr23p2s3mu
-export validator=validator_tdx_2_1s0j35ansmur5q8kxem4edr23j2leutupveqc9g8kuuj29wc7uvmd8z
-export epoch=24192
 supply=$(curl 'https://babylon-stokenet-gateway.radixdlt.com/state/entity/details' \
   -H 'authority: babylon-stokenet-gateway.radixdlt.com' \
   -H 'accept: */*' \
@@ -46,4 +43,3 @@ stake=$(curl 'https://babylon-stokenet-gateway.radixdlt.com/state/validators/lis
   --data-raw "{\"cursor\":null, \"at_ledger_state\":{\"epoch\":"$epoch"}}" \
   --compressed | jq ".validators.items[]|select(.address==\"$validator\")|.stake_vault.balance")
 echo "Tuple(Decimal("$stake"), Decimal("$supply"),${epoch}u64)"
-
