@@ -469,14 +469,17 @@ Tuple(Decimal("101090614.543360706792733531"), Decimal("100140212.45902043462802
 
 
 ./docs/replace_holder.sh docs/transactions/fill_keeper.rtm
-export amount=50
-export account=$p1
-./docs/replace_holder.sh ./docs/transactions/join.rtm
-amount=50
-./docs/replace_holder.sh ./docs/transactions/redeem_dse.rtm
 
 export account=$p2
 export supply_token=$xrd
 export amount=1000
 ./docs/replace_holder.sh docs/transactions/supply.rtm
+
+
+export amount=100
+export account=$p1
+./docs/replace_holder.sh ./docs/transactions/join.rtm
+amount=50
+./docs/replace_holder.sh ./docs/transactions/redeem_dse.rtm
+
 
