@@ -94,10 +94,8 @@ mod staking_pool {
             let join_amount = validator.get_redemption_value(lsu_amount);
             let unit_amount = floor_by_resource(self.staking_unit_res_mgr.address(), join_amount.checked_div(value_per_unit).unwrap());
             let unit_bucket = self.staking_unit_res_mgr.mint(unit_amount);
-            //TODO:
-            let lsu_address = lsu.resource_address();
-            let lsu_index = amount / lsu_amount;
 
+            let lsu_index = amount / lsu_amount;
             let last_lsu = if self.lsu_map.get(&validator_addr).is_some(){
                 let v = self.lsu_map.get_mut(&validator_addr).unwrap();
                 v.put(lsu);

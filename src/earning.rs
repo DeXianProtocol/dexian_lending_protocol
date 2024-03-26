@@ -188,7 +188,6 @@ mod staking_earning {
 
         pub fn join(&mut self, validator_addr: ComponentAddress, bucket: Bucket) -> Bucket{
             // assert!(self.staking_pool.get_underlying_token() == bucket.resource_address(), "the unsupported token!");
-            let amount = bucket.amount();
             let unit_bucket = self.staking_pool.contribute(bucket, validator_addr);
             unit_bucket
         }
