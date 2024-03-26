@@ -3,7 +3,7 @@ use crate::utils::*;
 use crate::validator::keeper::{StakeData, UnstakeData};
 
 #[blueprint]
-#[events(Event1, Event2, JoinDetailEvent)]
+#[events(Event1, Event2, JoinEvent)]
 mod staking_pool {
 
     enable_method_auth!{
@@ -117,13 +117,11 @@ mod staking_pool {
                         last_lsu
                     }
             );
-            Runtime::emit_event(JoinDetailEvent{
-                token:self.underlying_token.clone(),
+            Runtime::emit_event(JoinEvent{
                 amount: join_amount,
                 validator: validator_addr,
                 dse_index: value_per_unit,
                 dse_amount: unit_bucket.amount(),
-                lsu_address,
                 lsu_index,
                 lsu_amount
             });
@@ -222,11 +220,9 @@ mod staking_pool {
 
 
 #[derive(ScryptoSbor, ScryptoEvent)]
-pub struct JoinDetailEvent {
-    pub token: ResourceAddress,
+pub struct JoinEvent {
     pub amount: Decimal,
     pub validator: ComponentAddress,
-    pub lsu_address: ResourceAddress,
     pub lsu_index: Decimal,
     pub lsu_amount: Decimal,
     pub dse_index: Decimal,

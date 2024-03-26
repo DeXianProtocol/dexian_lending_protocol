@@ -8,7 +8,7 @@ use crate::validator::keeper::validator_keeper::ValidatorKeeper;
 
 
 #[blueprint]
-#[events(JoinEvent, FasterRedeemEvent, NormalRedeemEvent, NftFasterRedeemEvent, ClaimXrdEvent, SettleEvent, DebugEvent)]
+#[events(FasterRedeemEvent, NormalRedeemEvent, NftFasterRedeemEvent, ClaimXrdEvent, SettleEvent, DebugEvent)]
 mod staking_earning {
 
     enable_method_auth! {
@@ -190,11 +190,6 @@ mod staking_earning {
             // assert!(self.staking_pool.get_underlying_token() == bucket.resource_address(), "the unsupported token!");
             let amount = bucket.amount();
             let unit_bucket = self.staking_pool.contribute(bucket, validator_addr);
-            Runtime::emit_event(JoinEvent{
-                validator:validator_addr,
-                unit_amount:unit_bucket.amount(),
-                amount,
-            });
             unit_bucket
         }
 
@@ -224,9 +219,9 @@ mod staking_earning {
             }
             else{
                 Runtime::emit_event(NormalRedeemEvent{
-                    claim_nft: claim_nft_bucket.resource_address(),
                     res_addr,
                     amount,
+                    validator_addr,
                     claim_nft_id,
                     claim_amount
                 });
@@ -246,13 +241,6 @@ mod staking_earning {
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
-pub struct JoinEvent {
-    pub amount: Decimal,
-    pub validator: ComponentAddress,
-    pub unit_amount: Decimal,
-}
-
-#[derive(ScryptoSbor, ScryptoEvent)]
 pub struct FasterRedeemEvent{
 /// resource address of LSUs or DSE
     pub res_addr: ResourceAddress,
@@ -265,7 +253,7 @@ pub struct NormalRedeemEvent{
 /// resource address of LSUs or DSE
     pub res_addr: ResourceAddress,
     pub amount: Decimal,
-    pub claim_nft: ResourceAddress,
+    pub validator_addr: ComponentAddress,
     pub claim_nft_id: NonFungibleLocalId,
     pub claim_amount: Decimal
 }
