@@ -1,5 +1,5 @@
 use scrypto::prelude::*;
-use crate::utils::verify_ed25519;
+use crate::utils;
 
 #[derive(ScryptoSbor, Clone, PartialEq, Debug)]
 pub struct QuotePrice {
@@ -113,7 +113,7 @@ mod oracle{
             );
             
             info!("price message: {}, signature:{}", message.clone(), signature.clone());
-            if verify_ed25519(&message, &self.pk_str, &signature){
+            if utils::verify_ed25519(&message, &self.pk_str, &signature){
                 if self.last_validation_epoch == epoch_at{
                     assert!((self.last_validation_timestamp as i128 - timestamp as i128) < self.max_diff as i128, "Price information has become too stale.");
                     if self.last_validation_timestamp < timestamp{

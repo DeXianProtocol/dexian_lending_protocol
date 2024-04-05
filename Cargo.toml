@@ -1,11 +1,12 @@
 [package]
 name = "dexian_lending_protocol"
-version = "0.1.0"
+version = "0.9.1"
 edition = "2021"
+resolver = "2"
 
 [dependencies]
-sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
-scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
+sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.1.1" }
+scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.1.1" }
 
 hex = { version = "0.4.3", default-features = false }
 # serde = { version = "1.0.144", default-features = false, optional = true }
@@ -13,18 +14,24 @@ hex = { version = "0.4.3", default-features = false }
 ed25519-dalek = { version="2.1.0", default-features = false }
 
 [dev-dependencies]
-transaction = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
-radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
-scrypto-unit = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
-scrypto-test = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
-radix-engine-interface = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.0.1" }
+transaction = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.1.1" }
+radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.1.1" }
+scrypto-unit = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.1.1" }
+scrypto-test = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.1.1" }
+radix-engine-interface = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v1.1.1" }
+dexian_lending_protocol = {path = ".", features=["test"]}
+
 [profile.release]
 opt-level = 'z'        # Optimize for size.
 lto = true             # Enable Link Time Optimization.
 codegen-units = 1      # Reduce number of codegen units to increase optimizations.
 panic = 'abort'        # Abort on panic.
-strip = "debuginfo"    # Strip debug info.
+strip =  true          # "debuginfo"    # Strip debug info.
 overflow-checks = true # Panic in the case of an overflow.
+
+[features]
+default = []
+test = []
 
 [lib]
 crate-type = ["cdylib", "lib"]
