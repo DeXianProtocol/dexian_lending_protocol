@@ -12,28 +12,6 @@ use crate::validator::keeper::validator_keeper::ValidatorKeeper;
 #[events(SupplyEvent, WithdrawEvent, CreateCDPEvent, ExtendBorrowEvent, AdditionCollateralEvent, WithdrawCollateralEvent, RepayEvent, LiquidationEvent, FlashLoanEvent)]
 mod dexian_protocol{
 
-    // extern_blueprint!(
-    //     "package_sim1p5h5gldmvn863xwm3gezgflgf7le2nj7yq9aujx0gv3myj8f8c0slg",
-    //     LendingProtocol {
-    //         fn repay(&mut self, repay_bucket: Bucket, id: u64) -> Bucket;
-    
-    //         fn withdraw_collateral(&mut self,
-    //             cdp: Bucket,
-    //             amount: Decimal,
-    //             price1: String,
-    //             quote1: ResourceAddress,
-    //             timestamp1: u64,
-    //             signature1: String,
-    //             price2: Option<String>,
-    //             quote2: Option<ResourceAddress>,
-    //             timestamp2: Option<u64>,
-    //             signature2: Option<String>
-    //         ) -> (Bucket, Bucket);
-    
-    //         fn withdraw(&mut self, bucket: Bucket) -> Bucket;
-    //     }
-    // );
-
     enable_method_auth! {
         roles{
             admin => updatable_by: [];
