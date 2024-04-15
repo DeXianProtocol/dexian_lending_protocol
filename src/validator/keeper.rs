@@ -249,15 +249,15 @@ mod validator_keeper{
         
             // The last entry must be within the last week (inclusive).
             if latest_week_index < current_week_index -1 {
-                Runtime::emit_event(DebugGetApy{
-                    validator: _validator_addr.clone(),
-                    last_epoch: latest.last_stake_epoch,
-                    latest_index: Decimal::ZERO,
-                    previous_index: Decimal::ZERO,
-                    delta_epoch: Decimal::ZERO,
-                    current_week_index,
-                    latest_week_index
-                });
+                // Runtime::emit_event(DebugGetApy{
+                //     validator: _validator_addr.clone(),
+                //     last_epoch: latest.last_stake_epoch,
+                //     latest_index: Decimal::ZERO,
+                //     previous_index: Decimal::ZERO,
+                //     delta_epoch: Decimal::ZERO,
+                //     current_week_index,
+                //     latest_week_index
+                // });
                 return None;
             }
         
