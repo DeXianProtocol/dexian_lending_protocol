@@ -45,7 +45,7 @@ The following are illustrative examples of each of these three primary functions
 
 Contributions are always welcome! 
 
-* for Protocol & Developement. Join github (https://github.com/DexianProtocol)
+* for Protocol & Development. Join github (https://github.com/DexianProtocol) 
 
 * for XRD
 account_rdx12xygrv4yclm0lcckea3wk7lsp953mjvhn0gyzdppxka6eylggsxmc6

@@ -3,7 +3,6 @@ use crate::utils::*;
 use crate::validator::keeper::UnstakeData;
 
 #[blueprint]
-// #[events(Event1, Event2, JoinEvent)]
 #[events(JoinEvent)]
 mod staking_pool {
 
@@ -59,8 +58,7 @@ mod staking_pool {
 
             let staking_unit_token = staking_unit_res_mgr.address();
             let component = Self {
-                validator_map: HashMap::new(),
-                lsu_map: KeyValueStore::new(),
+                lsu_map: HashMap::new(),
                 underlying_token,
                 staking_unit_res_mgr
             }.instantiate()
@@ -83,7 +81,6 @@ mod staking_pool {
         pub fn contribute(&mut self, bucket: Bucket, validator_addr: ComponentAddress) -> Bucket{
             assert_resource(&bucket.resource_address(), &self.underlying_token);
             let (_, _, value_per_unit) = self.get_values();
-            // let current_epoch = Runtime::current_epoch().number();
             let mut validator: Global<Validator> = Global::from(validator_addr);
             let amount = bucket.amount();
             let lsu = validator.stake(bucket);
@@ -93,8 +90,9 @@ mod staking_pool {
             let unit_amount = floor_by_resource(self.staking_unit_res_mgr.address(), join_amount.checked_div(value_per_unit).unwrap());
             let unit_bucket = self.staking_unit_res_mgr.mint(unit_amount);
 
-            let last_lsu = if self.lsu_map.get(&validator_addr).is_some(){
-                let mut v = self.lsu_map.get_mut(&validator_addr).unwrap();
+            let lsu_index = amount / lsu_amount;
+            let _last_lsu = if self.lsu_map.get(&validator_addr).is_some(){
+                let v = self.lsu_map.get_mut(&validator_addr).unwrap();
                 v.put(lsu);
                 v.amount()
             }
@@ -102,26 +100,14 @@ mod staking_pool {
                 self.lsu_map.insert(validator_addr.clone(), Vault::with_bucket(lsu));
                 lsu_amount
             };
-            self.validator_map.entry(validator_addr).and_modify(|stake_data|{
-                stake_data.last_staked = validator.get_redemption_value(last_lsu);
-                stake_data.last_stake_epoch = current_epoch;
-            }).or_insert(
-                StakeData { 
-                        last_stake_epoch: current_epoch,
-                        last_staked: join_amount,
-                        last_lsu
-                    }
-            );
-            // Runtime::emit_event(JoinDetailEvent{
-            //     token:self.underlying_token.clone(),
-            //     amount: join_amount,
-            //     validator: validator_addr,
-            //     dse_index: value_per_unit,
-            //     dse_amount: unit_bucket.amount(),
-            //     lsu_address,
-            //     lsu_index,
-            //     lsu_amount
-            // });
+            Runtime::emit_event(JoinEvent{
+                amount: join_amount,
+                validator: validator_addr,
+                dse_index: value_per_unit,
+                dse_amount: unit_bucket.amount(),
+                lsu_index,
+                lsu_amount
+            });
 
             unit_bucket
         }
