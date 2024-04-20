@@ -258,6 +258,7 @@ mod validator_keeper{
                 //     current_week_index,
                 //     latest_week_index
                 // });
+                info!("latest_week_index:{}/{}, current_week_index:{}", latest.last_stake_epoch, latest_week_index, current_week_index);
                 return None;
             }
         
@@ -278,6 +279,14 @@ mod validator_keeper{
                     //     previous_index,
                     //     delta_epoch
                     // });
+                    info!(
+                        "latest_index:{}/{}, previous_index:{}/{}, delta_index:{}, delta_epoch:{}/{}",
+                        latest.last_staked, latest.last_lsu,
+                        previous.last_staked, previous.last_lsu,
+                        delta_index,
+                        latest.last_stake_epoch, previous.last_stake_epoch
+
+                    );
                     return Some(
                         (delta_index).checked_mul(Decimal::from(EPOCH_OF_YEAR)).unwrap()
                         .checked_div(delta_epoch).unwrap()

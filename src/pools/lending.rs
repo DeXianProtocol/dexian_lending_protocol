@@ -66,6 +66,7 @@ mod lend_pool {
         stable_loan_interest_rate: Decimal,
         stable_loan_amount: Decimal,
         stable_loan_last_update: u64
+
     }
 
 
@@ -366,12 +367,12 @@ mod lend_pool {
             let borrow_ratio = if supply == Decimal::ZERO { Decimal::ZERO } else { total_debt.checked_div(supply).unwrap() };
             let stable_ratio = if total_debt == Decimal::ZERO {Decimal::ZERO } else { stable_borrow.checked_div(total_debt).unwrap() };
             
-            info!("calc_interest_rate.1, borrow_ratio:{}, ", borrow_ratio);
+            info!("calc_interest_rate.1, borrow_ratio:{}, stable_ratio:{}", borrow_ratio, stable_ratio);
             let (variable_rate, stable_rate) = self.get_interest_rate_from_component(borrow_ratio, stable_ratio);
-            info!("calc_interest_rate.2, var_ratio:{}, stable_ratio:{} ", variable_rate, self.stable_loan_interest_rate);
+            info!("calc_interest_rate.2, variable_rate:{}, stable_rate:{} ", variable_rate, stable_rate);
             
             let overall_borrow_rate = if total_debt == Decimal::ZERO { Decimal::ZERO } else {
-                variable_borrow.checked_mul(variable_rate).unwrap().checked_add(stable_borrow.checked_mul(self.stable_loan_interest_rate).unwrap()).unwrap()
+                variable_borrow.checked_mul(variable_rate).unwrap().checked_add(stable_borrow.checked_mul(stable_rate).unwrap()).unwrap()
                 .checked_div(total_debt).unwrap()
             };
             
@@ -400,6 +401,7 @@ mod lend_pool {
                 let recent_supply_interest = normalized_supply.checked_mul(current_supply_index.checked_sub(self.deposit_index).unwrap()).unwrap();
     
                 // the interest rate spread goes into the insurance pool
+                // insurance_balance += variable_interest + stable_interest - recent_supply_interest
                 self.insurance_balance = self.insurance_balance.checked_add(recent_variable_interest.checked_add(recent_stable_interest).unwrap().checked_sub(recent_supply_interest).unwrap()).unwrap();
     
                 info!("update_index({}), borrow_index:{}, current:{}, supply_index:{}, current:{}, stable:{}, stable_avg_rate:{}", Runtime::bech32_encode_address(self.underlying_token), self.loan_index, current_borrow_index, self.deposit_index, current_supply_index, self.stable_loan_amount, self.stable_loan_interest_rate);
@@ -468,7 +470,10 @@ mod lend_pool {
         }
 
         fn get_interest_rate_from_component(&self, borrow_ratio: Decimal, stable_ratio: Decimal) -> (Decimal, Decimal){
-            self.interest_model_cmp.call_raw::<(Decimal, Decimal)>("get_interest_rate", scrypto_args!(borrow_ratio, stable_ratio, self.interest_model.clone()))
+            self.interest_model_cmp.call_raw::<(Decimal, Decimal)>(
+                "get_interest_rate", 
+                scrypto_args!(borrow_ratio, stable_ratio, self.interest_model.clone())
+            )
         }
     }   
 

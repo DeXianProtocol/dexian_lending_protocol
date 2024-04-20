@@ -1,9 +1,10 @@
 use scrypto::prelude::*;
 use crate::utils::*;
-use crate::validator::keeper::{StakeData, UnstakeData};
+use crate::validator::keeper::UnstakeData;
 
 #[blueprint]
-#[events(Event1, Event2, JoinEvent)]
+// #[events(Event1, Event2, JoinEvent)]
+#[events(JoinEvent)]
 mod staking_pool {
 
     enable_method_auth!{
@@ -24,7 +25,6 @@ mod staking_pool {
     struct StakingResourePool{
         underlying_token: ResourceAddress,
         staking_unit_res_mgr: ResourceManager,
-        validator_map: HashMap<ComponentAddress, StakeData>,
         lsu_map: HashMap<ComponentAddress, Vault>
     }
 
@@ -59,7 +59,6 @@ mod staking_pool {
 
             let staking_unit_token = staking_unit_res_mgr.address();
             let component = Self {
-                validator_map: HashMap::new(),
                 lsu_map: HashMap::new(),
                 underlying_token,
                 staking_unit_res_mgr
@@ -83,20 +82,18 @@ mod staking_pool {
         pub fn contribute(&mut self, bucket: Bucket, validator_addr: ComponentAddress) -> Bucket{
             assert_resource(&bucket.resource_address(), &self.underlying_token);
             let (_, _, value_per_unit) = self.get_values();
-            let current_epoch = Runtime::current_epoch().number();
+            // let current_epoch = Runtime::current_epoch().number();
             let mut validator: Global<Validator> = Global::from(validator_addr);
             let amount = bucket.amount();
             let lsu = validator.stake(bucket);
 
-            
-            
             let lsu_amount = lsu.amount();
             let join_amount = validator.get_redemption_value(lsu_amount);
             let unit_amount = floor_by_resource(self.staking_unit_res_mgr.address(), join_amount.checked_div(value_per_unit).unwrap());
             let unit_bucket = self.staking_unit_res_mgr.mint(unit_amount);
 
             let lsu_index = amount / lsu_amount;
-            let last_lsu = if self.lsu_map.get(&validator_addr).is_some(){
+            let _last_lsu = if self.lsu_map.get(&validator_addr).is_some(){
                 let v = self.lsu_map.get_mut(&validator_addr).unwrap();
                 v.put(lsu);
                 v.amount()
@@ -105,16 +102,6 @@ mod staking_pool {
                 self.lsu_map.insert(validator_addr.clone(), Vault::with_bucket(lsu));
                 lsu_amount
             };
-            self.validator_map.entry(validator_addr).and_modify(|stake_data|{
-                stake_data.last_staked = validator.get_redemption_value(last_lsu);
-                stake_data.last_stake_epoch = current_epoch;
-            }).or_insert(
-                StakeData { 
-                        last_stake_epoch: current_epoch,
-                        last_staked: join_amount,
-                        last_lsu
-                    }
-            );
             Runtime::emit_event(JoinEvent{
                 amount: join_amount,
                 validator: validator_addr,
@@ -141,31 +128,24 @@ mod staking_pool {
             
             
             // assert_amount(lsu_value, redeem_value);
-            assert!(redeem_value <= lsu_value, "target value {} less than expect {}!", lsu_value, redeem_value);
+            assert!(redeem_value <= lsu_value, "the target value {} less than expect {}!", lsu_value, redeem_value);
             let lsu_index = lsu_value.checked_div(lsu_amount).unwrap();
             let unstake_lsu_bucket = lsu.take_advanced(redeem_value.checked_div(lsu_index).unwrap(), WithdrawStrategy::Rounded(RoundingMode::ToZero));
-            let unstake_amount = unstake_lsu_bucket.amount();
+            // let unstake_amount = unstake_lsu_bucket.amount();
             let claim_nft = validator.unstake(unstake_lsu_bucket);
             let claim_nft_id = claim_nft.as_non_fungible().non_fungible_local_id();
             let unstake_data = ResourceManager::from_address(claim_nft.resource_address()).get_non_fungible_data::<UnstakeData>(&claim_nft_id);
 
-            self.validator_map.entry(validator_addr).and_modify(|stake_data|{
-                stake_data.last_staked = lsu_value.checked_sub(redeem_value).unwrap();
-                stake_data.last_stake_epoch = Runtime::current_epoch().number();
-                stake_data.last_lsu = lsu.amount();
-            });
-
             self.staking_unit_res_mgr.burn(bucket);
-            Runtime::emit_event(Event2{
-                amount,
-                value_per_share,
-                redeem_value,
-                lsu_amount,
-                lsu_value,
-                unstake_amount,
-                claim_amount: unstake_data.claim_amount
-
-            });
+            // Runtime::emit_event(Event2{
+            //     amount,
+            //     value_per_share,
+            //     redeem_value,
+            //     lsu_amount,
+            //     lsu_value,
+            //     unstake_amount,
+            //     claim_amount: unstake_data.claim_amount
+            // });
 
             (claim_nft, claim_nft_id, unstake_data.claim_amount)
             
@@ -204,12 +184,12 @@ mod staking_pool {
                 let validator: Global<Validator> = Global::from(validator_addr.clone());
                 let latest = validator.get_redemption_value(vault.amount());
                 sum = sum.checked_add(latest).unwrap();
-                Runtime::emit_event(Event1{
-                    sum,
-                    validator: *validator_addr,
-                    lsu_amount: vault.amount(),
-                    staked: latest
-                })
+                // Runtime::emit_event(Event1{
+                //     sum,
+                //     validator: *validator_addr,
+                //     lsu_amount: vault.amount(),
+                //     staked: latest
+                // })
             }
             sum
         }
@@ -227,22 +207,22 @@ pub struct JoinEvent {
     pub dse_amount: Decimal,
 }
 
-#[derive(ScryptoSbor, ScryptoEvent)]
-pub struct Event1{
-    pub validator: ComponentAddress,
-    pub lsu_amount: Decimal,
-    pub staked: Decimal,
-    pub sum: Decimal
-}
+// #[derive(ScryptoSbor, ScryptoEvent)]
+// pub struct Event1{
+//     pub validator: ComponentAddress,
+//     pub lsu_amount: Decimal,
+//     pub staked: Decimal,
+//     pub sum: Decimal
+// }
 
 
-#[derive(ScryptoSbor, ScryptoEvent)]
-pub struct Event2{
-    pub amount: Decimal,
-    pub value_per_share: Decimal,
-    pub redeem_value: Decimal,
-    pub lsu_amount: Decimal,
-    pub lsu_value: Decimal,
-    pub unstake_amount: Decimal,
-    pub claim_amount: Decimal
-}
+// #[derive(ScryptoSbor, ScryptoEvent)]
+// pub struct Event2{
+//     pub amount: Decimal,
+//     pub value_per_share: Decimal,
+//     pub redeem_value: Decimal,
+//     pub lsu_amount: Decimal,
+//     pub lsu_value: Decimal,
+//     pub unstake_amount: Decimal,
+//     pub claim_amount: Decimal
+// }
