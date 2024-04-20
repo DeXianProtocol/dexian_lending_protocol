@@ -2,6 +2,7 @@ use scrypto::prelude::*;
 use crate::interest::InterestModel;
 use crate::oracle::oracle::PriceOracle;
 // use crate::cdp::CollateralDebtPosition;
+use crate::cdp::FlashLoanData;
 use crate::cdp::cdp_mgr::CollateralDebtManager;
 use crate::earning::staking_earning::StakingEarning;
 use crate::validator::keeper::validator_keeper::ValidatorKeeper;
@@ -10,30 +11,6 @@ use crate::validator::keeper::validator_keeper::ValidatorKeeper;
 #[blueprint]
 #[events(SupplyEvent, WithdrawEvent, CreateCDPEvent, ExtendBorrowEvent, AdditionCollateralEvent, WithdrawCollateralEvent, RepayEvent, LiquidationEvent, FlashLoanEvent)]
 mod dexian_protocol{
-
-    // extern_blueprint!(
-    //     "package_sim1p5h5gldmvn863xwm3gezgflgf7le2nj7yq9aujx0gv3myj8f8c0slg",
-    //     LendingProtocol {
-    //         fn repay(&mut self, repay_bucket: Bucket, id: u64) -> Bucket;
-    
-    //         fn withdraw_collateral(&mut self,
-    //             cdp: Bucket,
-    //             amount: Decimal,
-    //             price1: String,
-    //             quote1: ResourceAddress,
-    //             timestamp1: u64,
-    //             signature1: String,
-    //             price2: Option<String>,
-    //             quote2: Option<ResourceAddress>,
-    //             timestamp2: Option<u64>,
-    //             signature2: Option<String>
-    //         ) -> (Bucket, Bucket);
-    
-    //         fn withdraw(&mut self, bucket: Bucket) -> Bucket;
-    //     }
-    // );
-
-    use crate::cdp::FlashLoanData;
 
     enable_method_auth! {
         roles{
@@ -86,6 +63,7 @@ mod dexian_protocol{
             price_signer_pk: String, 
             price_validity_ms: u64,
             unstake_epoch_num: u64,
+            settle_gas: Decimal
         ) -> (
             Global<DeXianProtocol>,
             Global<PriceOracle>,
@@ -108,6 +86,7 @@ mod dexian_protocol{
             let staking_mgr = StakingEarning::instantiate(
                 validator_keeper,
                 unstake_epoch_num,
+                settle_gas,
                 admin_rule.clone(),
                 mgr_rule.clone()
             );
@@ -376,7 +355,7 @@ mod dexian_protocol{
 
         pub fn repay_flashloan(&mut self, repay_bucket: Bucket, flashloan: Bucket) -> Bucket{
             let nft_id: NonFungibleLocalId = flashloan.as_non_fungible().non_fungible_local_id();
-            let flashloan_data = ResourceManager::from(flashloan.resource_address()).get_non_fungible_data::<FlashLoanData>(&nft_id);
+            let flashloan_data = ResourceManager::from_address(flashloan.resource_address()).get_non_fungible_data::<FlashLoanData>(&nft_id);
             Runtime::emit_event(FlashLoanEvent{
                 res_addr: flashloan_data.res_addr,
                 bucket_amount: repay_bucket.amount(),

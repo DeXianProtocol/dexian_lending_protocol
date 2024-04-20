@@ -1,0 +1,31 @@
+CALL_METHOD
+    Address("${account}")
+    "lock_fee"
+    Decimal("10")
+;
+CALL_METHOD
+  Address("${account}")
+  "withdraw"
+  Address("${xrd}")
+  Decimal("${subsidy}")
+;
+TAKE_FROM_WORKTOP
+  Address("${xrd}")
+  Decimal("${subsidy}")
+  Bucket("bucket1")
+;
+CALL_METHOD
+    Address("${dse_mgr}")
+    "settle"
+    Address("${cdp_mgr}")
+    Address("${validator}")
+    Address("${claim_nft}")
+    NonFungibleLocalId("${nft_id}")
+    NonFungibleLocalId("${cdp_id}")
+    Some(Bucket("bucket1"))
+;
+CALL_METHOD
+    Address("${account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;

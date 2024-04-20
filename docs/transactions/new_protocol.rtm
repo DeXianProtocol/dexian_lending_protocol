@@ -19,6 +19,7 @@ CALL_FUNCTION
     "${price_signer_pk}"
     30000u64
     2016u64
+    Decimal("3")
 ;
 CALL_METHOD
     Address("${admin_account}")

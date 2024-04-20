@@ -76,7 +76,7 @@ pub fn calc_principal(amount: Decimal,  apy: Decimal, epoch_of_year: Decimal, de
 }
 
 pub fn get_divisibility(res_addr: ResourceAddress) -> Option<u8>{
-    let res_mgr = ResourceManager::from(res_addr);
+    let res_mgr = ResourceManager::from_address(res_addr);
     res_mgr.resource_type().divisibility()
 }
 

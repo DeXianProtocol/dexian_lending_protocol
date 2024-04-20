@@ -18,29 +18,18 @@ export p3=$(echo $result|grep "Account component address: "|awk -F ": " '{print 
 export p3_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
 export p3_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
 
-cd ~/myworks/kmfrog/scrypto-examples/core/hello-world/
-result=$(resim publish ".")
-export pkg=$(echo $result | awk -F ": " '{print $2}')
 
-result=$(resim call-function $pkg "Hello" "instantiate_hello" "USDT" "USDT" "" 6)
-export usdt_component=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
-export usdt=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
-result=$(resim call-function $pkg "Hello" "instantiate_hello" "USDC" "USDC" "" 6)
-export usdc_component=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
-export usdc=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
-
-cd ~/myworks/kmfrog/dexian_lending_protocol/
-resim set-default-account $p2 $p2_priv $p2_badge
-export account=$p2
-resim run < ./docs/replace_holder.sh docs/transactions/faucet_usdt.rtm
-resim run < ./docs/replace_holder.sh docs/transactions/faucet_usdc.rtm
-resim set-default-account $p3 $p3_priv $p3_badge
-export account=$p3
-resim run < ./docs/replace_holder.sh docs/transactions/faucet_usdc.rtm
-resim set-default-account $p1 $p1_priv $p1_badge
-export account=$p1
-resim run < ./docs/replace_holder.sh docs/transactions/faucet_usdt.rtm
-resim run < ./docs/replace_holder.sh docs/transactions/faucet_usdc.rtm
+result=$(resim new-token-fixed --symbol=USDT --name=USDT 1000000)
+# export usdt=$(echo $result | grep "Resource:" | awk -F " " '{print $3}')
+export usdt=$(echo $result | awk -F "Resource: " '{print $2}')
+result=$(resim new-token-fixed --symbol=USDC --name=USDC 1000000)
+# export usdc=$(echo $result | grep "Resource:" | awk -F " " '{print $3}')
+export usdc=$(echo $result | awk -F "Resource: " '{print $2}')
+resim transfer $usdt:100000 $p2
+resim transfer $usdc:100000 $p2
+resim transfer $usdc:100000 $p3
+resim transfer $usdt:200 $p1
+resim transfer $usdc:200 $p1
 
 
 
@@ -516,45 +505,32 @@ resim reset
 result=$(resim new-account)
 export admin_account=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
 export admin_account_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
-export admin_account_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
+export admin_account_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
 export account=$admin_account
 result=$(resim new-account)
 export p1=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
 export p1_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
-export p1_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
+export p1_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
 result=$(resim new-account)
 export p2=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
 export p2_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
-export p2_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
+export p2_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
 result=$(resim new-account)
 export p3=$(echo $result|grep "Account component address: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
 export p3_priv=$(echo $result|grep "Private key:" |awk -F "Private key: " '{print $2}'|awk -F " " '{print $1}')
-export p3_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $5}'|awk -F " " '{print $1}')
+export p3_badge=$(echo $result|grep "Owner badge: "|awk -F ": " '{print $2}'|awk -F " " '{print $1}')
 
-cd ~/myworks/kmfrog/scrypto-examples/core/hello-world/
-result=$(resim publish ".")
-export pkg=$(echo $result | awk -F ": " '{print $2}')
-
-result=$(resim call-function $pkg "Hello" "instantiate_hello" "USDT" "USDT" "" 6)
-export usdt_component=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
-export usdt=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
-result=$(resim call-function $pkg "Hello" "instantiate_hello" "USDC" "USDC" "" 6)
-export usdc_component=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
-export usdc=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
-
-cd ~/myworks/kmfrog/dexian_lending_protocol/
-resim set-default-account $p2 $p2_priv $p2_badge
-export account=$p2
-resim run < ./docs/replace_holder.sh docs/transactions/faucet_usdt.rtm
-resim run < ./docs/replace_holder.sh docs/transactions/faucet_usdc.rtm
-resim set-default-account $p3 $p3_priv $p3_badge
-export account=$p3
-resim run < ./docs/replace_holder.sh docs/transactions/faucet_usdc.rtm
-resim set-default-account $p1 $p1_priv $p1_badge
-export account=$p1
-resim run < ./docs/replace_holder.sh docs/transactions/faucet_usdt.rtm
-resim run < ./docs/replace_holder.sh docs/transactions/faucet_usdc.rtm
-
+result=$(resim new-token-fixed --symbol=USDT --name=USDT 1000000)
+export usdt=$(echo $result | grep "Resource:" | awk -F " " '{print $3}')
+#export usdt=$(echo $result | awk -F "Resource: " '{print $2}')
+result=$(resim new-token-fixed --symbol=USDC --name=USDC 1000000)
+export usdc=$(echo $result | grep "Resource:" | awk -F " " '{print $3}')
+#export usdc=$(echo $result | awk -F "Resource: " '{print $2}')
+resim transfer $usdt:100000 $p2
+resim transfer $usdc:100000 $p2
+resim transfer $usdc:100000 $p3
+resim transfer $usdt:200 $p1
+resim transfer $usdc:200 $p1
 
 
 
@@ -566,19 +542,21 @@ export pkg=$(echo $result | awk -F ": " '{print $2}')
 result=$(resim call-function $pkg "ValidatorKeeper" "instantiate")
 export keeper=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
 export admin_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
-export op_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $3}' | awk -F " " '{print $1}')
+export op_badge=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==2) print $2}' | awk -F " " '{print $1}')
+
 result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_interest.rtm)
 export def_interest_model=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
+
 export price_signer_pk=6d187b0f2e66d74410e92e2dc92a5141a55c241646ce87acbcad4ab413170f9b
 result=$(resim run < ./docs/replace_holder.sh docs/transactions/new_protocol.rtm)
-export lending_component=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{print $1}')
-export oracle=$(echo $result | grep "Component: "| awk -F "Component: " '{print $3}' | awk -F " " '{print $1}')
-export dse_mgr=$(echo $result | grep "Component: "| awk -F "Component: " '{print $4}' | awk -F " " '{print $1}')
-export staking=$(echo $result | grep "Component: "| awk -F "Component: " '{print $5}' | awk -F " " '{print $1}')
-export cdp_mgr=$(echo $result | grep "Component: "| awk -F "Component: " '{print $6}' | awk -F " " '{print $1}')
+export lending_component=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{if (NR==1) print $1}')
+export oracle=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{if (NR==2) print $1}')
+export dse_mgr=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{if (NR==3) print $1}')
+export staking=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{if (NR==4) print $1}')
+export cdp_mgr=$(echo $result | grep "Component: "| awk -F "Component: " '{print $2}' | awk -F " " '{if (NR==5) print $1}')
 export dse=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $2}' | awk -F " " '{print $1}')
-export cdp=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $3}' | awk -F " " '{print $1}')
-export flash=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==1) print $4}' | awk -F " " '{print $1}')
+export cdp=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==2) print $2}' | awk -F " " '{print $1}')
+export flash=$(echo $result | grep "Resource: " | awk -F "Resource: " '{if (NR==3) print $2}' | awk -F " " '{print $1}')
 export xrd="resource_sim1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxakj8n3"
 
 resim run < ./docs/replace_holder.sh docs/transactions/set_price.rtm
@@ -645,7 +623,7 @@ export account=$p1
 export dx_token=$dx_xrd
 export amount=2000
 export borrow_token=$usdt
-export borrow_amount=67
+export borrow_amount=60
 resim run < ./docs/replace_holder.sh docs/transactions/borrow_variable.rtm
 
 resim set-default-account $p3 $p3_priv $p3_badge

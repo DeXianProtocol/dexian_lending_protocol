@@ -1,7 +1,7 @@
 use scrypto::prelude::*;
 use crate::utils::EPOCH_OF_YEAR;
 
-pub const BABYLON_START_EPOCH: u64 = 32718; //mainnet: 32718, stokenet: 0 //0; //
+pub const BABYLON_START_EPOCH: u64 = 0; //32718; // //mainnet: 32718, stokenet: 0
 pub const A_WEEK_EPOCHS: u64 = 60/5*24*7;
 pub const RESERVE_WEEKS: usize = 52;
 
@@ -27,7 +27,7 @@ pub struct UnstakeData {
 
 
 #[blueprint]
-// #[events(DebugGetApy, DebugGetApy2)]
+//#[events(DebugGetApy, DebugGetApy2)]
 mod validator_keeper{
 
     enable_method_auth!{
@@ -258,6 +258,7 @@ mod validator_keeper{
                 //     current_week_index,
                 //     latest_week_index
                 // });
+                info!("latest_week_index:{}/{}, current_week_index:{}", latest.last_stake_epoch, latest_week_index, current_week_index);
                 return None;
             }
         
@@ -278,6 +279,13 @@ mod validator_keeper{
                     //     previous_index,
                     //     delta_epoch
                     // });
+                    info!(
+                        "latest_index:{}/{}, previous_index:{}/{}, delta_index:{}, delta_epoch:{}/{}",
+                        latest.last_staked, latest.last_lsu,
+                        previous.last_staked, previous.last_lsu,
+                        delta_index,
+                        latest.last_stake_epoch, previous.last_stake_epoch
+                    );
                     return Some(
                         (delta_index).checked_mul(Decimal::from(EPOCH_OF_YEAR)).unwrap()
                         .checked_div(delta_epoch).unwrap()
