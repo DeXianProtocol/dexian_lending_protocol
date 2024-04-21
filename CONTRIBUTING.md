@@ -1,4 +1,4 @@
-# Welcome to ENS docs contributing guide
+# Welcome to DeXian Staking Earning contributing guide
 
 Thank you for investing your time in contributing dexian staking earning! 
 
