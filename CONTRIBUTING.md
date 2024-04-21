@@ -1,22 +1,22 @@
 # Welcome to ENS docs contributing guide
 
-Thank you for investing your time in contributing to our documentation! Any contribution you make will be reflected on [docs.ens.domains](https://docs.ens.domains) :sparkles:.
+Thank you for investing your time in contributing dexian staking earning! 
 
 In this guide you will get an overview of the contribution workflow from opening an issue, creating a PR, reviewing, and merging the PR.
 
 ## Getting started
 
-This guide will walk you through the process of contributing to the ENS docs. If you are new to GitHub, you can checkout this [GitHub tutorial](https://guides.github.com/activities/hello-world/) to get started.
+This guide will walk you through the process of contributing to the dexian staking earning. If you are new to GitHub, you can checkout this [GitHub tutorial](https://guides.github.com/activities/hello-world/) to get started.
 
 ### Issues
 
 #### Create a new issue
 
-If you spot a problem with the docs, [search if an issue already exists](https://github.com/ensdomains/docs/issues). If a related issue doesn't exist, you can open a new issue using a relevant [issue form](https://github.com/ensdomains/docs/issues/new).
+If you spot a problem with the docs, [search if an issue already exists](https://github.com/DeXianProtocol/dexian_lending_protocol/issues). If a related issue doesn't exist, you can open a new issue using a relevant [issue form](https://github.com/DeXianProtocol/dexian_lending_protocol/issues/new).
 
 #### Solve an issue
 
-Scan through our [existing issues](https://github.com/ensdomains/docs/issues) to find one that interests you. You can narrow down the search using `labels` as filters. As a general rule, we don't assign issues to anyone. If you find an issue to work on, you are welcome to open a PR with a fix.
+Scan through our [existing issues](https://github.com/DeXianProtocol/dexian_lending_protocol/issues) to find one that interests you. You can narrow down the search using `labels` as filters. As a general rule, we don't assign issues to anyone. If you find an issue to work on, you are welcome to open a PR with a fix.
 
 ### Make Changes
 
@@ -28,7 +28,7 @@ Click **Make a contribution** at the bottom of any docs page to make small chang
 
 1. Fork the repository.
 
-2. (Optional) If you are making any code changes. Install or update to **Node.js**, or run `nvm use` if using [Node Version Manager](https://nvm.sh). For more information, see [the development guide](.github/development.md).
+2. (Optional) If you are making any code changes. For more information, see [the development guide](.github/development.md).
 
 3. Create a working branch and start with your changes!
 
@@ -49,6 +49,6 @@ Once you submit your PR, a Docs team member will review your proposal. We may as
 
 ### Your PR is merged!
 
-Congratulations :tada::tada: The ENS team thanks you :sparkles:.
+Congratulations :tada::tada: The DeXian team thanks you :sparkles:.
 
-Once your PR is merged, your contributions will be publicly visible on the [ENS Docs](https://docs.ens.domains).
+Once your PR is merged, your contributions will be publicly visible on the [DeXian Staking Earning](https://github.com/DeXianProtocol/dexian_lending_protocol).
