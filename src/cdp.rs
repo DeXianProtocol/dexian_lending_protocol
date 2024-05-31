@@ -15,6 +15,8 @@ pub struct FlashLoanData{
 pub struct CollateralDebtPosition{
     pub borrow_token: ResourceAddress,
     pub collateral_token: ResourceAddress,
+    // for fixed term, default: 0
+    pub end_epoch: u64,
 
     #[mutable]
     pub is_stable: bool,
@@ -36,7 +38,11 @@ pub struct CollateralDebtPosition{
     #[mutable]
     pub last_update_epoch: u64,
     #[mutable]
-    pub stable_rate: Decimal
+    pub stable_rate: Decimal,
+
+    // for fixed term.
+    // pub prev_id: Non
+
 }
 
 #[derive(ScryptoSbor)]
@@ -106,7 +112,10 @@ mod cdp_mgr{
         transient_nft_res_mgr: ResourceManager,
         // flashloan NFT counter
         transient_id_counter: u64,
-        cdp_vault: NonFungibleVault
+        // for fixed term
+        cdp_vault: NonFungibleVault,
+        // for fixed term
+        last_cdp_nft_id: NonFungibleLocalId
     }
 
     impl CollateralDebtManager{
@@ -180,6 +189,7 @@ mod cdp_mgr{
             }
             )
             .globalize();
+        cdp_vaults.
             (component, cdp_res_mgr.address())
         }
 
