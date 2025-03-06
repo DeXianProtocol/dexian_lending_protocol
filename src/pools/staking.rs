@@ -23,8 +23,8 @@ mod staking_pool {
 
     struct StakingResourePool{
         underlying_token: ResourceAddress,
-        staking_unit_res_mgr: ResourceManager,
-        lsu_map: HashMap<ComponentAddress, Vault>
+        staking_unit_res_mgr: FungibleResourceManager,
+        lsu_map: HashMap<ComponentAddress, FungibleVault>
     }
 
     impl StakingResourePool {
@@ -37,7 +37,7 @@ mod staking_pool {
             let (address_reservation, address) =
                 Runtime::allocate_component_address(StakingResourePool::blueprint_id());
 
-            let staking_unit_res_mgr: ResourceManager = ResourceBuilder::new_fungible(OwnerRole::Fixed(admin_rule.clone()))
+            let staking_unit_res_mgr: FungibleResourceManager = ResourceBuilder::new_fungible(OwnerRole::Fixed(admin_rule.clone()))
                 .metadata(metadata!(init{
                     "pool" => address, locked;
                     "symbol" => "dseXRD", locked;
@@ -78,7 +78,7 @@ mod staking_pool {
             (component, staking_unit_token)
         }
 
-        pub fn contribute(&mut self, bucket: Bucket, validator_addr: ComponentAddress) -> Bucket{
+        pub fn contribute(&mut self, bucket: FungibleBucket, validator_addr: ComponentAddress) -> FungibleBucket{
             assert_resource(&bucket.resource_address(), &self.underlying_token);
             let (_, _, value_per_unit) = self.get_values();
             let mut validator: Global<Validator> = Global::from(validator_addr);
@@ -97,7 +97,7 @@ mod staking_pool {
                 v.amount()
             }
             else{
-                self.lsu_map.insert(validator_addr.clone(), Vault::with_bucket(lsu));
+                self.lsu_map.insert(validator_addr.clone(), FungibleVault::with_bucket(lsu));
                 lsu_amount
             };
             Runtime::emit_event(JoinEvent{
@@ -112,7 +112,7 @@ mod staking_pool {
             unit_bucket
         }
 
-        pub fn redeem(&mut self, validator_addr: ComponentAddress, bucket: Bucket) -> (Bucket, NonFungibleLocalId, Decimal){
+        pub fn redeem(&mut self, validator_addr: ComponentAddress, bucket: FungibleBucket) -> (NonFungibleBucket, NonFungibleLocalId, Decimal){
             assert_resource(&bucket.resource_address(), &self.staking_unit_res_mgr.address());
             assert!(self.lsu_map.get(&validator_addr).is_some(), "the validator address not exists");
             let (_, _, value_per_share) = self.get_values();
@@ -131,8 +131,8 @@ mod staking_pool {
             let unstake_lsu_bucket = lsu.take_advanced(redeem_value.checked_div(lsu_index).unwrap(), WithdrawStrategy::Rounded(RoundingMode::ToZero));
             // let unstake_amount = unstake_lsu_bucket.amount();
             let claim_nft = validator.unstake(unstake_lsu_bucket);
-            let claim_nft_id = claim_nft.as_non_fungible().non_fungible_local_id();
-            let unstake_data = ResourceManager::from_address(claim_nft.resource_address()).get_non_fungible_data::<UnstakeData>(&claim_nft_id);
+            let claim_nft_id = claim_nft.non_fungible_local_id();
+            let unstake_data = NonFungibleResourceManager::from(claim_nft.resource_address()).get_non_fungible_data::<UnstakeData>(&claim_nft_id);
 
             self.staking_unit_res_mgr.burn(bucket);
             // Runtime::emit_event(Event2{

@@ -1,8 +1,25 @@
 use scrypto::prelude::*;
+use crate::common::list::*;
+use crate::common::nft_vaults::NonFungibleVaults;
+use crate::validator::keeper::UnstakeData;
 use crate::utils::*;
 use crate::interest::InterestModel;
 
+#[derive(ScryptoSbor)]
+struct FixedEpochBond {
+    pub epoch_at: u64,
+    pub interest: Decimal,
+    pub global_id_list: List<NonFungibleGlobalId>
+}
+
 #[blueprint]
+#[types(
+    ListIndex,
+    NonFungibleGlobalId,
+    ResourceAddress,
+    NonFungibleVault,
+    FixedEpochBond
+)]
 mod lend_pool {
 
     enable_method_auth!{
@@ -17,8 +34,9 @@ mod lend_pool {
             borrow_stable => restrict_to: [operator];
             repay_stable => restrict_to: [operator];
             repay_variable => restrict_to: [operator];
-            borrow_flashloan => restrict_to:[operator];
-            repay_flashloan => restrict_to:[operator];
+            borrow_fixed_term => restrict_to:[operator];
+            repay_fixed_term => restrict_to:[operator];
+            add_fixed_term => restrict_to:[operator];
             
             //business method
             add_liquity => PUBLIC;
@@ -39,15 +57,21 @@ mod lend_pool {
         }
     }
     
+    /**
+     * LendResourcePool is a pool that allows users to lend their assets to the pool and earn income.
+     * The pool will use the assets to provide loans to borrowers and earn interest.
+     * The pool will also provide flash loans to users who need to borrow assets for a short period of time.
+     * The pool will also fixed-term bonds to users who need to borrow assets for a fixed period of time.
+     */
     struct LendResourcePool{
 
         interest_model_cmp: Global<AnyComponent>,
         interest_model: InterestModel,
         
         underlying_token: ResourceAddress,
-        deposit_share_res_mgr: ResourceManager,
+        deposit_share_res_mgr: FungibleResourceManager,
         
-        vault: Vault,
+        vault: FungibleVault,
         insurance_balance: Decimal,
         
         deposit_index: Decimal,
@@ -65,8 +89,11 @@ mod lend_pool {
         
         stable_loan_interest_rate: Decimal,
         stable_loan_amount: Decimal,
-        stable_loan_last_update: u64
+        stable_loan_last_update: u64,
 
+        bond_epochs: Vec<u64>, 
+        bonds: KeyValueStore<u64, FixedEpochBond>,
+        claim_nfts: NonFungibleVaults
     }
 
 
@@ -93,6 +120,9 @@ mod lend_pool {
                     //pool ==> , pool_unit==>
                     "symbol" => format!("dx{}", origin_symbol), locked;
                     "name" => format!("DeXian Lending LP token({}) ", origin_symbol), locked;
+                    "underlying" => underlying_token, locked;
+                    "icon_url" => "https://dexian.io/images/dx.png", updatable;
+                    "info_url" => "https://dexian.io", updatable;
                 }))
                 .divisibility(share_divisibility)
                 .mint_roles(mint_roles! {
@@ -116,8 +146,11 @@ mod lend_pool {
                 stable_loan_interest_rate: Decimal::ZERO,
                 stable_loan_amount: Decimal::ZERO,
                 stable_loan_last_update: 0u64,
-                vault: Vault::new(underlying_token),
+                vault: FungibleVault::new(underlying_token),
                 insurance_balance: Decimal::ZERO,
+                bond_epochs: Vec::new(),
+                bonds: KeyValueStore::new(),
+                claim_nfts: NonFungibleVaults::new(|| LendResourcePoolKeyValueStore::new_with_registered_type()),
                 interest_model,
                 insurance_ratio,
                 underlying_token,
@@ -138,18 +171,17 @@ mod lend_pool {
 
         }
 
-        pub fn withdraw_insurance(&mut self, amount: Decimal) -> Bucket{
+        pub fn withdraw_insurance(&mut self, amount: Decimal) -> FungibleBucket{
             assert_amount(amount, self.insurance_balance);
             self.vault.take_advanced(amount, WithdrawStrategy::Rounded(RoundingMode::ToZero))
         }
 
         pub fn get_underlying_value(&self) -> Decimal{
-            let res_mgr = ResourceManager::from_address(self.underlying_token);
             let (supply_index, _) = self.get_current_index();
-            res_mgr.total_supply().unwrap().checked_mul(supply_index).unwrap()
+            self.deposit_share_res_mgr.total_supply().unwrap().checked_mul(supply_index).unwrap()
         }
 
-        pub fn add_liquity(&mut self, bucket: Bucket) -> Bucket{
+        pub fn add_liquity(&mut self, bucket: FungibleBucket) -> FungibleBucket{
             assert_resource(&bucket.resource_address(), &self.underlying_token);
             let deposit_amount = bucket.amount();
 
@@ -167,7 +199,7 @@ mod lend_pool {
             dx_bucket
 
         }
-        pub fn remove_liquity(&mut self, bucket: Bucket) -> Bucket{
+        pub fn remove_liquity(&mut self, bucket: FungibleBucket) -> FungibleBucket{
             assert_resource(&bucket.resource_address(), &self.deposit_share_res_mgr.address());
 
             self.update_index();
@@ -175,7 +207,7 @@ mod lend_pool {
             let burn_amount = bucket.amount();
             let divisibility = get_divisibility(self.underlying_token).unwrap();
             let withdraw_amount = floor(self.get_redemption_value(burn_amount), divisibility);
-            assert_vault_amount(&self.vault, withdraw_amount);
+            assert!(self.vault.amount() >= withdraw_amount, "the balance in vault is insufficient.");
             self.deposit_share_res_mgr.burn(bucket);
 
             info!("after interest rate:{}, {}, index:{}, {}", self.variable_loan_interest_rate, self.stable_loan_interest_rate, self.deposit_index, self.loan_index);
@@ -186,8 +218,8 @@ mod lend_pool {
 
         }
 
-        pub fn borrow_variable(&mut self, borrow_amount: Decimal) -> (Bucket, Decimal){
-            assert_vault_amount(&self.vault, borrow_amount);
+        pub fn borrow_variable(&mut self, borrow_amount: Decimal) -> (FungibleBucket, Decimal){
+            assert!(self.vault.amount() >= borrow_amount, "the balance in vault is insufficient.");
             
             self.update_index();
             
@@ -202,8 +234,8 @@ mod lend_pool {
             (self.vault.take_advanced(borrow_amount, WithdrawStrategy::Rounded(RoundingMode::ToZero)), variable_share)
         }
 
-        pub fn borrow_stable(&mut self, borrow_amount: Decimal, stable_rate: Decimal) -> Bucket{
-            assert_vault_amount(&self.vault, borrow_amount);
+        pub fn borrow_stable(&mut self, borrow_amount: Decimal, stable_rate: Decimal) -> FungibleBucket{
+            assert!(self.vault.amount() >= borrow_amount, "the balance in vault is insufficient.");
 
             self.update_index();
 
@@ -216,8 +248,7 @@ mod lend_pool {
 
         }
 
-
-        pub fn repay_variable(&mut self, mut repay_bucket: Bucket, normalized_amount: Decimal, repay_opt: Option<Decimal>) -> (Bucket, Decimal){
+        pub fn repay_variable(&mut self, mut repay_bucket: FungibleBucket, normalized_amount: Decimal, repay_opt: Option<Decimal>) -> (FungibleBucket, Decimal){
             assert_resource(&repay_bucket.resource_address(), &self.underlying_token);
             
             self.update_index();
@@ -253,12 +284,12 @@ mod lend_pool {
 
         pub fn repay_stable(
             &mut self, 
-            mut repay_bucket: Bucket, 
+            mut repay_bucket: FungibleBucket, 
             loan_amount: Decimal,
             rate: Decimal,
             last_epoch_at: u64,
             repay_opt: Option<Decimal>
-        ) -> (Bucket, Decimal, Decimal, Decimal, u64){
+        ) -> (FungibleBucket, Decimal, Decimal, Decimal, u64){
             let current_epoch_at = Runtime::current_epoch().number();
             let delta_epoch = current_epoch_at - last_epoch_at;
             let interest = if delta_epoch <= 0u64 {
@@ -323,12 +354,12 @@ mod lend_pool {
 
         }
 
-        pub fn borrow_flashloan(&mut self, amount: Decimal) -> Bucket {
+        pub fn borrow_fixed_term(&mut self, amount: Decimal) -> FungibleBucket {
             assert!(self.vault.amount() >= amount, "Insufficient vault amount!");
             self.vault.take_advanced(amount, WithdrawStrategy::Rounded(RoundingMode::ToZero))
         }
 
-        pub fn repay_flashloan(&mut self, mut repay_bucket: Bucket, amount: Decimal, fee: Decimal) -> Bucket{
+        pub fn repay_fixed_term(&mut self, mut repay_bucket: FungibleBucket, amount: Decimal, fee: Decimal) -> FungibleBucket{
             let total = ceil_by_resource(self.underlying_token.clone(), amount.checked_add(fee).unwrap());
             assert!(repay_bucket.amount() >= total, "Insufficient repay amount!");
             self.vault.put(repay_bucket.take(total));
@@ -348,6 +379,65 @@ mod lend_pool {
             repay_bucket
         }
 
+        pub fn add_fixed_term(&mut self, claim_nft: NonFungibleBucket, interest: Decimal){
+            let nft_id = claim_nft.non_fungible_global_id();
+            let data = claim_nft.non_fungible::<UnstakeData>().data();
+            let epoch_at = data.claim_epoch.number();
+            
+            match self.bond_epochs.binary_search(&epoch_at) {
+                Ok(_) => (),
+                Err(index) => self.bond_epochs.insert(index, epoch_at),
+            }
+
+            if self.bonds.get(&epoch_at).is_none() {
+                let mut global_id_list: List<NonFungibleGlobalId> = List::new(||LendResourcePoolKeyValueStore::new_with_registered_type());
+                global_id_list.push(nft_id.clone());
+                self.bonds.insert(epoch_at, FixedEpochBond{
+                    epoch_at,
+                    interest,
+                    global_id_list
+                });
+            }
+            else{
+                let mut entry = self.bonds.get_mut(&epoch_at).unwrap();
+                entry.interest = entry.interest.checked_add(interest).unwrap();
+                entry.global_id_list.push(nft_id);
+            }
+
+            self.claim_nfts.put(claim_nft);
+        }
+
+        ///
+        /// Retrieves the total amount of mature bonds and the total interest of the mature bonds.
+        fn get_mature_bonds(&self) -> (Decimal, Decimal) {
+            let current_epoch = Runtime::current_epoch().number();
+            let mut sum = Decimal::ZERO;
+            let mut interest = Decimal::ZERO;
+            
+            for epoch in self.bond_epochs.iter() {
+                if *epoch > current_epoch {
+                    break;
+                }
+                let epoch_entry = self.bonds.get(epoch);
+                if epoch_entry.is_some() {
+                    let entry = epoch_entry.unwrap();
+                    let nft_ids = entry.global_id_list.range(0, entry.global_id_list.len());
+                    sum = sum.checked_add(Self::sum_claim_amount(nft_ids)).unwrap();
+                    interest = interest.checked_add(entry.interest).unwrap();
+                }
+            }
+            (sum, interest)
+        }
+
+        fn sum_claim_amount(nft_ids: Vec<NonFungibleGlobalId>) -> Decimal{
+            let mut sum = Decimal::ZERO;
+            for nft_id in nft_ids {
+                let data = NonFungibleResourceManager::from(nft_id.resource_address()).get_non_fungible_data::<UnstakeData>(&nft_id.local_id());
+                sum = sum.checked_add(data.claim_amount).unwrap();
+            }
+            sum
+        }
+
         pub fn get_current_index(&self) -> (Decimal, Decimal){
             let current_epoch = Runtime::current_epoch().number();
             let delta_epoch = current_epoch - self.last_update;
@@ -358,8 +448,17 @@ mod lend_pool {
             let epoch_of_year = Decimal::from(EPOCH_OF_YEAR);
             // let delta_supply_interest_rate = calc_linear_rate(self.deposit_interest_rate, epoch_of_year, delta_epoch);
             // info!("epoch:{}-{}, delta_epoch:{}, supply:{}==>{}, borrow:{}==>{}", current_epoch, self.last_update, delta_epoch, self.deposit_interest_rate,delta_supply_interest_rate, self.variable_loan_interest_rate, delta_borrow_interest_rate);
+            let mut index_of_deposit = calc_linear_interest(self.deposit_index, self.deposit_interest_rate, epoch_of_year, delta_epoch);
+            let (_, mature_interest) = self.get_mature_bonds();
+            if mature_interest > Decimal::ZERO {
+                let deposit_funds = self.get_deposit_share_quantity().checked_mul(index_of_deposit).unwrap();
+                let delta_index = mature_interest.checked_mul(
+                    Decimal::ONE - self.insurance_ratio
+                ).unwrap().checked_div(deposit_funds).unwrap();
+                index_of_deposit = index_of_deposit.checked_add(delta_index).unwrap();
+            }
             (
-                calc_linear_interest(self.deposit_index, self.deposit_interest_rate, epoch_of_year, delta_epoch),
+                index_of_deposit,
                 calc_compound_interest(self.loan_index, self.variable_loan_interest_rate, epoch_of_year, delta_epoch)
             )
         }
@@ -402,18 +501,23 @@ mod lend_pool {
             let current_epoch = Runtime::current_epoch().number();
             let delta_epoch = current_epoch - self.last_update;
             if delta_epoch > 0u64 {
+                // Liquidate matured bonds (NFTs) and distribute the accrued returns to all depositors (deposit share holders).
+                self.claim_matured_bonds();
+
                 let (current_supply_index, current_borrow_index) = self.get_current_index();
                 
-                // get the total equity value
-                let variable_borrow: Decimal = self.variable_loan_share_quantity;
-                let normalized_supply: Decimal = self.get_deposit_share_quantity();
-    
-                // interest = equity value * (current index value - [last_update] index value)
                 let epoch_of_year = Decimal::from(EPOCH_OF_YEAR);
+                // variable loan share quantity
+                let variable_borrow: Decimal = self.variable_loan_share_quantity;
+                // variable loan interest = variable loan share quantity * (current index value - [last_update] index value)
                 let recent_variable_interest = variable_borrow.checked_mul(current_borrow_index.checked_sub(self.loan_index).unwrap()).unwrap();
+                // stable loan interest
                 let recent_stable_interest = calc_compound_interest(self.stable_loan_amount, self.stable_loan_interest_rate, epoch_of_year, delta_epoch).checked_sub(self.stable_loan_amount).unwrap();
+                // deposit share quantity
+                let normalized_supply: Decimal = self.get_deposit_share_quantity();
+                // deposite interest
                 let recent_supply_interest = normalized_supply.checked_mul(current_supply_index.checked_sub(self.deposit_index).unwrap()).unwrap();
-    
+                
                 // the interest rate spread goes into the insurance pool
                 // insurance_balance += variable_interest + stable_interest - recent_supply_interest
                 self.insurance_balance = self.insurance_balance.checked_add(
@@ -439,6 +543,41 @@ mod lend_pool {
             let (variable_rate, _, deposite_rate) = self.calc_interest_rate(supply, variable_borrow, stable_borrow);
             self.deposit_interest_rate = deposite_rate;
             self.variable_loan_interest_rate = variable_rate;
+        }
+
+        /// Claims matured bonds (NFTs) and distributes the accrued returns to all depositors.
+        fn claim_matured_bonds(&mut self) {
+            let current_epoch = Runtime::current_epoch().number();
+            let mut interest = Decimal::ZERO;
+            // let mut result: Vec<NonFungibleBucket> = Vec::new();
+
+            while let Some(epoch) = self.bond_epochs.first() {
+                if *epoch > current_epoch {
+                    break;
+                }
+                if let Some(entry) = self.bonds.get_mut(epoch) {
+                    interest = interest.checked_add(entry.interest).unwrap();
+                    let nft_ids = entry.global_id_list.range(0, entry.global_id_list.len());
+                    if !nft_ids.is_empty() {
+                        let nft_buckets = self.claim_nfts.take_nft_batch(nft_ids);
+                        for bucket in nft_buckets {
+                            let mut validator: Global<Validator> = get_validator(bucket.resource_address());
+                            self.vault.put(validator.claim_xrd(bucket));
+                        }
+                    }
+                }
+                self.bond_epochs.remove(0);
+            }
+            
+            if interest > Decimal::ZERO {
+                let insurance = interest.checked_mul(self.insurance_ratio).unwrap();
+                let deposit_funds = self.get_deposit_share_quantity().checked_mul(self.deposit_index).unwrap();
+                // It is impossible for `interest` to be positive when `deposit_funds` is zero.
+                let delta_index = interest.checked_sub(insurance).unwrap().checked_div(deposit_funds).unwrap();
+
+                self.insurance_balance = self.insurance_balance.checked_add(insurance).unwrap();
+                self.deposit_index = self.deposit_index.checked_add(delta_index).unwrap();
+            }
         }
 
         fn get_stable_loan_value(&self) -> Decimal{

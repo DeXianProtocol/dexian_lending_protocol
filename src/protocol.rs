@@ -1,7 +1,7 @@
 use scrypto::prelude::*;
 use crate::interest::InterestModel;
 use crate::oracle::oracle::PriceOracle;
-// use crate::cdp::CollateralDebtPosition;
+use crate::utils::get_underlying_token_res_addr;
 use crate::cdp::FlashLoanData;
 use crate::cdp::cdp_mgr::CollateralDebtManager;
 use crate::earning::staking_earning::StakingEarning;
@@ -62,8 +62,7 @@ mod dexian_protocol{
             op_res_addr: ResourceAddress,
             price_signer_pk: String, 
             price_validity_ms: u64,
-            unstake_epoch_num: u64,
-            settle_gas: Decimal
+            unstake_epoch_num: u64
         ) -> (
             Global<DeXianProtocol>,
             Global<PriceOracle>,
@@ -86,7 +85,6 @@ mod dexian_protocol{
             let staking_mgr = StakingEarning::instantiate(
                 validator_keeper,
                 unstake_epoch_num,
-                settle_gas,
                 admin_rule.clone(),
                 mgr_rule.clone()
             );
@@ -152,7 +150,7 @@ mod dexian_protocol{
             )
         }
 
-        pub fn supply(&mut self, bucket: Bucket) -> Bucket{
+        pub fn supply(&mut self, bucket: FungibleBucket) -> FungibleBucket{
             let supply_token = bucket.resource_address();
             let supply_amount = bucket.amount();
             info!("{} supply {}", Runtime::bech32_encode_address(supply_token), supply_amount);
@@ -164,7 +162,7 @@ mod dexian_protocol{
             dx_bucket
         }
 
-        pub fn withdraw(&mut self, bucket: Bucket) -> Bucket{
+        pub fn withdraw(&mut self, bucket: FungibleBucket) -> FungibleBucket{
             let dx_token = bucket.resource_address();
             let dx_amount = bucket.amount();
             info!("{} burn {}", Runtime::bech32_encode_address(dx_token), dx_amount);
@@ -177,7 +175,7 @@ mod dexian_protocol{
         }
 
         pub fn borrow_variable(&mut self,
-            dx_bucket: Bucket,
+            dx_bucket: FungibleBucket,
             borrow_token: ResourceAddress,
             borrow_amount: Decimal,
             price1: String,
@@ -188,7 +186,7 @@ mod dexian_protocol{
             quote2: Option<ResourceAddress>,
             timestamp2: Option<u64>,
             signature2: Option<String>
-        ) -> (Bucket, Bucket){
+        ) -> (FungibleBucket, NonFungibleBucket){
             let dx_token = dx_bucket.resource_address();
             let dx_amount = dx_bucket.amount();
             let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.extra_params(dx_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
@@ -196,12 +194,12 @@ mod dexian_protocol{
             assert!(borrow_price_in_xrd.is_positive() && collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
             info!("collateral {}, amount:{}; price:{}/{}", Runtime::bech32_encode_address(dx_token), dx_amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
             let (borrow_bucket, cdp_bucket) = self.cdp_mgr.borrow_variable(dx_bucket, borrow_token, borrow_amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
-            Runtime::emit_event(CreateCDPEvent{dx_token, dx_amount, borrow_token, borrow_amount, cdp_id:cdp_bucket.as_non_fungible().non_fungible_local_id(), is_stable:false});
+            Runtime::emit_event(CreateCDPEvent{dx_token, dx_amount, borrow_token, borrow_amount, cdp_id:cdp_bucket.non_fungible_local_id(), is_stable:false});
             (borrow_bucket, cdp_bucket)
         }
 
         pub fn borrow_stable(&mut self,
-            dx_bucket: Bucket,
+            dx_bucket: FungibleBucket,
             borrow_token: ResourceAddress,
             borrow_amount: Decimal,
             price1: String,
@@ -212,18 +210,18 @@ mod dexian_protocol{
             quote2: Option<ResourceAddress>,
             timestamp2: Option<u64>,
             signature2: Option<String>
-        ) -> (Bucket, Bucket){
+        ) -> (FungibleBucket, NonFungibleBucket){
             let dx_token = dx_bucket.resource_address();
             let dx_amount = dx_bucket.amount();
             let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.extra_params(dx_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
             assert!(borrow_price_in_xrd.is_positive() && collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
             let (borrow_bucket, cdp_bucket) = self.cdp_mgr.borrow_stable(dx_bucket, borrow_token, borrow_amount, borrow_price_in_xrd, collateral_underlying_price_in_xrd);
-            Runtime::emit_event(CreateCDPEvent{dx_token, dx_amount, borrow_token, borrow_amount, cdp_id:cdp_bucket.as_non_fungible().non_fungible_local_id(), is_stable:true});
+            Runtime::emit_event(CreateCDPEvent{dx_token, dx_amount, borrow_token, borrow_amount, cdp_id:cdp_bucket.non_fungible_local_id(), is_stable:true});
             (borrow_bucket, cdp_bucket)
         }
 
         pub fn extend_borrow(&mut self,
-            cdp: Bucket,
+            cdp: NonFungibleBucket,
             amount: Decimal,
             price1: String,
             quote1: ResourceAddress,
@@ -233,8 +231,8 @@ mod dexian_protocol{
             quote2: Option<ResourceAddress>,
             timestamp2: Option<u64>,
             signature2: Option<String>
-        ) -> (Bucket, Bucket){
-            let cdp_id: NonFungibleLocalId = cdp.as_non_fungible().non_fungible_local_id();
+        ) -> (FungibleBucket, NonFungibleBucket){
+            let cdp_id: NonFungibleLocalId = cdp.non_fungible_local_id();
             let (borrow_token, collateral_underlying_token) = self.cdp_mgr.get_cdp_resource_address(cdp_id.clone());
             let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.get_price_in_xrd(collateral_underlying_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
             assert!(borrow_price_in_xrd.is_positive() && collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
@@ -245,7 +243,7 @@ mod dexian_protocol{
         }
 
         pub fn withdraw_collateral(&mut self,
-            cdp: Bucket,
+            cdp: NonFungibleBucket,
             amount: Decimal,
             price1: String,
             quote1: ResourceAddress,
@@ -255,8 +253,8 @@ mod dexian_protocol{
             quote2: Option<ResourceAddress>,
             timestamp2: Option<u64>,
             signature2: Option<String>
-        ) -> (Bucket, Bucket){
-            let cdp_id: NonFungibleLocalId = cdp.as_non_fungible().non_fungible_local_id();
+        ) -> (FungibleBucket, NonFungibleBucket){
+            let cdp_id: NonFungibleLocalId = cdp.non_fungible_local_id();
             let (borrow_token, collateral_underlying_token) = self.cdp_mgr.get_cdp_resource_address(cdp_id.clone());
             let (borrow_price_in_xrd, collateral_underlying_price_in_xrd) = self.get_price_in_xrd(collateral_underlying_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2);
             assert!(borrow_price_in_xrd.is_positive() && collateral_underlying_price_in_xrd.is_positive(), "Incorrect information on price signature.");
@@ -265,7 +263,7 @@ mod dexian_protocol{
             (underlying_bucket, cdp_bucket)
         }
 
-        pub fn addition_collateral(&mut self, id: u64, bucket: Bucket){
+        pub fn addition_collateral(&mut self, id: u64, bucket: FungibleBucket){
             let cdp_id = NonFungibleLocalId::integer(id);
             let amount = bucket.amount();
             let underlying_token = bucket.resource_address();
@@ -274,7 +272,7 @@ mod dexian_protocol{
             Runtime::emit_event(AdditionCollateralEvent{cdp_id, underlying_token, amount});
         }
 
-        pub fn repay(&mut self, repay_bucket: Bucket, id: u64) -> Bucket{
+        pub fn repay(&mut self, repay_bucket: FungibleBucket, id: u64) -> FungibleBucket{
             let cdp_id: NonFungibleLocalId = NonFungibleLocalId::integer(id);
             let repay_token = repay_bucket.resource_address();
             let bucket_amount = repay_bucket.amount();
@@ -284,7 +282,7 @@ mod dexian_protocol{
         }
 
         pub fn liquidation(&mut self,
-            debt_bucket: Bucket,
+            debt_bucket: FungibleBucket,
             debt_to_cover: Decimal,
             id: u64,
             price1: String,
@@ -295,7 +293,7 @@ mod dexian_protocol{
             quote2: Option<ResourceAddress>,
             timestamp2: Option<u64>,
             signature2: Option<String>
-        ) -> (Bucket, Bucket){
+        ) -> (FungibleBucket, FungibleBucket){
             let bucket_amount = debt_bucket.amount();
             let cdp_id = NonFungibleLocalId::integer(id);
             let (borrow_token, collateral_underlying_token) = self.cdp_mgr.get_cdp_resource_address(cdp_id.clone());
@@ -349,13 +347,13 @@ mod dexian_protocol{
         //     (flashloan_remain, cdp_bucket, new_cdp)
         // }
 
-        pub fn borrow_flashloan(&mut self, res_addr: ResourceAddress, amount: Decimal) -> (Bucket, Bucket){
+        pub fn borrow_flashloan(&mut self, res_addr: ResourceAddress, amount: Decimal) -> (FungibleBucket, NonFungibleBucket){
             self.cdp_mgr.borrow_flashloan(res_addr, amount)
         }
 
-        pub fn repay_flashloan(&mut self, repay_bucket: Bucket, flashloan: Bucket) -> Bucket{
-            let nft_id: NonFungibleLocalId = flashloan.as_non_fungible().non_fungible_local_id();
-            let flashloan_data = ResourceManager::from_address(flashloan.resource_address()).get_non_fungible_data::<FlashLoanData>(&nft_id);
+        pub fn repay_flashloan(&mut self, repay_bucket: FungibleBucket, flashloan: NonFungibleBucket) -> FungibleBucket{
+            let nft_id: NonFungibleLocalId = flashloan.non_fungible_local_id();
+            let flashloan_data = NonFungibleResourceManager::from(flashloan.resource_address()).get_non_fungible_data::<FlashLoanData>(&nft_id);
             Runtime::emit_event(FlashLoanEvent{
                 res_addr: flashloan_data.res_addr,
                 bucket_amount: repay_bucket.amount(),
@@ -367,15 +365,15 @@ mod dexian_protocol{
             self.cdp_mgr.repay_flashloan(repay_bucket, flashloan)
         }
 
-        pub fn withdraw_insurance(&mut self, underlying_token_addr: ResourceAddress, amount: Decimal) -> Bucket{
+        pub fn withdraw_insurance(&mut self, underlying_token_addr: ResourceAddress, amount: Decimal) -> FungibleBucket{
             self.cdp_mgr.withdraw_insurance(underlying_token_addr, amount)
         }
 
-        pub fn join(&mut self, validator: ComponentAddress, xrd_bucket: Bucket) -> Bucket{
+        pub fn join(&mut self, validator: ComponentAddress, xrd_bucket: FungibleBucket) -> FungibleBucket{
             self.staking_mgr.join(validator, xrd_bucket)
         }
 
-        pub fn redeem(&mut self, validator: ComponentAddress, bucket: Bucket, is_faster: bool) ->Bucket{
+        pub fn redeem(&mut self, validator: ComponentAddress, bucket: FungibleBucket, is_faster: bool) ->Bucket{
             self.staking_mgr.redeem(self.cdp_mgr, validator, bucket, is_faster)
         }
 
@@ -391,7 +389,7 @@ mod dexian_protocol{
             timestamp2: Option<u64>,
             signature2: Option<String>
         ) -> (Decimal, Decimal){
-            let collateral_underlying_token = self.cdp_mgr.get_underlying_token(dx_token);
+            let collateral_underlying_token = get_underlying_token_res_addr(dx_token);
             self.get_price_in_xrd(collateral_underlying_token, borrow_token, &price1, quote1, timestamp1, &signature1, price2, quote2, timestamp2, signature2)
         }
 

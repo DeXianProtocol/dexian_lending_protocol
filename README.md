@@ -40,6 +40,15 @@ The following are illustrative examples of each of these three primary functions
 ![add/remove liquidity](docs/asset/add_remove_liquidity.svg)
 
 
+#### ClaimNFT Vaults
+HashList: <u64, PendingUnstakeEpoch>
+PendingUnstakeEpoch: {
+    epoch_at: u64,
+    claim_amount: Decimal,
+    claim_nft_vaults: Vaults
+}
+
+
 
 ## Contributing
 

@@ -90,6 +90,44 @@ pub fn floor_by_resource(res_addr: ResourceAddress, amount: Decimal) -> Decimal{
     floor(amount, divisibility)
 }
 
+/**
+ * Get the resource address of the pool unit from the metadata of the validator.
+ */
+pub fn get_lsu_res_addr(validator_addr: ComponentAddress) -> ResourceAddress {
+    get_res_addr_from_metadata(validator_addr, "pool_unit")
+}
+
+/**
+ * Get the resource address of the claim nft from the metadata of the validator.
+ */
+pub fn get_claim_nft_res_addr(validator_addr: ComponentAddress) -> ResourceAddress {
+    get_res_addr_from_metadata(validator_addr, "claim_nft")
+}
+
+pub fn get_underlying_token_res_addr(dx_token_addr: ResourceAddress) -> ResourceAddress {
+    let res_mgr = ResourceManager::from_address(dx_token_addr);
+    let addr = res_mgr.get_metadata::<&str, GlobalAddress>("underlying").unwrap().unwrap();
+    ResourceAddress::try_from(addr).unwrap()
+}
+/**
+ * Get the validator from the metadata of the resource.
+ */
+pub fn get_validator(res_addr: ResourceAddress) -> Global<Validator> {
+    let res_mgr = ResourceManager::from_address(res_addr);
+    let addr = res_mgr.get_metadata::<&str, GlobalAddress>("validator").unwrap().unwrap();
+    let validator: Global<Validator>  = Global::from(ComponentAddress::try_from(addr).unwrap());
+    return validator;
+}
+
+/**
+ * Get the resource address from the metadata of the validator.
+ */
+pub fn get_res_addr_from_metadata(validator_addr: ComponentAddress, name: &str) -> ResourceAddress {
+    let validator: Global<Validator> = Global::from(validator_addr);
+    let addr = validator.get_metadata::<&str, GlobalAddress>(name).unwrap().unwrap();
+    ResourceAddress::try_from(addr).unwrap()
+}
+
 
 pub fn verify_ed25519(
     msg: &str,

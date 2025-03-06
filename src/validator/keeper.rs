@@ -2,10 +2,10 @@ use scrypto::prelude::*;
 use crate::utils::EPOCH_OF_YEAR;
 
 pub const BABYLON_START_EPOCH: u64 = 0; //32718; // //mainnet: 32718, stokenet: 0
-pub const A_WEEK_EPOCHS: u64 = 60/5*24*7;
+pub const A_WEEK_EPOCHS: u64 = 60/5*24*7; //2016
 pub const RESERVE_WEEKS: usize = 52;
 
-#[derive(Debug, Clone, Copy, ScryptoSbor)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ScryptoSbor)]
 pub struct StakeData{
     pub last_lsu: Decimal,
     pub last_staked: Decimal,
@@ -41,18 +41,16 @@ mod validator_keeper{
             log_validator_staking => restrict_to: [admin, OWNER];
             insert_validator_staking => restrict_to: [admin, OWNER];
             // op
-            register_validator_address => restrict_to: [operator, OWNER];
+            // register_validator_address => restrict_to: [operator, OWNER];
 
             // public
             get_active_set_apy => PUBLIC;
-            get_validator_address => PUBLIC;
 
         }
     }
 
     struct ValidatorKeeper{
         validator_map: HashMap<ComponentAddress, Vec<StakeData>>,
-        res_validator_map: KeyValueStore<ResourceAddress, ComponentAddress>
     }
 
     impl ValidatorKeeper {
@@ -65,9 +63,9 @@ mod validator_keeper{
                 .divisibility(DIVISIBILITY_NONE)
                 .metadata(metadata!(
                     init {
-                        "name" => "Keeper Admin Badge".to_owned(), locked;
+                        "name" => "ValidatorKeeper Admin Badge".to_owned(), locked;
                         "description" => 
-                        "This is a DeXian Lending Protocol admin badge used to authenticate the admin.".to_owned(), locked;
+                        "This is a DeXian Protocol admin badge used to authenticate the admin.".to_owned(), locked;
                     }
                 ))
                 .mint_initial_supply(1);
@@ -75,9 +73,9 @@ mod validator_keeper{
                 .divisibility(DIVISIBILITY_NONE)
                 .metadata(metadata!(
                     init {
-                        "name" => "Keeper Operator Badge".to_owned(), locked;
+                        "name" => "ValidatorKeeper Operator Badge".to_owned(), locked;
                         "description" => 
-                        "This is a DeXian Lending Protocol operator badge used to authenticate the operator.".to_owned(), locked;
+                        "This is a DeXian Protocol operator badge used to authenticate the operator.".to_owned(), locked;
                     }
                 ))
                 .mint_initial_supply(1);
@@ -86,8 +84,7 @@ mod validator_keeper{
             let owner_rule = rule!(require(admin_badge.resource_address()));
             
             let component = Self{
-                validator_map: HashMap::new(),
-                res_validator_map: KeyValueStore::new()
+                validator_map: HashMap::new()
             }.instantiate()
             // .prepare_to_globalize(OwnerRole::Fixed(rule!(require(admin_badge.resource_address()))))
             .prepare_to_globalize(OwnerRole::Fixed(owner_rule))
@@ -99,21 +96,6 @@ mod validator_keeper{
             ).globalize();
             
             (component, admin_badge.into(), op_badge.into())
-        }
-
-        
-        
-        pub fn register_validator_address(&mut self, res_addr_vec: Vec<ResourceAddress>, validator_addr_vec: Vec<ComponentAddress>){
-            assert_eq!(res_addr_vec.capacity(), validator_addr_vec.capacity(), "The resource addresses must matches validator addresses!");
-            for (res_addr, validator_addr) in res_addr_vec.iter().zip(validator_addr_vec.iter()) {
-                self.res_validator_map.insert(res_addr.clone(), validator_addr.clone());
-            }
-        }
-
-        // /// get validator by LSU address or ClaimNFT address
-        pub fn get_validator_address(&self, res_addr: ResourceAddress) -> ComponentAddress{
-            assert!(self.res_validator_map.get(&res_addr).is_some(), "unknow resource address");
-            self.res_validator_map.get(&res_addr).unwrap().clone()
         }
 
         pub fn fill_validator_staking(&mut self, validator_addr: ComponentAddress, stake_data_vec: Vec<StakeData>){
@@ -128,23 +110,22 @@ mod validator_keeper{
 
 
         pub fn log_validator_staking(&mut self, add_validator_list: Vec<ComponentAddress>, remove_validator_list: Vec<ComponentAddress>) {
-            let current_epoch = Runtime::current_epoch().number();
-            let current_week_index = Self::get_week_index(current_epoch);
-        
             // Remove validators from the map
-            remove_validator_list.iter().for_each(|remove_validator_addr| {
-                self.validator_map.remove(remove_validator_addr);
+            remove_validator_list.iter().for_each(|validator_addr| {
+                self.validator_map.remove(validator_addr);
             });
         
             // Update staking information for existing validators
+            let current_epoch = Runtime::current_epoch().number();
+            let current_week_index = Self::get_week_index(current_epoch);
             let mut current_staked = self.validator_map.iter_mut()
             .map(|(validator_addr, vec)| {
                 let validator: Global<Validator> = Global::from(validator_addr.clone());
                 let last_lsu = validator.total_stake_unit_supply();
                 let last_staked = validator.total_stake_xrd_amount();
                 let latest = vec.first_mut().unwrap();
-                let last_index = Self::get_week_index(latest.last_stake_epoch);
-                if current_week_index > last_index {
+                let last_week_index = Self::get_week_index(latest.last_stake_epoch);
+                if current_week_index > last_week_index {
                     vec.insert(0, Self::new_stake_data(last_lsu, last_staked, current_epoch));
                     while vec.capacity() > RESERVE_WEEKS {
                         vec.remove(vec.capacity()-1);
