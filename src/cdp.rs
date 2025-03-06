@@ -147,7 +147,8 @@ mod cdp_mgr{
                 init{
                     "name"=> "dxLoanNFT", locked;
                     "description" => "DeXian FlashLoan NFT", locked;
-                    "dapp_definitions" => "DeXian Protocol", locked;
+                    "icon_url" => "https://dexian.io/images/flash.png", updatable;
+                    "info_url" => "https://dexian.io", updatable;
                 }
             }).mint_roles(mint_roles!(
                 minter => rule!(require(global_caller(address)));
