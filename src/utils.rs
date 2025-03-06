@@ -3,6 +3,9 @@ use scrypto::prelude::*;
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH, VerifyingKey, Signature};
 
 pub const EPOCH_OF_YEAR: u64 = 105120;
+pub const TO_INFINITY: WithdrawStrategy = WithdrawStrategy::Rounded(RoundingMode::ToPositiveInfinity);
+pub const TO_ZERO: WithdrawStrategy = WithdrawStrategy::Rounded(RoundingMode::ToZero);
+
 /// Copies a slice to a fixed-sized array.
 pub fn copy_u8_array<const N: usize>(slice: &[u8]) -> [u8; N] {
     if slice.len() == N {

@@ -1,4 +1,5 @@
 use scrypto::prelude::*;
+use crate::common::vaults::Vaults;
 use crate::pools::lending::lend_pool::LendResourcePool;
 use crate::interest::InterestModel;
 use crate::oracle::oracle::PriceOracle;
@@ -51,6 +52,11 @@ struct AssetState{
 
 
 #[blueprint]
+#[types(
+    ResourceAddress,
+    NonFungibleVault,
+    FungibleVault
+)]
 mod cdp_mgr{
     
     enable_method_auth!{
@@ -90,7 +96,7 @@ mod cdp_mgr{
         //Status of each asset in the lending pool, I.E.: XRD ==> AssetState(XRD)
         states: HashMap<ResourceAddress, AssetState>,
         // vault for each collateral asset(supply token), I.E. dxXRD ==> Vault(dxXRD)
-        collateral_vaults: KeyValueStore<ResourceAddress, FungibleVault>,
+        collateral_vaults: Vaults,
         // CDP token define
         cdp_res_mgr: NonFungibleResourceManager,
         // CDP id counter
@@ -157,7 +163,7 @@ mod cdp_mgr{
             let component = Self{
                 pools: HashMap::new(),
                 states: HashMap::new(),
-                collateral_vaults: KeyValueStore::new(),
+                collateral_vaults: Vaults::new(|| CollateralDebtManagerKeyValueStore::new_with_registered_type()),
                 self_cmp_addr: address,
                 close_factor_percent: Decimal::from(50),
                 cdp_id_counter: 0u64,
@@ -220,7 +226,7 @@ mod cdp_mgr{
             };
             self.pools.insert(underlying_token_addr, lend_res_pool);
             self.states.insert(underlying_token_addr, asset_state);
-            self.collateral_vaults.insert(dx_token_addr, FungibleVault::new(dx_token_addr));
+            self.collateral_vaults.put(FungibleBucket::new(dx_token_addr));
             dx_token_addr
         }
 
@@ -270,7 +276,7 @@ mod cdp_mgr{
             let max_loan_amount = self.get_max_loan_amount(dx_token, dx_amount, borrow_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd, Decimal::ZERO);
             assert!(borrow_amount <= max_loan_amount, "The amount borrowed exceeds the borrowable quantity of the collateral.");
 
-            self.put_collateral_vault(dx_bucket);
+            self.collateral_vaults.put(dx_bucket);
             let (borrow_bucket, borrow_normalized_amount) = self.borrow_variable_from_pool(borrow_token, borrow_amount);
             //mint cdp
             let cdp_bucket = self.new_cdp(dx_token, borrow_token, borrow_amount, dx_amount, borrow_normalized_amount, Decimal::ZERO, false);
@@ -294,7 +300,7 @@ mod cdp_mgr{
             let max_loan_amount = self.get_max_loan_amount(dx_token, dx_amount, borrow_token, borrow_price_in_xrd, collateral_underlying_price_in_xrd, Decimal::ZERO);
             assert!(borrow_amount <= max_loan_amount, "The amount borrowed exceeds the borrowable quantity of the collateral.");
             
-            self.put_collateral_vault(dx_bucket);
+            self.collateral_vaults.put(dx_bucket);
             let (borrow_bucket, stable_rate) = self.borrow_stable_from_pool(borrow_token, borrow_amount);
             
             //mint cdp
@@ -380,8 +386,8 @@ mod cdp_mgr{
             let underlying_pool = self.pools.get_mut(&underlying_token).unwrap();
             let (supply_index, _) = underlying_pool.get_current_index();
             
-            let take_amount = floor(amount.checked_div(supply_index).unwrap(), divisibility);
-            let dx_bucket = self.collateral_vaults.get_mut(&dx_token).unwrap().take(take_amount);
+            let take_amount = amount.checked_div(supply_index).unwrap();
+            let dx_bucket = self.collateral_vaults.take_advanced(&dx_token, take_amount, TO_ZERO);
             let normalized_amount = ceil(amount.checked_div(supply_index).unwrap(), divisibility);
             let underlying_bucket = underlying_pool.remove_liquity(dx_bucket);
             info!("amount:{}, take_amount:{}, normalized_amount:{}, underlying_bucket.amount:{}",amount, take_amount, normalized_amount, underlying_bucket.amount());
@@ -409,7 +415,7 @@ mod cdp_mgr{
             
             let dx_bucket = self.get_dx_bucket(cdp_data.collateral_token, dx_token, bucket);
             let dx_amount = dx_bucket.amount();
-            self.put_collateral_vault(dx_bucket);
+            self.collateral_vaults.put(dx_bucket);
             self.update_cdp_data(cdp_data.is_stable, Decimal::ZERO, Decimal::ZERO, dx_amount,  Decimal::ZERO, Decimal::ZERO, cdp_id, cdp_data);
 
         }
@@ -502,9 +508,9 @@ mod cdp_mgr{
 
             info!("debt_bucket:{}", bucket.amount());
             let underlying_pool = self.pools.get_mut(&underlying_token).unwrap();
-            let mut vault = self.collateral_vaults.get_mut(&dx_token).unwrap();
-            info!("underlying:{}, dx:{}, dx_vault:{}", Runtime::bech32_encode_address(underlying_token), Runtime::bech32_encode_address(dx_token),vault.amount());
-            let release_underlying_bucket = underlying_pool.remove_liquity(vault.take(release_collateral_to_liqiudate));
+            // let mut vault = self.collateral_vaults.get_mut(&dx_token).unwrap();
+            info!("underlying:{}, dx:{}, dx_vault:{}", Runtime::bech32_encode_address(underlying_token), Runtime::bech32_encode_address(dx_token.clone()),self.collateral_vaults.amount(&dx_token));
+            let release_underlying_bucket = underlying_pool.remove_liquity(self.collateral_vaults.take_advanced(&dx_token, release_collateral_to_liqiudate, TO_ZERO));
             info!("underlying(collateral) amount:{}", release_underlying_bucket.amount());
             self.cdp_res_mgr.update_non_fungible_data(&cdp_id, "collateral_amount", dx_amount.checked_sub(release_collateral_to_liqiudate).unwrap());
             (release_underlying_bucket, bucket)
@@ -697,16 +703,6 @@ mod cdp_mgr{
             };
             self.cdp_id_counter += 1;
             self.cdp_res_mgr.mint_non_fungible(&NonFungibleLocalId::integer(self.cdp_id_counter), data)
-        }
-
-        fn put_collateral_vault(&mut self, bucket: FungibleBucket){
-            let res_addr = bucket.resource_address();
-            if self.collateral_vaults.get(&res_addr).is_some(){
-                self.collateral_vaults.get_mut(&res_addr).unwrap().put(bucket);
-            }
-            else{
-                self.collateral_vaults.insert(res_addr, FungibleVault::with_bucket(bucket));
-            }
         }
 
         // fn get_token(&self, dx_token: ResourceAddress) -> (ResourceAddress, Decimal, Decimal){
